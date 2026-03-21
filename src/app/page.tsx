@@ -33,6 +33,14 @@ export default async function Home() {
             Get started free
           </Link>
         </div>
+        <div className="pt-2">
+          <Link
+            href="/chat?guest=1"
+            className="text-slate-400 hover:text-slate-300 text-sm underline underline-offset-4 transition-colors"
+          >
+            Continue as guest
+          </Link>
+        </div>
       </div>
     </main>
   )
