@@ -76,7 +76,7 @@ export function ChatHeader({
 
         {/* Auth section */}
         {userId ? (
-          <UserButton afterSignOutUrl="/" />
+          <UserButton />
         ) : (
           <>
             <Link
