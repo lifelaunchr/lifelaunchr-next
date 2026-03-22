@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useAuth } from '@clerk/nextjs'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
 interface CollegeEntry {
@@ -33,14 +34,21 @@ const STATUS_COLORS: Record<string, string> = {
   not_applying: '#9ca3af',
 }
 
-export default function ListsPage() {
+function ListsContent() {
   const { getToken } = useAuth()
+  const searchParams = useSearchParams()
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
-  const [userId, setUserId] = useState<number | null>(null)
+  // ?for=<studentId> — set when a counselor/parent navigates from the sidebar
+  const forParam = searchParams.get('for')
+  const forStudentId = forParam ? parseInt(forParam, 10) : null
+  const isViewingStudent = forStudentId !== null
+
+  const [myUserId, setMyUserId] = useState<number | null>(null)
   const [entries, setEntries] = useState<CollegeEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [studentName, setStudentName] = useState<string | null>(null)
   const [addName, setAddName] = useState('')
   const [adding, setAdding] = useState(false)
   const [activeTab, setActiveTab] = useState<'research' | 'applications'>('research')
@@ -54,9 +62,23 @@ export default function ListsPage() {
         })
         if (!usageRes.ok) { setError('Not signed in.'); setLoading(false); return }
         const usage = await usageRes.json()
-        setUserId(usage.user_id)
+        setMyUserId(usage.user_id)
 
-        const listRes = await fetch(`${apiUrl}/lists/${usage.user_id}`, {
+        const targetId = forStudentId ?? usage.user_id
+
+        // Resolve student name if viewing another user
+        if (forStudentId) {
+          const studentsRes = await fetch(`${apiUrl}/my-students`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          if (studentsRes.ok) {
+            const students: Array<{ id: number; full_name: string; email: string }> = await studentsRes.json()
+            const match = students.find((s) => s.id === forStudentId)
+            if (match) setStudentName(match.full_name || match.email)
+          }
+        }
+
+        const listRes = await fetch(`${apiUrl}/lists/${targetId}`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         if (listRes.ok) {
@@ -66,14 +88,16 @@ export default function ListsPage() {
       } catch { setError('Failed to load lists.') } finally { setLoading(false) }
     }
     load()
-  }, [getToken, apiUrl])
+  }, [getToken, apiUrl, forStudentId])
+
+  const targetId = forStudentId ?? myUserId
 
   const addCollege = async () => {
-    if (!userId || !addName.trim()) return
+    if (!targetId || isViewingStudent || !addName.trim()) return
     setAdding(true)
     try {
       const token = await getToken()
-      const res = await fetch(`${apiUrl}/lists/${userId}/colleges`, {
+      const res = await fetch(`${apiUrl}/lists/${targetId}/colleges`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ college_name: addName.trim() }),
@@ -87,6 +111,7 @@ export default function ListsPage() {
   }
 
   const updateStatus = async (entryId: number, status: string) => {
+    if (isViewingStudent) return
     const token = await getToken()
     await fetch(`${apiUrl}/lists/colleges/${entryId}`, {
       method: 'PATCH',
@@ -97,6 +122,7 @@ export default function ListsPage() {
   }
 
   const removeCollege = async (entryId: number) => {
+    if (isViewingStudent) return
     const token = await getToken()
     await fetch(`${apiUrl}/lists/colleges/${entryId}`, {
       method: 'DELETE',
@@ -107,16 +133,23 @@ export default function ListsPage() {
 
   const applications = entries.filter((e) => e.status === 'applying' || e.status === 'applied' || e.status === 'decided')
   const researchList = entries
-
   const displayList = activeTab === 'applications' ? applications : researchList
 
-  if (loading) return <div className="flex items-center justify-center h-screen text-gray-400">Loading...</div>
+  if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: '#9ca3af' }}>Loading...</div>
   if (error) return (
-    <div className="flex flex-col items-center justify-center h-screen gap-4">
-      <p className="text-gray-500">{error}</p>
-      <Link href="/sign-in" className="text-indigo-600 underline">Sign in</Link>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', gap: 16 }}>
+      <p style={{ color: '#6b7280' }}>{error}</p>
+      <Link href="/sign-in" style={{ color: '#4f46e5', textDecoration: 'underline' }}>Sign in</Link>
     </div>
   )
+
+  const pageTitle = isViewingStudent
+    ? `${studentName ? `${studentName}'s` : 'Student'} College Lists`
+    : 'My College Lists'
+
+  const pageSubtitle = isViewingStudent
+    ? `Viewing ${studentName ? `${studentName}'s` : 'this student\'s'} research list and applications.`
+    : 'Soar adds colleges here as you research them. You can also add and update them manually.'
 
   return (
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', background: '#f5f6fa', minHeight: '100dvh' }}>
@@ -130,8 +163,15 @@ export default function ListsPage() {
       </header>
 
       <div style={{ maxWidth: 760, margin: '0 auto', padding: '32px 24px 80px' }}>
-        <h1 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#0c1b33', marginBottom: 8 }}>My College Lists</h1>
-        <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: 24 }}>Soar adds colleges here as you research them. You can also add and update them manually.</p>
+        <h1 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#0c1b33', marginBottom: 8 }}>{pageTitle}</h1>
+        <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: isViewingStudent ? 16 : 24 }}>{pageSubtitle}</p>
+
+        {/* Read-only banner */}
+        {isViewingStudent && (
+          <div style={{ background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 10, padding: '10px 16px', marginBottom: 24, fontSize: '0.875rem', color: '#4338ca' }}>
+            👁 You&apos;re viewing {studentName ? `${studentName}'s` : 'this student\'s'} lists. Changes are disabled.
+          </div>
+        )}
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 0, marginBottom: 24, border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden', width: 'fit-content' }}>
@@ -150,8 +190,8 @@ export default function ListsPage() {
           ))}
         </div>
 
-        {/* Add college */}
-        {activeTab === 'research' && (
+        {/* Add college — own list only */}
+        {!isViewingStudent && activeTab === 'research' && (
           <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
             <input
               value={addName}
@@ -174,8 +214,8 @@ export default function ListsPage() {
         {displayList.length === 0 ? (
           <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '40px 24px', textAlign: 'center', color: '#9ca3af' }}>
             {activeTab === 'research'
-              ? 'No colleges yet. Ask Soar about colleges to build your list, or add one above.'
-              : 'No applications yet. Update a college\'s status to "Applying" to see it here.'}
+              ? (isViewingStudent ? 'No colleges on this student\'s list yet.' : 'No colleges yet. Ask Soar about colleges to build your list, or add one above.')
+              : (isViewingStudent ? 'No applications yet.' : 'No applications yet. Update a college\'s status to "Applying" to see it here.')}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -191,25 +231,39 @@ export default function ListsPage() {
                   )}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                  <select
-                    value={e.status}
-                    onChange={(ev) => updateStatus(e.id, ev.target.value)}
-                    style={{
+                  {isViewingStudent ? (
+                    /* Read-only status badge */
+                    <span style={{
                       border: `1.5px solid ${STATUS_COLORS[e.status] || '#e5e7eb'}`,
-                      borderRadius: 6, padding: '4px 8px', fontSize: '0.78rem',
+                      borderRadius: 6, padding: '4px 10px', fontSize: '0.78rem',
                       fontWeight: 600, color: STATUS_COLORS[e.status] || '#374151',
-                      background: '#fff', cursor: 'pointer', outline: 'none',
-                    }}
-                  >
-                    {Object.entries(STATUS_LABELS).map(([v, l]) => (
-                      <option key={v} value={v}>{l}</option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={() => removeCollege(e.id)}
-                    style={{ color: '#d1d5db', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', lineHeight: 1 }}
-                    title="Remove"
-                  >×</button>
+                      background: '#fff',
+                    }}>
+                      {STATUS_LABELS[e.status] || e.status}
+                    </span>
+                  ) : (
+                    <>
+                      <select
+                        value={e.status}
+                        onChange={(ev) => updateStatus(e.id, ev.target.value)}
+                        style={{
+                          border: `1.5px solid ${STATUS_COLORS[e.status] || '#e5e7eb'}`,
+                          borderRadius: 6, padding: '4px 8px', fontSize: '0.78rem',
+                          fontWeight: 600, color: STATUS_COLORS[e.status] || '#374151',
+                          background: '#fff', cursor: 'pointer', outline: 'none',
+                        }}
+                      >
+                        {Object.entries(STATUS_LABELS).map(([v, l]) => (
+                          <option key={v} value={v}>{l}</option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => removeCollege(e.id)}
+                        style={{ color: '#d1d5db', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', lineHeight: 1 }}
+                        title="Remove"
+                      >×</button>
+                    </>
+                  )}
                 </div>
               </div>
             ))}
@@ -217,5 +271,13 @@ export default function ListsPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function ListsPage() {
+  return (
+    <Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: '#9ca3af' }}>Loading...</div>}>
+      <ListsContent />
+    </Suspense>
   )
 }

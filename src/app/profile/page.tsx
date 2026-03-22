@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useAuth, useUser } from '@clerk/nextjs'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
 interface Profile {
@@ -42,12 +43,17 @@ const INCOME_TIERS = [
   { value: '110k_plus', label: 'Over $110,000' },
 ]
 
-export default function ProfilePage() {
+function ProfileContent() {
   const { getToken } = useAuth()
   const { user: clerkUser } = useUser()
+  const searchParams = useSearchParams()
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
-  const [userId, setUserId] = useState<number | null>(null)
+  // ?for=<studentId> — set when a counselor/parent navigates from the sidebar
+  const forParam = searchParams.get('for')
+  const forStudentId = forParam ? parseInt(forParam, 10) : null
+
+  const [myUserId, setMyUserId] = useState<number | null>(null)
   const [accountType, setAccountType] = useState<string>('student')
   const [profile, setProfile] = useState<Profile>({})
   const [activities, setActivities] = useState<Activity[]>([])
@@ -55,6 +61,7 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [studentName, setStudentName] = useState<string | null>(null)
   // Counselor-specific fields
   const [counselorOrg, setCounselorOrg] = useState('')
   const [counselorType, setCounselorType] = useState('')
@@ -64,22 +71,40 @@ export default function ProfilePage() {
   const [showAddActivity, setShowAddActivity] = useState(false)
   const [newActivity, setNewActivity] = useState({ category: '', role: '', organization: '', description: '', hours_per_week: '', weeks_per_year: '', is_current: true })
 
+  // True when we're viewing someone else's profile (read-only)
+  const isViewingStudent = forStudentId !== null
+
   useEffect(() => {
     const load = async () => {
       try {
         const token = await getToken()
-        // Get user_id from /my-usage
+
+        // Always fetch our own usage first (for account_type + myUserId)
         const usageRes = await fetch(`${apiUrl}/my-usage`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         if (!usageRes.ok) { setError('Not signed in.'); setLoading(false); return }
         const usage = await usageRes.json()
-        const id = usage.user_id
-        setUserId(id)
+        setMyUserId(usage.user_id)
         setAccountType(usage.account_type || 'student')
 
-        // Get profile
-        const profRes = await fetch(`${apiUrl}/profile/${id}`, {
+        // Determine which user's profile to load
+        const targetId = forStudentId ?? usage.user_id
+
+        // If viewing a student, resolve their name from /my-students
+        if (forStudentId) {
+          const studentsRes = await fetch(`${apiUrl}/my-students`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          if (studentsRes.ok) {
+            const students: Array<{ id: number; full_name: string; email: string }> = await studentsRes.json()
+            const match = students.find((s) => s.id === forStudentId)
+            if (match) setStudentName(match.full_name || match.email)
+          }
+        }
+
+        // Load profile
+        const profRes = await fetch(`${apiUrl}/profile/${targetId}`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         if (profRes.ok) {
@@ -91,21 +116,23 @@ export default function ProfilePage() {
             setCounselorType(data.counselor_info.counselor_type || '')
           }
         }
-      } catch (e) {
+      } catch {
         setError('Failed to load profile.')
       } finally {
         setLoading(false)
       }
     }
     load()
-  }, [getToken, apiUrl])
+  }, [getToken, apiUrl, forStudentId])
+
+  const targetId = forStudentId ?? myUserId
 
   const saveProfile = async () => {
-    if (!userId) return
+    if (!targetId || isViewingStudent) return
     setSaving(true)
     try {
       const token = await getToken()
-      const res = await fetch(`${apiUrl}/profile/${userId}`, {
+      const res = await fetch(`${apiUrl}/profile/${targetId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(profile),
@@ -115,6 +142,7 @@ export default function ProfilePage() {
   }
 
   const deleteActivity = async (activityId: number) => {
+    if (isViewingStudent) return
     const token = await getToken()
     await fetch(`${apiUrl}/profile/activities/${activityId}`, {
       method: 'DELETE',
@@ -124,9 +152,9 @@ export default function ProfilePage() {
   }
 
   const addActivity = async () => {
-    if (!userId || !newActivity.category || !newActivity.role || !newActivity.organization) return
+    if (!targetId || isViewingStudent || !newActivity.category || !newActivity.role || !newActivity.organization) return
     const token = await getToken()
-    const res = await fetch(`${apiUrl}/profile/${userId}/activities`, {
+    const res = await fetch(`${apiUrl}/profile/${targetId}/activities`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({
@@ -143,26 +171,44 @@ export default function ProfilePage() {
     }
   }
 
+  const inputStyle = (extra?: React.CSSProperties): React.CSSProperties => ({
+    width: '100%',
+    border: '1px solid #e5e7eb',
+    borderRadius: 8,
+    padding: '8px 12px',
+    fontSize: '0.875rem',
+    outline: 'none',
+    boxSizing: 'border-box',
+    background: isViewingStudent ? '#f9fafb' : '#fff',
+    color: isViewingStudent ? '#6b7280' : '#111827',
+    ...extra,
+  })
+
   const field = (label: string, key: keyof Profile, type: string = 'text', placeholder: string = '') => (
     <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: 4 }}>{label}</label>
       <input
         type={type}
         value={(profile[key] as string | number) ?? ''}
-        onChange={(e) => setProfile((p) => ({ ...p, [key]: type === 'number' ? (e.target.value === '' ? undefined : Number(e.target.value)) : e.target.value }))}
+        onChange={(e) => !isViewingStudent && setProfile((p) => ({ ...p, [key]: type === 'number' ? (e.target.value === '' ? undefined : Number(e.target.value)) : e.target.value }))}
         placeholder={placeholder}
-        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+        readOnly={isViewingStudent}
+        style={inputStyle()}
       />
     </div>
   )
 
-  if (loading) return <div className="flex items-center justify-center h-screen text-gray-400">Loading...</div>
+  if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: '#9ca3af' }}>Loading...</div>
   if (error) return (
-    <div className="flex flex-col items-center justify-center h-screen gap-4">
-      <p className="text-gray-500">{error}</p>
-      <Link href="/sign-in" className="text-indigo-600 underline">Sign in</Link>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', gap: 16 }}>
+      <p style={{ color: '#6b7280' }}>{error}</p>
+      <Link href="/sign-in" style={{ color: '#4f46e5', textDecoration: 'underline' }}>Sign in</Link>
     </div>
   )
+
+  const pageTitle = isViewingStudent
+    ? `${studentName ? `${studentName}'s` : 'Student'} Profile`
+    : accountType === 'counselor' ? 'My Info' : 'My Profile'
 
   return (
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', background: '#f5f6fa', minHeight: '100dvh' }}>
@@ -177,12 +223,19 @@ export default function ProfilePage() {
       </header>
 
       <div style={{ maxWidth: 760, margin: '0 auto', padding: '32px 24px 80px' }}>
-        <h1 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#0c1b33', marginBottom: 24 }}>
-          {accountType === 'counselor' ? 'My Info' : 'My Profile'}
+        <h1 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#0c1b33', marginBottom: isViewingStudent ? 12 : 24 }}>
+          {pageTitle}
         </h1>
 
-        {/* Counselor info section */}
-        {accountType === 'counselor' && (
+        {/* Read-only banner */}
+        {isViewingStudent && (
+          <div style={{ background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 10, padding: '10px 16px', marginBottom: 24, fontSize: '0.875rem', color: '#4338ca' }}>
+            👁 You&apos;re viewing {studentName ? `${studentName}'s` : 'this student\'s'} profile. Fields are read-only.
+          </div>
+        )}
+
+        {/* Counselor info section — only when viewing own profile as counselor */}
+        {!isViewingStudent && accountType === 'counselor' && (
           <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 24, marginBottom: 24 }}>
             <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0c1b33', marginBottom: 16 }}>Professional Information</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -207,13 +260,13 @@ export default function ProfilePage() {
                   value={counselorOrg}
                   onChange={(e) => setCounselorOrg(e.target.value)}
                   placeholder={counselorType === 'school_counselor' ? 'Lincoln High School' : 'Smith College Consulting'}
-                  style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 12px', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }}
+                  style={inputStyle()}
                 />
               </div>
             </div>
             <button
               onClick={async () => {
-                if (!userId || !clerkUser) return
+                if (!myUserId || !clerkUser) return
                 setSavingCounselor(true)
                 try {
                   const token = await getToken()
@@ -240,8 +293,8 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* Academic info + student sections — students only */}
-        {accountType !== 'counselor' && (<>
+        {/* Academic info + student sections */}
+        {(accountType !== 'counselor' || isViewingStudent) && (<>
         <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 24, marginBottom: 24 }}>
           <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0c1b33', marginBottom: 16 }}>Academic Information</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
@@ -268,33 +321,36 @@ export default function ProfilePage() {
 
         {/* Preferences */}
         <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 24, marginBottom: 24 }}>
-          <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0c1b33', marginBottom: 16 }}>Preferences & Goals</h2>
+          <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0c1b33', marginBottom: 16 }}>Preferences &amp; Goals</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div>
               <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: 4 }}>Intended Major(s)</label>
               <input
                 value={profile.intended_majors ?? ''}
-                onChange={(e) => setProfile((p) => ({ ...p, intended_majors: e.target.value }))}
+                onChange={(e) => !isViewingStudent && setProfile((p) => ({ ...p, intended_majors: e.target.value }))}
                 placeholder="Computer Science, Economics"
-                style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 12px', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }}
+                readOnly={isViewingStudent}
+                style={inputStyle()}
               />
             </div>
             <div>
               <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: 4 }}>College Preferences</label>
               <textarea
                 value={profile.college_preferences ?? ''}
-                onChange={(e) => setProfile((p) => ({ ...p, college_preferences: e.target.value }))}
+                onChange={(e) => !isViewingStudent && setProfile((p) => ({ ...p, college_preferences: e.target.value }))}
                 placeholder="Small liberal arts, urban setting, strong research opportunities..."
                 rows={3}
-                style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 12px', fontSize: '0.875rem', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
+                readOnly={isViewingStudent}
+                style={{ ...inputStyle(), resize: 'vertical' }}
               />
             </div>
             <div>
               <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: 4 }}>Family Income Tier</label>
               <select
                 value={profile.family_income_tier ?? ''}
-                onChange={(e) => setProfile((p) => ({ ...p, family_income_tier: e.target.value }))}
-                style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 12px', fontSize: '0.875rem', outline: 'none', background: '#fff' }}
+                onChange={(e) => !isViewingStudent && setProfile((p) => ({ ...p, family_income_tier: e.target.value }))}
+                disabled={isViewingStudent}
+                style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 12px', fontSize: '0.875rem', outline: 'none', background: isViewingStudent ? '#f9fafb' : '#fff', color: isViewingStudent ? '#6b7280' : '#111827' }}
               >
                 <option value="">— Select —</option>
                 {INCOME_TIERS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
@@ -305,37 +361,42 @@ export default function ProfilePage() {
               <input
                 type="number"
                 value={profile.budget_max ?? ''}
-                onChange={(e) => setProfile((p) => ({ ...p, budget_max: e.target.value === '' ? undefined : Number(e.target.value) }))}
+                onChange={(e) => !isViewingStudent && setProfile((p) => ({ ...p, budget_max: e.target.value === '' ? undefined : Number(e.target.value) }))}
                 placeholder="30000"
-                style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 12px', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }}
+                readOnly={isViewingStudent}
+                style={inputStyle()}
               />
             </div>
           </div>
         </div>
 
-        {/* Save button */}
-        <button
-          onClick={saveProfile}
-          disabled={saving}
-          style={{ background: saving ? '#818cf8' : '#4f46e5', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 24px', fontSize: '0.9rem', fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', marginBottom: 32 }}
-        >
-          {saved ? '✓ Saved' : saving ? 'Saving…' : 'Save Profile'}
-        </button>
+        {/* Save button — own profile only */}
+        {!isViewingStudent && (
+          <button
+            onClick={saveProfile}
+            disabled={saving}
+            style={{ background: saving ? '#818cf8' : '#4f46e5', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 24px', fontSize: '0.9rem', fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', marginBottom: 32 }}
+          >
+            {saved ? '✓ Saved' : saving ? 'Saving…' : 'Save Profile'}
+          </button>
+        )}
         </>)}
 
         {/* Activities */}
         <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 24, marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0c1b33' }}>Activities & Awards</h2>
-            <button
-              onClick={() => setShowAddActivity((v) => !v)}
-              style={{ fontSize: '0.8rem', color: '#4f46e5', border: '1px solid #c7d2fe', borderRadius: 6, padding: '4px 12px', background: '#eef2ff', cursor: 'pointer' }}
-            >
-              + Add
-            </button>
+            <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0c1b33' }}>Activities &amp; Awards</h2>
+            {!isViewingStudent && (
+              <button
+                onClick={() => setShowAddActivity((v) => !v)}
+                style={{ fontSize: '0.8rem', color: '#4f46e5', border: '1px solid #c7d2fe', borderRadius: 6, padding: '4px 12px', background: '#eef2ff', cursor: 'pointer' }}
+              >
+                + Add
+              </button>
+            )}
           </div>
 
-          {showAddActivity && (
+          {!isViewingStudent && showAddActivity && (
             <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: 16, marginBottom: 16 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
                 <div>
@@ -380,7 +441,9 @@ export default function ProfilePage() {
                     <p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: 2 }}>{a.category}{a.hours_per_week ? ` · ${a.hours_per_week} hrs/wk` : ''}{a.weeks_per_year ? ` · ${a.weeks_per_year} wks/yr` : ''}</p>
                     {a.description && <p style={{ fontSize: '0.8rem', color: '#374151', marginTop: 4 }}>{a.description}</p>}
                   </div>
-                  <button onClick={() => deleteActivity(a.id)} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', flexShrink: 0, marginLeft: 12 }}>Remove</button>
+                  {!isViewingStudent && (
+                    <button onClick={() => deleteActivity(a.id)} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', flexShrink: 0, marginLeft: 12 }}>Remove</button>
+                  )}
                 </div>
               ))}
             </div>
@@ -388,5 +451,13 @@ export default function ProfilePage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: '#9ca3af' }}>Loading...</div>}>
+      <ProfileContent />
+    </Suspense>
   )
 }
