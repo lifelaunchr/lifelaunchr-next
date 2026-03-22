@@ -13,24 +13,29 @@ const STARTERS = [
 
 const VALUE_PROPS = [
   {
-    icon: '🔍',
-    title: 'Smart college search',
-    desc: 'Find schools that match your academics, interests, location, and budget from our database of 1,514+ colleges.',
+    icon: '🧑‍🏫',
+    title: 'Counselor-guided',
+    desc: 'Student, counselor, and parent in one shared workspace — everyone sees the same research.',
   },
   {
-    icon: '💰',
-    title: 'Financial aid guidance',
-    desc: 'Understand net price, merit aid, need-based aid, FAFSA, and CSS Profile — for every school on your list.',
+    icon: '✅',
+    title: 'Fewer hallucinations',
+    desc: 'Answers grounded in authoritative college and career databases, not internet guesswork.',
   },
   {
-    icon: '📊',
-    title: 'Fit assessment',
-    desc: 'Get honest assessments of your admit chances and find your best safety, match, and reach schools.',
+    icon: '🧭',
+    title: 'Process guidance',
+    desc: 'Helps you know what to ask, what to look for, and when — at every stage of the journey.',
   },
   {
-    icon: '📝',
-    title: 'Application strategy',
-    desc: 'Plan deadlines, essay topics, and a balanced college list tailored to your goals.',
+    icon: '👤',
+    title: 'Knows you',
+    desc: 'Your profile plus real data equals advice that actually fits your situation and goals.',
+  },
+  {
+    icon: '📈',
+    title: 'Gets smarter',
+    desc: 'Builds a personalized research record over months, not just one chat session.',
   },
 ]
 
@@ -54,13 +59,13 @@ export function WelcomeCard({ onSendMessage }: WelcomeCardProps) {
           <h2 className="text-2xl font-bold text-gray-800 mb-2">
             Welcome to Soar by LifeLaunchr
           </h2>
-          <p className="text-gray-500 text-sm">
-            Your AI-powered college advisor — ask me anything about college search, fit, and applications.
+          <p className="text-gray-500 text-sm max-w-lg mx-auto">
+            The college and career planning assistant that knows you, remembers everything, and gets smarter the more you use it.
           </p>
         </div>
 
         {/* Value props */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 text-left">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6 text-left">
           {VALUE_PROPS.map((vp) => (
             <div
               key={vp.title}

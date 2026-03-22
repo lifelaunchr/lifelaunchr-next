@@ -2,6 +2,7 @@ import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 
 const isProtectedRoute = createRouteMatcher([
   // /chat is intentionally NOT protected — guests can access it without signing in
+  '/onboarding(.*)',
   '/profile(.*)',
   '/lists(.*)',
   '/admin(.*)',

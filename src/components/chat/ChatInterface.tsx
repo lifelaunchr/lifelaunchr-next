@@ -375,37 +375,43 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
       />
 
       <div className="flex flex-1 overflow-hidden">
+        {/* Mobile backdrop */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 z-20 md:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
         {/* Sidebar */}
         <aside
-          className={`bg-[#1a1a2e] text-slate-300 flex flex-col flex-shrink-0 border-r border-white/10 transition-all duration-200 overflow-hidden ${
-            sidebarOpen ? 'w-[260px] opacity-100' : 'w-0 opacity-0'
-          }`}
+          className={`
+            fixed md:relative inset-y-0 left-0 z-30
+            bg-[#1a1a2e] text-slate-300 flex flex-col flex-shrink-0
+            border-r border-white/10 transition-all duration-200 overflow-hidden
+            ${sidebarOpen ? 'w-[260px]' : 'w-0'}
+          `}
         >
-          {/* Sidebar nav links */}
-          {userId && (
-            <div className="px-3 py-2 border-b border-white/10 flex gap-2 flex-shrink-0">
-              <Link
-                href="/profile"
-                className="flex-1 text-center text-xs text-slate-400 hover:text-white border border-white/15 hover:border-white/30 rounded-md py-1.5 transition-all"
-              >
-                👤 Profile
-              </Link>
-              <Link
-                href="/lists"
-                className="flex-1 text-center text-xs text-slate-400 hover:text-white border border-white/15 hover:border-white/30 rounded-md py-1.5 transition-all"
-              >
-                🎓 My Lists
-              </Link>
-            </div>
-          )}
-
-          {/* Session list header */}
-          <div className="px-4 py-3 text-xs font-semibold uppercase tracking-widest text-slate-500 border-b border-white/10 flex-shrink-0">
-            Past Conversations
+          {/* New conversation button */}
+          <div className="px-3 pt-3 pb-2 flex-shrink-0">
+            <button
+              onClick={() => { handleNewConversation(); setSidebarOpen(window.innerWidth < 768 ? false : true) }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-300 hover:text-white hover:bg-white/10 rounded-lg transition-all border border-white/10"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 flex-shrink-0">
+                <path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712zM19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z" />
+              </svg>
+              New conversation
+            </button>
           </div>
 
-          {/* Session list */}
-          <div className="flex-1 overflow-y-auto py-1">
+          {/* Recent label */}
+          <div className="px-4 py-1 text-[10px] font-semibold uppercase tracking-widest text-slate-600 flex-shrink-0">
+            Recent
+          </div>
+
+          {/* Session list — scrollable */}
+          <div className="flex-1 overflow-y-auto py-1 min-h-0">
             {!userId ? (
               <p className="text-center text-slate-600 text-xs px-4 py-5">
                 Sign in to save conversations.
@@ -418,7 +424,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
               sessions.map((s) => (
                 <button
                   key={s.id}
-                  onClick={() => loadSession(s.id)}
+                  onClick={() => { loadSession(s.id); setSidebarOpen(window.innerWidth < 768 ? false : true) }}
                   className={`w-full text-left px-4 py-2.5 hover:bg-white/5 transition-colors border-b border-white/5 last:border-0 ${
                     activeSessionId === s.id ? 'bg-white/10' : ''
                   }`}
@@ -433,6 +439,26 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
               ))
             )}
           </div>
+
+          {/* Bottom nav — pinned */}
+          {userId && (
+            <div className="border-t border-white/10 p-3 flex-shrink-0 flex flex-col gap-0.5">
+              <Link
+                href="/profile"
+                className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+              >
+                <span className="text-base leading-none">👤</span>
+                <span>Profile</span>
+              </Link>
+              <Link
+                href="/lists"
+                className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+              >
+                <span className="text-base leading-none">🎓</span>
+                <span>My College Lists</span>
+              </Link>
+            </div>
+          )}
         </aside>
 
         {/* Main panel */}
