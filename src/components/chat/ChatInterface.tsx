@@ -78,6 +78,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
   const [sessions, setSessions] = useState<Session[]>([])
   const [activeSessionId, setActiveSessionId] = useState<number | null>(null)
   const [isCounselor, setIsCounselor] = useState(false)
+  const [isParent, setIsParent] = useState(false)
   const [myStudents, setMyStudents] = useState<Array<{ id: number; full_name: string; email: string }>>([])
   const [inviteUrl, setInviteUrl] = useState<string | null>(null)
   const [inviteCopied, setInviteCopied] = useState(false)
@@ -110,23 +111,27 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
       if (res.ok) {
         const data = await res.json()
         setUsageData(data)
-        // If this is a counselor, load their student list and invite link
-        if (data.account_type === 'counselor') {
-          setIsCounselor(true)
-          const [studentsRes, inviteRes] = await Promise.all([
-            fetch(`${apiUrl}/my-students`, { headers: { Authorization: `Bearer ${token}` } }),
-            fetch(`${apiUrl}/my-invite`, { headers: { Authorization: `Bearer ${token}` } }),
-          ])
+
+        const accountType = data.account_type ?? 'student'
+        const counselor = accountType === 'counselor'
+        const parent = accountType === 'parent'
+        setIsCounselor(counselor)
+        setIsParent(parent)
+
+        // Invite link — available to everyone
+        const inviteRes = await fetch(`${apiUrl}/my-invite`, { headers: { Authorization: `Bearer ${token}` } })
+        if (inviteRes.ok) {
+          const inv = await inviteRes.json()
+          const frontendBase = typeof window !== 'undefined' ? window.location.origin : ''
+          setInviteUrl(`${frontendBase}/join?code=${inv.token}`)
+        }
+
+        // Student list — counselors and parents only
+        if (counselor || parent) {
+          const studentsRes = await fetch(`${apiUrl}/my-students`, { headers: { Authorization: `Bearer ${token}` } })
           if (studentsRes.ok) {
             const students = await studentsRes.json()
             setMyStudents(students.map((s: { id: number; full_name: string; email: string }) => ({ id: s.id, full_name: s.full_name, email: s.email })))
-          }
-          if (inviteRes.ok) {
-            const inv = await inviteRes.json()
-            // Replace backend origin with the frontend URL so the link goes to Vercel
-            const frontendBase = typeof window !== 'undefined' ? window.location.origin : ''
-            const token_val = inv.token
-            setInviteUrl(`${frontendBase}/join?code=${token_val}`)
           }
         }
       }
@@ -383,7 +388,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
         abortControllerRef.current = null
       }
     },
-    [isStreaming, userId, getToken, serverSessionId, conversationHistory, guestToken, activeModules, apiUrl, fetchSessions]
+    [isStreaming, userId, getToken, serverSessionId, conversationHistory, guestToken, activeModules, apiUrl, fetchSessions, forStudentId]
   )
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -482,49 +487,81 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
           {/* Bottom nav — pinned */}
           {userId && (
             <div className="border-t border-white/10 p-3 flex-shrink-0 flex flex-col gap-0.5">
-              {/* Counselor: student picker + invite link */}
-              {isCounselor && (
-                <>
-                  {myStudents.length > 0 && (
-                    <div className="mb-2">
-                      <p className="text-[10px] uppercase tracking-widest text-slate-600 px-3 mb-1">Researching for</p>
-                      <select
-                        value={forStudentId ?? ''}
-                        onChange={(e) => setForStudentId(e.target.value ? Number(e.target.value) : null)}
-                        className="w-full bg-white/5 border border-white/10 text-slate-300 text-xs rounded-lg px-3 py-2 focus:outline-none"
-                      >
-                        <option value="">— Myself —</option>
-                        {myStudents.map((s) => (
-                          <option key={s.id} value={s.id}>{s.full_name || s.email}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                  {inviteUrl && (
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(inviteUrl)
-                        setInviteCopied(true)
-                        setTimeout(() => setInviteCopied(false), 2000)
-                      }}
-                      className="flex items-center gap-3 px-3 py-2 text-xs text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all w-full text-left"
-                    >
-                      <span className="text-base leading-none">{inviteCopied ? '✅' : '🔗'}</span>
-                      <span>{inviteCopied ? 'Copied!' : 'Copy student invite link'}</span>
-                    </button>
-                  )}
-                  <div className="border-t border-white/10 mt-1 mb-1" />
-                </>
+              {/* Counselors + Parents: student picker dropdown */}
+              {(isCounselor || isParent) && myStudents.length > 0 && (
+                <div className="mb-2">
+                  <p className="text-[10px] uppercase tracking-widest text-slate-600 px-3 mb-1">
+                    {isCounselor ? 'Researching for' : 'Your student'}
+                  </p>
+                  <select
+                    value={forStudentId ?? ''}
+                    onChange={(e) => setForStudentId(e.target.value ? Number(e.target.value) : null)}
+                    className="w-full bg-white/5 border border-white/10 text-slate-300 text-xs rounded-lg px-3 py-2 focus:outline-none"
+                  >
+                    <option value="">— Select student —</option>
+                    {myStudents.map((s) => (
+                      <option key={s.id} value={s.id}>{s.full_name || s.email}</option>
+                    ))}
+                  </select>
+                </div>
               )}
 
+              {/* Invite link — all signed-in users */}
+              {inviteUrl && (
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(inviteUrl)
+                    setInviteCopied(true)
+                    setTimeout(() => setInviteCopied(false), 2000)
+                  }}
+                  className="flex items-center gap-3 px-3 py-2 text-xs text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all w-full text-left"
+                >
+                  <span className="text-base leading-none">{inviteCopied ? '✅' : '🔗'}</span>
+                  <span>
+                    {inviteCopied
+                      ? 'Copied!'
+                      : isCounselor
+                      ? 'Copy student invite link'
+                      : isParent
+                      ? 'Copy student invite link'
+                      : 'Copy invite link'}
+                  </span>
+                </button>
+              )}
+
+              <div className="border-t border-white/10 mt-1 mb-1" />
+
+              {/* My Info / Profile — always own profile */}
               <Link
                 href="/profile"
                 className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
               >
                 <span className="text-base leading-none">👤</span>
-                <span>{isCounselor ? 'My info' : 'Profile'}</span>
+                <span>{isCounselor || isParent ? 'My Info' : 'Profile'}</span>
               </Link>
-              {!isCounselor && (
+
+              {/* Student profile + lists — shown when a student is selected (counselor/parent) */}
+              {(isCounselor || isParent) && forStudentId && (
+                <>
+                  <Link
+                    href={`/profile?for=${forStudentId}`}
+                    className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                  >
+                    <span className="text-base leading-none">🧑‍🎓</span>
+                    <span>Student Profile</span>
+                  </Link>
+                  <Link
+                    href={`/lists?for=${forStudentId}`}
+                    className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                  >
+                    <span className="text-base leading-none">🎓</span>
+                    <span>College Lists</span>
+                  </Link>
+                </>
+              )}
+
+              {/* My College Lists — students only */}
+              {!isCounselor && !isParent && (
                 <Link
                   href="/lists"
                   className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
