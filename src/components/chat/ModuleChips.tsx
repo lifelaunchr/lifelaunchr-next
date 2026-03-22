@@ -2,11 +2,11 @@
 
 const MODULES = [
   { id: 'athletics', label: 'Athletics', emoji: '🏈' },
-  { id: 'religious', label: 'Religious / spiritual life', emoji: '✝️' },
-  { id: 'lgbtq', label: 'LGBTQ+ & campus culture', emoji: '🏳️‍🌈' },
+  { id: 'religious_life', label: 'Religious / spiritual life', emoji: '✝️' },
+  { id: 'campus_culture', label: 'LGBTQ+ & campus culture', emoji: '🏳️‍🌈' },
   { id: 'extracurriculars', label: 'Extracurriculars', emoji: '🎭' },
   { id: 'rankings', label: 'Rankings', emoji: '🏆' },
-  { id: 'neurodiversity', label: 'Learning differences / neurodiversity', emoji: '🧠' },
+  { id: 'learning_differences', label: 'Learning differences / neurodiversity', emoji: '🧠' },
   { id: 'diversity', label: 'Racial & ethnic diversity', emoji: '🌍' },
 ]
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '@clerk/nextjs'
+import Link from 'next/link'
 import { ChatHeader } from './ChatHeader'
 import { ChatMessage } from './ChatMessage'
 import { ModuleChips } from './ModuleChips'
@@ -14,10 +15,17 @@ export interface Message {
   content: string
 }
 
+interface HistoryItem {
+  role: string
+  content: string
+}
+
 interface UsageData {
+  user_id?: number
   messages_used: number
-  effective_limit: number
+  effective_limit: number | null
   reset_date?: string
+  account_type?: string
 }
 
 interface LimitReachedData {
@@ -26,23 +34,44 @@ interface LimitReachedData {
   reset_date?: string
 }
 
+interface Session {
+  id: number
+  title: string
+  last_active_at: string
+  active_topics?: string[]
+}
+
 interface ChatInterfaceProps {
   userId: string | null
 }
 
+function formatSessionDate(iso: string): string {
+  const d = new Date(iso)
+  const now = new Date()
+  const diffDays = Math.floor((now.getTime() - d.getTime()) / 86400000)
+  if (diffDays === 0) return 'Today'
+  if (diffDays === 1) return 'Yesterday'
+  if (diffDays < 7) return d.toLocaleDateString('en-US', { weekday: 'long' })
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
 export function ChatInterface({ userId }: ChatInterfaceProps) {
   const { getToken } = useAuth()
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
   const [messages, setMessages] = useState<Message[]>([])
+  const [conversationHistory, setConversationHistory] = useState<HistoryItem[]>([])
+  const [serverSessionId, setServerSessionId] = useState<number | null>(null)
   const [input, setInput] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
-  const [sessionId] = useState<string>(() => crypto.randomUUID())
   const [guestToken, setGuestToken] = useState<string | null>(null)
   const [activeModules, setActiveModules] = useState<string[]>([])
   const [usageData, setUsageData] = useState<UsageData | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [limitModalData, setLimitModalData] = useState<LimitReachedData | null>(null)
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
+  const [sessions, setSessions] = useState<Session[]>([])
+  const [activeSessionId, setActiveSessionId] = useState<number | null>(null)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -60,26 +89,39 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
     }
   }, [userId])
 
-  // Fetch usage data for authenticated users
-  useEffect(() => {
+  // Fetch usage + session list for authenticated users
+  const fetchUsage = useCallback(async () => {
     if (!userId) return
-    const fetchUsage = async () => {
-      try {
-        const token = await getToken()
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-        const res = await fetch(`${apiUrl}/my-usage`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        if (res.ok) {
-          const data = await res.json()
-          setUsageData(data)
-        }
-      } catch {
-        // silently ignore
+    try {
+      const token = await getToken()
+      const res = await fetch(`${apiUrl}/my-usage`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setUsageData(data)
       }
-    }
+    } catch { /* silently ignore */ }
+  }, [userId, getToken, apiUrl])
+
+  const fetchSessions = useCallback(async () => {
+    if (!userId) return
+    try {
+      const token = await getToken()
+      const res = await fetch(`${apiUrl}/sessions`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setSessions(data)
+      }
+    } catch { /* silently ignore */ }
+  }, [userId, getToken, apiUrl])
+
+  useEffect(() => {
     fetchUsage()
-  }, [userId, getToken])
+    fetchSessions()
+  }, [fetchUsage, fetchSessions])
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -101,48 +143,59 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
   }, [])
 
   const handleNewConversation = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
-    }
+    if (abortControllerRef.current) abortControllerRef.current.abort()
     setMessages([])
+    setConversationHistory([])
+    setServerSessionId(null)
+    setActiveSessionId(null)
     setInput('')
     setIsStreaming(false)
     setStreamingMessageId(null)
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto'
-    }
+    if (textareaRef.current) textareaRef.current.style.height = 'auto'
   }, [])
+
+  const loadSession = useCallback(async (sessionId: number) => {
+    try {
+      const token = userId ? await getToken() : null
+      const headers: Record<string, string> = {}
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      if (!token && guestToken) {
+        // guest
+      }
+      const res = await fetch(`${apiUrl}/sessions/${sessionId}`, { headers })
+      if (!res.ok) return
+      const data = await res.json()
+      const msgs: Message[] = (data.messages || []).map((m: HistoryItem) => ({
+        id: crypto.randomUUID(),
+        role: m.role as 'user' | 'assistant',
+        content: m.content,
+      }))
+      setMessages(msgs)
+      setConversationHistory(data.messages || [])
+      setServerSessionId(sessionId)
+      setActiveSessionId(sessionId)
+      setInput('')
+      if (textareaRef.current) textareaRef.current.style.height = 'auto'
+    } catch { /* silently ignore */ }
+  }, [userId, getToken, guestToken, apiUrl])
 
   const sendMessage = useCallback(
     async (text: string) => {
       const trimmed = text.trim()
       if (!trimmed || isStreaming) return
 
-      const userMsg: Message = {
-        id: crypto.randomUUID(),
-        role: 'user',
-        content: trimmed,
-      }
-
+      const userMsg: Message = { id: crypto.randomUUID(), role: 'user', content: trimmed }
       const assistantMsgId = crypto.randomUUID()
-      const assistantMsg: Message = {
-        id: assistantMsgId,
-        role: 'assistant',
-        content: '',
-      }
+      const assistantMsg: Message = { id: assistantMsgId, role: 'assistant', content: '' }
 
       setMessages((prev) => [...prev, userMsg, assistantMsg])
       setStreamingMessageId(assistantMsgId)
       setInput('')
-      if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto'
-      }
+      if (textareaRef.current) textareaRef.current.style.height = 'auto'
       setIsStreaming(true)
 
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
         const token = userId ? await getToken() : null
-
         abortControllerRef.current = new AbortController()
 
         const response = await fetch(`${apiUrl}/chat`, {
@@ -153,6 +206,8 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
           },
           body: JSON.stringify({
             message: trimmed,
+            history: conversationHistory,
+            ...(serverSessionId ? { session_id: serverSessionId } : {}),
             ...(guestToken && !userId ? { guest_token: guestToken } : {}),
             active_topics: activeModules,
           }),
@@ -193,7 +248,6 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
               const data = JSON.parse(rawData)
 
               if (data.type === 'text') {
-                // incremental streaming chunk (future backend support)
                 setMessages((prev) =>
                   prev.map((m) =>
                     m.id === assistantMsgId
@@ -202,7 +256,6 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                   )
                 )
               } else if (data.type === 'status') {
-                // tool-call status while backend is thinking
                 setMessages((prev) =>
                   prev.map((m) =>
                     m.id === assistantMsgId
@@ -211,24 +264,23 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                   )
                 )
               } else if (data.type === 'done') {
-                // final response — set full text
                 if (data.response) {
                   setMessages((prev) =>
                     prev.map((m) =>
-                      m.id === assistantMsgId
-                        ? { ...m, content: data.response }
-                        : m
+                      m.id === assistantMsgId ? { ...m, content: data.response } : m
                     )
                   )
                 }
-                // Update usage if returned
-                if (data.messages_used !== undefined && data.effective_limit !== undefined) {
-                  setUsageData({
-                    messages_used: data.messages_used,
-                    effective_limit: data.effective_limit,
-                    reset_date: data.reset_date,
-                  })
+                if (data.history) setConversationHistory(data.history)
+                if (data.session_id) {
+                  setServerSessionId(data.session_id)
+                  setActiveSessionId(data.session_id)
                 }
+                if (data.messages_used !== undefined && data.effective_limit !== undefined) {
+                  setUsageData((prev) => prev ? { ...prev, messages_used: data.messages_used, effective_limit: data.effective_limit } : null)
+                }
+                // Refresh session list after each message
+                fetchSessions()
               } else if (data.type === 'error') {
                 setMessages((prev) =>
                   prev.map((m) =>
@@ -243,12 +295,9 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                   effective_limit: data.effective_limit,
                   reset_date: data.reset_date,
                 })
-                // Remove the empty assistant message
                 setMessages((prev) => prev.filter((m) => m.id !== assistantMsgId))
               }
-            } catch {
-              // skip malformed SSE lines
-            }
+            } catch { /* skip malformed SSE lines */ }
           }
         }
       } catch (err: unknown) {
@@ -269,7 +318,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
         abortControllerRef.current = null
       }
     },
-    [isStreaming, userId, getToken, sessionId, guestToken, activeModules]
+    [isStreaming, userId, getToken, serverSessionId, conversationHistory, guestToken, activeModules, apiUrl, fetchSessions]
   )
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -279,16 +328,15 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
     }
   }
 
-  const handleSend = () => sendMessage(input)
-
-  // Usage bar color
-  const usagePercent = usageData
-    ? (usageData.messages_used / usageData.effective_limit) * 100
-    : 0
+  // Usage bar — guard against null effective_limit (unlimited plans)
+  const usagePercent =
+    usageData && usageData.effective_limit
+      ? (usageData.messages_used / usageData.effective_limit) * 100
+      : 0
   const usageColor =
     usagePercent >= 85
       ? 'text-red-500'
-      : usagePercent >= 66
+      : usagePercent >= 60
       ? 'text-amber-500'
       : 'text-gray-400'
 
@@ -307,13 +355,57 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
             sidebarOpen ? 'w-[260px] opacity-100' : 'w-0 opacity-0'
           }`}
         >
+          {/* Sidebar nav links */}
+          {userId && (
+            <div className="px-3 py-2 border-b border-white/10 flex gap-2 flex-shrink-0">
+              <Link
+                href="/profile"
+                className="flex-1 text-center text-xs text-slate-400 hover:text-white border border-white/15 hover:border-white/30 rounded-md py-1.5 transition-all"
+              >
+                👤 Profile
+              </Link>
+              <Link
+                href="/lists"
+                className="flex-1 text-center text-xs text-slate-400 hover:text-white border border-white/15 hover:border-white/30 rounded-md py-1.5 transition-all"
+              >
+                🎓 My Lists
+              </Link>
+            </div>
+          )}
+
+          {/* Session list header */}
           <div className="px-4 py-3 text-xs font-semibold uppercase tracking-widest text-slate-500 border-b border-white/10 flex-shrink-0">
             Past Conversations
           </div>
-          <div className="flex-1 overflow-y-auto py-2">
-            <p className="text-center text-slate-600 text-sm px-4 py-5">
-              {userId ? 'No past conversations yet.' : 'Sign in to save conversations.'}
-            </p>
+
+          {/* Session list */}
+          <div className="flex-1 overflow-y-auto py-1">
+            {!userId ? (
+              <p className="text-center text-slate-600 text-xs px-4 py-5">
+                Sign in to save conversations.
+              </p>
+            ) : sessions.length === 0 ? (
+              <p className="text-center text-slate-600 text-xs px-4 py-5">
+                No past conversations yet.
+              </p>
+            ) : (
+              sessions.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => loadSession(s.id)}
+                  className={`w-full text-left px-4 py-2.5 hover:bg-white/5 transition-colors border-b border-white/5 last:border-0 ${
+                    activeSessionId === s.id ? 'bg-white/10' : ''
+                  }`}
+                >
+                  <p className="text-xs text-slate-300 truncate leading-snug">
+                    {s.title || 'Untitled conversation'}
+                  </p>
+                  <p className="text-[10px] text-slate-600 mt-0.5">
+                    {formatSessionDate(s.last_active_at)}
+                  </p>
+                </button>
+              ))
+            )}
           </div>
         </aside>
 
@@ -354,17 +446,12 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                   style={{ minHeight: '44px' }}
                 />
                 <button
-                  onClick={handleSend}
+                  onClick={() => sendMessage(input)}
                   disabled={isStreaming || !input.trim()}
                   className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-300 text-white rounded-xl px-5 h-11 flex items-center justify-center flex-shrink-0 transition-colors cursor-pointer disabled:cursor-not-allowed"
                   aria-label="Send message"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    className="w-5 h-5"
-                  >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
                     <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
                   </svg>
                 </button>
@@ -374,15 +461,16 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                 Press Enter to send · Shift+Enter for new line
               </p>
 
-              {/* Usage counter */}
-              {userId && usageData && (
+              {/* Usage counter — only show if there is a finite limit */}
+              {userId && usageData && usageData.effective_limit !== null && (
                 <p className={`text-center text-xs mt-1 ${usageColor}`}>
                   {usageData.messages_used} of {usageData.effective_limit} messages used this month
-                  {usagePercent >= 66 && (
+                  {usagePercent >= 60 && (
                     <> · <a href="/upgrade" className="underline hover:text-indigo-500">Upgrade for more →</a></>
                   )}
                 </p>
               )}
+
               {/* Safety link */}
               <p className="text-center text-xs mt-1 text-gray-300">
                 <a href="/safety" className="hover:text-gray-400 transition-colors">Student safety</a>
