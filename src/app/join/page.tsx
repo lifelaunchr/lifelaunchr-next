@@ -14,7 +14,7 @@ function JoinContent() {
 
   const code = searchParams.get('code')
 
-  const [step, setStep] = useState<'loading' | 'confirm' | 'done' | 'no_link' | 'error'>('loading')
+  const [step, setStep] = useState<'loading' | 'confirm' | 'done' | 'no_link' | 'self_link' | 'error'>('loading')
   const [inviterName, setInviterName] = useState('')
   const [inviterType, setInviterType] = useState('')
   const [confirming, setConfirming] = useState(false)
@@ -56,7 +56,7 @@ function JoinContent() {
         }
         const data = await res.json()
         if (data.status === 'self') {
-          setStep('no_link')
+          setStep('self_link')
           return
         }
         if (!data.relationship_proposed) {
@@ -172,13 +172,27 @@ function JoinContent() {
             </>
           )}
 
-          {/* No link needed */}
+          {/* Peer invite — accounts don't create a relationship with each other */}
           {step === 'no_link' && (
             <>
               <div className="text-4xl mb-4">👋</div>
-              <h1 className="text-xl font-bold text-gray-800 mb-2">You&apos;re already set</h1>
+              <h1 className="text-xl font-bold text-gray-800 mb-2">You&apos;re in Soar!</h1>
               <p className="text-gray-500 text-sm mb-6">
-                No additional connection is needed for your account type.
+                Your account is ready to go.{inviterName ? ` No automatic connection was created between you and ${inviterName} — your account types don't link directly.` : ''}
+              </p>
+              <Link href="/chat" className="block w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl transition-colors text-sm">
+                Go to Soar
+              </Link>
+            </>
+          )}
+
+          {/* Self-invite */}
+          {step === 'self_link' && (
+            <>
+              <div className="text-4xl mb-4">😄</div>
+              <h1 className="text-xl font-bold text-gray-800 mb-2">That&apos;s your own link!</h1>
+              <p className="text-gray-500 text-sm mb-6">
+                Share this link with a student, parent, or counselor to connect your accounts.
               </p>
               <Link href="/chat" className="block w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl transition-colors text-sm">
                 Go to Soar
