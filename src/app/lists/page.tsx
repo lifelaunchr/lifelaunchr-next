@@ -45,6 +45,7 @@ function ListsContent() {
   const isViewingStudent = forStudentId !== null
 
   const [myUserId, setMyUserId] = useState<number | null>(null)
+  const [canWrite, setCanWrite] = useState(true)   // from API; false for parents (read-only)
   const [entries, setEntries] = useState<CollegeEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -84,6 +85,8 @@ function ListsContent() {
         if (listRes.ok) {
           const data = await listRes.json()
           setEntries(data.research || [])
+          // Backend tells us whether the viewer can edit (counselors yes, parents no)
+          if (typeof data.can_write === 'boolean') setCanWrite(data.can_write)
         }
       } catch { setError('Failed to load lists.') } finally { setLoading(false) }
     }
@@ -93,7 +96,7 @@ function ListsContent() {
   const targetId = forStudentId ?? myUserId
 
   const addCollege = async () => {
-    if (!targetId || isViewingStudent || !addName.trim()) return
+    if (!targetId || !canWrite || !addName.trim()) return
     setAdding(true)
     try {
       const token = await getToken()
@@ -111,7 +114,7 @@ function ListsContent() {
   }
 
   const updateStatus = async (entryId: number, status: string) => {
-    if (isViewingStudent) return
+    if (!canWrite) return
     const token = await getToken()
     await fetch(`${apiUrl}/lists/colleges/${entryId}`, {
       method: 'PATCH',
@@ -122,7 +125,7 @@ function ListsContent() {
   }
 
   const removeCollege = async (entryId: number) => {
-    if (isViewingStudent) return
+    if (!canWrite) return
     const token = await getToken()
     await fetch(`${apiUrl}/lists/colleges/${entryId}`, {
       method: 'DELETE',
@@ -166,10 +169,12 @@ function ListsContent() {
         <h1 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#0c1b33', marginBottom: 8 }}>{pageTitle}</h1>
         <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: isViewingStudent ? 16 : 24 }}>{pageSubtitle}</p>
 
-        {/* Read-only banner */}
+        {/* Viewing-student banner */}
         {isViewingStudent && (
           <div style={{ background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 10, padding: '10px 16px', marginBottom: 24, fontSize: '0.875rem', color: '#4338ca' }}>
-            👁 You&apos;re viewing {studentName ? `${studentName}'s` : 'this student\'s'} lists. Changes are disabled.
+            {canWrite
+              ? `✏️ You're viewing ${studentName ? `${studentName}'s` : 'this student\'s'} lists. You can add and remove colleges on their behalf.`
+              : `👁 You're viewing ${studentName ? `${studentName}'s` : 'this student\'s'} lists. Changes are disabled.`}
           </div>
         )}
 
@@ -190,8 +195,8 @@ function ListsContent() {
           ))}
         </div>
 
-        {/* Add college — own list only */}
-        {!isViewingStudent && activeTab === 'research' && (
+        {/* Add college — own list or counselor viewing student */}
+        {canWrite && activeTab === 'research' && (
           <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
             <input
               value={addName}
@@ -215,7 +220,7 @@ function ListsContent() {
           <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '40px 24px', textAlign: 'center', color: '#9ca3af' }}>
             {activeTab === 'research'
               ? (isViewingStudent ? 'No colleges on this student\'s list yet.' : 'No colleges yet. Ask Soar about colleges to build your list, or add one above.')
-              : (isViewingStudent ? 'No applications yet.' : 'No applications yet. Update a college\'s status to "Applying" to see it here.')}
+              : 'No applications yet. Update a college\'s status to "Applying" to see it here.'}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -231,17 +236,7 @@ function ListsContent() {
                   )}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                  {isViewingStudent ? (
-                    /* Read-only status badge */
-                    <span style={{
-                      border: `1.5px solid ${STATUS_COLORS[e.status] || '#e5e7eb'}`,
-                      borderRadius: 6, padding: '4px 10px', fontSize: '0.78rem',
-                      fontWeight: 600, color: STATUS_COLORS[e.status] || '#374151',
-                      background: '#fff',
-                    }}>
-                      {STATUS_LABELS[e.status] || e.status}
-                    </span>
-                  ) : (
+                  {canWrite ? (
                     <>
                       <select
                         value={e.status}
@@ -263,6 +258,16 @@ function ListsContent() {
                         title="Remove"
                       >×</button>
                     </>
+                  ) : (
+                    /* Read-only status badge for parents */
+                    <span style={{
+                      border: `1.5px solid ${STATUS_COLORS[e.status] || '#e5e7eb'}`,
+                      borderRadius: 6, padding: '4px 10px', fontSize: '0.78rem',
+                      fontWeight: 600, color: STATUS_COLORS[e.status] || '#374151',
+                      background: '#fff',
+                    }}>
+                      {STATUS_LABELS[e.status] || e.status}
+                    </span>
                   )}
                 </div>
               </div>
