@@ -55,6 +55,7 @@ function ProfileContent() {
 
   const [myUserId, setMyUserId] = useState<number | null>(null)
   const [accountType, setAccountType] = useState<string>('student')
+  const [canWrite, setCanWrite] = useState(true)   // from API; false for parents
   const [profile, setProfile] = useState<Profile>({})
   const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading] = useState(true)
@@ -71,7 +72,7 @@ function ProfileContent() {
   const [showAddActivity, setShowAddActivity] = useState(false)
   const [newActivity, setNewActivity] = useState({ category: '', role: '', organization: '', description: '', hours_per_week: '', weeks_per_year: '', is_current: true })
 
-  // True when we're viewing someone else's profile (read-only)
+  // True when we're viewing someone else's profile
   const isViewingStudent = forStudentId !== null
 
   useEffect(() => {
@@ -111,6 +112,7 @@ function ProfileContent() {
           const data = await profRes.json()
           setProfile(data.profile || {})
           setActivities(data.activities || [])
+          if (typeof data.can_write === 'boolean') setCanWrite(data.can_write)
           if (data.counselor_info) {
             setCounselorOrg(data.counselor_info.organization || '')
             setCounselorType(data.counselor_info.counselor_type || '')
@@ -128,7 +130,7 @@ function ProfileContent() {
   const targetId = forStudentId ?? myUserId
 
   const saveProfile = async () => {
-    if (!targetId || isViewingStudent) return
+    if (!targetId || !canWrite) return
     setSaving(true)
     try {
       const token = await getToken()
@@ -142,7 +144,7 @@ function ProfileContent() {
   }
 
   const deleteActivity = async (activityId: number) => {
-    if (isViewingStudent) return
+    if (!canWrite) return
     const token = await getToken()
     await fetch(`${apiUrl}/profile/activities/${activityId}`, {
       method: 'DELETE',
@@ -152,7 +154,7 @@ function ProfileContent() {
   }
 
   const addActivity = async () => {
-    if (!targetId || isViewingStudent || !newActivity.category || !newActivity.role || !newActivity.organization) return
+    if (!targetId || !canWrite || !newActivity.category || !newActivity.role || !newActivity.organization) return
     const token = await getToken()
     const res = await fetch(`${apiUrl}/profile/${targetId}/activities`, {
       method: 'POST',
@@ -179,8 +181,8 @@ function ProfileContent() {
     fontSize: '0.875rem',
     outline: 'none',
     boxSizing: 'border-box',
-    background: isViewingStudent ? '#f9fafb' : '#fff',
-    color: isViewingStudent ? '#6b7280' : '#111827',
+    background: !canWrite ? '#f9fafb' : '#fff',
+    color: !canWrite ? '#6b7280' : '#111827',
     ...extra,
   })
 
@@ -190,9 +192,9 @@ function ProfileContent() {
       <input
         type={type}
         value={(profile[key] as string | number) ?? ''}
-        onChange={(e) => !isViewingStudent && setProfile((p) => ({ ...p, [key]: type === 'number' ? (e.target.value === '' ? undefined : Number(e.target.value)) : e.target.value }))}
+        onChange={(e) => canWrite && setProfile((p) => ({ ...p, [key]: type === 'number' ? (e.target.value === '' ? undefined : Number(e.target.value)) : e.target.value }))}
         placeholder={placeholder}
-        readOnly={isViewingStudent}
+        readOnly={!canWrite}
         style={inputStyle()}
       />
     </div>
@@ -227,10 +229,12 @@ function ProfileContent() {
           {pageTitle}
         </h1>
 
-        {/* Read-only banner */}
+        {/* Viewing-student banner */}
         {isViewingStudent && (
           <div style={{ background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 10, padding: '10px 16px', marginBottom: 24, fontSize: '0.875rem', color: '#4338ca' }}>
-            👁 You&apos;re viewing {studentName ? `${studentName}'s` : 'this student\'s'} profile. Fields are read-only.
+            {canWrite
+              ? `✏️ You're viewing ${studentName ? `${studentName}'s` : 'this student\'s'} profile. You can edit on their behalf.`
+              : `👁 You're viewing ${studentName ? `${studentName}'s` : 'this student\'s'} profile. Fields are read-only.`}
           </div>
         )}
 
@@ -327,9 +331,9 @@ function ProfileContent() {
               <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: 4 }}>Intended Major(s)</label>
               <input
                 value={profile.intended_majors ?? ''}
-                onChange={(e) => !isViewingStudent && setProfile((p) => ({ ...p, intended_majors: e.target.value }))}
+                onChange={(e) => canWrite && setProfile((p) => ({ ...p, intended_majors: e.target.value }))}
                 placeholder="Computer Science, Economics"
-                readOnly={isViewingStudent}
+                readOnly={!canWrite}
                 style={inputStyle()}
               />
             </div>
@@ -337,10 +341,10 @@ function ProfileContent() {
               <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: 4 }}>College Preferences</label>
               <textarea
                 value={profile.college_preferences ?? ''}
-                onChange={(e) => !isViewingStudent && setProfile((p) => ({ ...p, college_preferences: e.target.value }))}
+                onChange={(e) => canWrite && setProfile((p) => ({ ...p, college_preferences: e.target.value }))}
                 placeholder="Small liberal arts, urban setting, strong research opportunities..."
                 rows={3}
-                readOnly={isViewingStudent}
+                readOnly={!canWrite}
                 style={{ ...inputStyle(), resize: 'vertical' }}
               />
             </div>
@@ -348,9 +352,9 @@ function ProfileContent() {
               <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: 4 }}>Family Income Tier</label>
               <select
                 value={profile.family_income_tier ?? ''}
-                onChange={(e) => !isViewingStudent && setProfile((p) => ({ ...p, family_income_tier: e.target.value }))}
-                disabled={isViewingStudent}
-                style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 12px', fontSize: '0.875rem', outline: 'none', background: isViewingStudent ? '#f9fafb' : '#fff', color: isViewingStudent ? '#6b7280' : '#111827' }}
+                onChange={(e) => canWrite && setProfile((p) => ({ ...p, family_income_tier: e.target.value }))}
+                disabled={!canWrite}
+                style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 12px', fontSize: '0.875rem', outline: 'none', background: !canWrite ? '#f9fafb' : '#fff', color: !canWrite ? '#6b7280' : '#111827' }}
               >
                 <option value="">— Select —</option>
                 {INCOME_TIERS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
@@ -361,17 +365,17 @@ function ProfileContent() {
               <input
                 type="number"
                 value={profile.budget_max ?? ''}
-                onChange={(e) => !isViewingStudent && setProfile((p) => ({ ...p, budget_max: e.target.value === '' ? undefined : Number(e.target.value) }))}
+                onChange={(e) => canWrite && setProfile((p) => ({ ...p, budget_max: e.target.value === '' ? undefined : Number(e.target.value) }))}
                 placeholder="30000"
-                readOnly={isViewingStudent}
+                readOnly={!canWrite}
                 style={inputStyle()}
               />
             </div>
           </div>
         </div>
 
-        {/* Save button — own profile only */}
-        {!isViewingStudent && (
+        {/* Save button — editable profiles only */}
+        {canWrite && (
           <button
             onClick={saveProfile}
             disabled={saving}
@@ -386,7 +390,7 @@ function ProfileContent() {
         <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 24, marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0c1b33' }}>Activities &amp; Awards</h2>
-            {!isViewingStudent && (
+            {canWrite && (
               <button
                 onClick={() => setShowAddActivity((v) => !v)}
                 style={{ fontSize: '0.8rem', color: '#4f46e5', border: '1px solid #c7d2fe', borderRadius: 6, padding: '4px 12px', background: '#eef2ff', cursor: 'pointer' }}
@@ -396,7 +400,7 @@ function ProfileContent() {
             )}
           </div>
 
-          {!isViewingStudent && showAddActivity && (
+          {canWrite && showAddActivity && (
             <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: 16, marginBottom: 16 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
                 <div>
@@ -441,7 +445,7 @@ function ProfileContent() {
                     <p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: 2 }}>{a.category}{a.hours_per_week ? ` · ${a.hours_per_week} hrs/wk` : ''}{a.weeks_per_year ? ` · ${a.weeks_per_year} wks/yr` : ''}</p>
                     {a.description && <p style={{ fontSize: '0.8rem', color: '#374151', marginTop: 4 }}>{a.description}</p>}
                   </div>
-                  {!isViewingStudent && (
+                  {canWrite && (
                     <button onClick={() => deleteActivity(a.id)} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', flexShrink: 0, marginLeft: 12 }}>Remove</button>
                   )}
                 </div>
