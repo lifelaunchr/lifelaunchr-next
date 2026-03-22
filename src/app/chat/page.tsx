@@ -1,21 +1,33 @@
 import { auth, currentUser } from '@clerk/nextjs/server'
-import { redirect } from 'next/navigation'
+import Link from 'next/link'
 
 export default async function ChatPage() {
   const { userId } = await auth()
-  if (!userId) redirect('/sign-in')
-
-  const user = await currentUser()
+  const user = userId ? await currentUser() : null
 
   return (
     <main className="min-h-screen bg-slate-50 flex flex-col">
-      <header className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+      <header className="bg-slate-900 text-white px-6 py-3 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold">Soar by LifeLaunchr</h1>
-          <p className="text-slate-400 text-sm">Your AI-powered college advisor</p>
+          <h1 className="text-lg font-semibold">Soar by LifeLaunchr</h1>
+          <p className="text-slate-400 text-xs">Your AI-powered college advisor</p>
         </div>
-        <div className="text-slate-300 text-sm">
-          Welcome, {user?.firstName || 'there'}
+        <div className="flex items-center gap-4 text-sm">
+          {user ? (
+            <span className="text-slate-300">{user.firstName || user.emailAddresses[0]?.emailAddress}</span>
+          ) : (
+            <>
+              <Link href="/sign-in" className="text-slate-300 hover:text-white transition-colors">
+                Sign in
+              </Link>
+              <Link
+                href="/sign-up"
+                className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-md font-medium transition-colors"
+              >
+                Get started free
+              </Link>
+            </>
+          )}
         </div>
       </header>
       <div className="flex-1 flex items-center justify-center">
