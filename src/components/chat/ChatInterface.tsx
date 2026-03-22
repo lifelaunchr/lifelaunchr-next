@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useAuth } from '@clerk/nextjs'
+import { useAuth, useUser } from '@clerk/nextjs'
 import Link from 'next/link'
 import { ChatHeader } from './ChatHeader'
 import { ChatMessage } from './ChatMessage'
@@ -57,7 +57,12 @@ function formatSessionDate(iso: string): string {
 
 export function ChatInterface({ userId }: ChatInterfaceProps) {
   const { getToken } = useAuth()
+  const { user: clerkUser } = useUser()
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+
+  // Strip any DB-only fields (created_at etc.) — Claude API only accepts {role, content}
+  const toHistory = (items: Array<{ role: string; content: string; [k: string]: unknown }>) =>
+    items.map(({ role, content }) => ({ role, content }))
 
   const [messages, setMessages] = useState<Message[]>([])
   const [conversationHistory, setConversationHistory] = useState<HistoryItem[]>([])
@@ -118,6 +123,27 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
     } catch { /* silently ignore */ }
   }, [userId, getToken, apiUrl])
 
+  // Auth sync — ensure user exists in our DB so profile/lists work
+  useEffect(() => {
+    if (!userId || !clerkUser) return
+    const sync = async () => {
+      try {
+        const token = await getToken()
+        await fetch(`${apiUrl}/auth/sync`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            clerk_user_id: userId,
+            email: clerkUser.emailAddresses[0]?.emailAddress || '',
+            full_name: clerkUser.fullName || clerkUser.firstName || '',
+            account_type: 'student',
+          }),
+        })
+      } catch { /* ignore */ }
+    }
+    sync()
+  }, [userId, clerkUser, getToken, apiUrl])
+
   useEffect(() => {
     fetchUsage()
     fetchSessions()
@@ -171,7 +197,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
         content: m.content,
       }))
       setMessages(msgs)
-      setConversationHistory(data.messages || [])
+      setConversationHistory(toHistory(data.messages || []))
       setServerSessionId(sessionId)
       setActiveSessionId(sessionId)
       setInput('')
@@ -271,7 +297,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                     )
                   )
                 }
-                if (data.history) setConversationHistory(data.history)
+                if (data.history) setConversationHistory(toHistory(data.history))
                 if (data.session_id) {
                   setServerSessionId(data.session_id)
                   setActiveSessionId(data.session_id)
@@ -461,19 +487,21 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                 Press Enter to send · Shift+Enter for new line
               </p>
 
-              {/* Usage counter — only show if there is a finite limit */}
-              {userId && usageData && usageData.effective_limit !== null && (
-                <p className={`text-center text-xs mt-1 ${usageColor}`}>
-                  {usageData.messages_used} of {usageData.effective_limit} messages used this month
-                  {usagePercent >= 60 && (
+              {/* Usage counter */}
+              {userId && usageData && (
+                <p className={`text-center text-xs mt-1 ${usageData.effective_limit ? usageColor : 'text-gray-400'}`}>
+                  {usageData.effective_limit
+                    ? `${usageData.messages_used} of ${usageData.effective_limit} messages used this month`
+                    : `${usageData.messages_used} messages used this month`}
+                  {usageData.effective_limit && usagePercent >= 60 && (
                     <> · <a href="/upgrade" className="underline hover:text-indigo-500">Upgrade for more →</a></>
                   )}
                 </p>
               )}
 
               {/* Safety link */}
-              <p className="text-center text-xs mt-1 text-gray-300">
-                <a href="/safety" className="hover:text-gray-400 transition-colors">Student safety</a>
+              <p className="text-center text-xs mt-1 text-gray-400">
+                <a href="/safety" className="hover:text-white transition-colors">How we help keep teens safe →</a>
               </p>
             </div>
           </div>
