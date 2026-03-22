@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useAuth } from '@clerk/nextjs'
+import { useState, useEffect, Suspense } from 'react'
+import { useAuth, useUser } from '@clerk/nextjs'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 
-export default function JoinPage() {
+function JoinContent() {
   const { getToken, isSignedIn, isLoaded } = useAuth()
+  const { user: clerkUser } = useUser()
   const searchParams = useSearchParams()
   const router = useRouter()
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
@@ -21,12 +22,28 @@ export default function JoinPage() {
 
   useEffect(() => {
     if (!isLoaded) return
-    if (!isSignedIn) return  // show sign-in prompt instead
+    if (!isSignedIn || !clerkUser) return  // show sign-in prompt instead
     if (!code) { setStep('error'); setErrorMsg('No invite code found in the URL.'); return }
 
     const accept = async () => {
       try {
         const token = await getToken()
+
+        // Ensure the user has a DB row before calling /invites/accept.
+        // This handles new users who signed up via the invite link and
+        // were redirected back here before ever visiting /chat (where
+        // auth/sync normally runs).
+        await fetch(`${apiUrl}/auth/sync`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            clerk_user_id: clerkUser.id,
+            email: clerkUser.emailAddresses[0]?.emailAddress || '',
+            full_name: clerkUser.fullName || clerkUser.firstName || '',
+            account_type: 'student',
+          }),
+        })
+
         const res = await fetch(`${apiUrl}/invites/accept/${code}`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
@@ -55,7 +72,7 @@ export default function JoinPage() {
       }
     }
     accept()
-  }, [isLoaded, isSignedIn, code, getToken, apiUrl])
+  }, [isLoaded, isSignedIn, clerkUser, code, getToken, apiUrl])
 
   const confirm = async () => {
     if (!code) return
@@ -183,5 +200,17 @@ export default function JoinPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function JoinPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <p className="text-slate-400 text-sm">Loading…</p>
+      </div>
+    }>
+      <JoinContent />
+    </Suspense>
   )
 }
