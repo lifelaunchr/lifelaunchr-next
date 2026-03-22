@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useAuth } from '@clerk/nextjs'
+import { useAuth, useUser } from '@clerk/nextjs'
 import Link from 'next/link'
 
 interface Profile {
@@ -44,15 +44,21 @@ const INCOME_TIERS = [
 
 export default function ProfilePage() {
   const { getToken } = useAuth()
+  const { user: clerkUser } = useUser()
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
   const [userId, setUserId] = useState<number | null>(null)
+  const [accountType, setAccountType] = useState<string>('student')
   const [profile, setProfile] = useState<Profile>({})
   const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Counselor-specific fields
+  const [counselorOrg, setCounselorOrg] = useState('')
+  const [counselorType, setCounselorType] = useState('')
+  const [savingCounselor, setSavingCounselor] = useState(false)
 
   // New activity form
   const [showAddActivity, setShowAddActivity] = useState(false)
@@ -70,6 +76,7 @@ export default function ProfilePage() {
         const usage = await usageRes.json()
         const id = usage.user_id
         setUserId(id)
+        setAccountType(usage.account_type || 'student')
 
         // Get profile
         const profRes = await fetch(`${apiUrl}/profile/${id}`, {
@@ -79,6 +86,10 @@ export default function ProfilePage() {
           const data = await profRes.json()
           setProfile(data.profile || {})
           setActivities(data.activities || [])
+          if (data.counselor_info) {
+            setCounselorOrg(data.counselor_info.organization || '')
+            setCounselorType(data.counselor_info.counselor_type || '')
+          }
         }
       } catch (e) {
         setError('Failed to load profile.')
@@ -166,9 +177,71 @@ export default function ProfilePage() {
       </header>
 
       <div style={{ maxWidth: 760, margin: '0 auto', padding: '32px 24px 80px' }}>
-        <h1 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#0c1b33', marginBottom: 24 }}>My Profile</h1>
+        <h1 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#0c1b33', marginBottom: 24 }}>
+          {accountType === 'counselor' ? 'My Info' : 'My Profile'}
+        </h1>
 
-        {/* Academic info */}
+        {/* Counselor info section */}
+        {accountType === 'counselor' && (
+          <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 24, marginBottom: 24 }}>
+            <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0c1b33', marginBottom: 16 }}>Professional Information</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: 4 }}>Role</label>
+                <select
+                  value={counselorType}
+                  onChange={(e) => setCounselorType(e.target.value)}
+                  style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 12px', fontSize: '0.875rem', outline: 'none', background: '#fff' }}
+                >
+                  <option value="">— Select —</option>
+                  <option value="school_counselor">School counselor</option>
+                  <option value="iec">Independent educational consultant (IEC)</option>
+                  <option value="admissions_coach">College admissions coach</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: 4 }}>
+                  {counselorType === 'school_counselor' ? 'School name' : 'Practice / company name'}
+                </label>
+                <input
+                  value={counselorOrg}
+                  onChange={(e) => setCounselorOrg(e.target.value)}
+                  placeholder={counselorType === 'school_counselor' ? 'Lincoln High School' : 'Smith College Consulting'}
+                  style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 12px', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+            </div>
+            <button
+              onClick={async () => {
+                if (!userId || !clerkUser) return
+                setSavingCounselor(true)
+                try {
+                  const token = await getToken()
+                  await fetch(`${apiUrl}/auth/sync`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({
+                      clerk_user_id: clerkUser.id,
+                      email: clerkUser.emailAddresses[0]?.emailAddress || '',
+                      full_name: clerkUser.fullName || clerkUser.firstName || '',
+                      account_type: 'counselor',
+                      counselor_type: counselorType || undefined,
+                      organization: counselorOrg || undefined,
+                    }),
+                  })
+                  setSaved(true); setTimeout(() => setSaved(false), 2000)
+                } catch { /* ignore */ } finally { setSavingCounselor(false) }
+              }}
+              disabled={savingCounselor}
+              style={{ marginTop: 16, background: savingCounselor ? '#818cf8' : '#4f46e5', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}
+            >
+              {saved ? '✓ Saved' : savingCounselor ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+        )}
+
+        {/* Academic info + student sections — students only */}
+        {accountType !== 'counselor' && (<>
         <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 24, marginBottom: 24 }}>
           <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0c1b33', marginBottom: 16 }}>Academic Information</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
@@ -248,6 +321,7 @@ export default function ProfilePage() {
         >
           {saved ? '✓ Saved' : saving ? 'Saving…' : 'Save Profile'}
         </button>
+        </>)}
 
         {/* Activities */}
         <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 24, marginBottom: 24 }}>
