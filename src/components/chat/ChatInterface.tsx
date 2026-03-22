@@ -153,9 +153,8 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
           },
           body: JSON.stringify({
             message: trimmed,
-            session_id: sessionId,
             ...(guestToken && !userId ? { guest_token: guestToken } : {}),
-            active_modules: activeModules,
+            active_topics: activeModules,
           }),
           signal: abortControllerRef.current.signal,
         })
@@ -194,6 +193,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
               const data = JSON.parse(rawData)
 
               if (data.type === 'text') {
+                // incremental streaming chunk (future backend support)
                 setMessages((prev) =>
                   prev.map((m) =>
                     m.id === assistantMsgId
@@ -201,7 +201,26 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                       : m
                   )
                 )
+              } else if (data.type === 'status') {
+                // tool-call status while backend is thinking
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantMsgId
+                      ? { ...m, content: `_${data.msg}_` }
+                      : m
+                  )
+                )
               } else if (data.type === 'done') {
+                // final response — set full text
+                if (data.response) {
+                  setMessages((prev) =>
+                    prev.map((m) =>
+                      m.id === assistantMsgId
+                        ? { ...m, content: data.response }
+                        : m
+                    )
+                  )
+                }
                 // Update usage if returned
                 if (data.messages_used !== undefined && data.effective_limit !== undefined) {
                   setUsageData({
@@ -210,6 +229,14 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                     reset_date: data.reset_date,
                   })
                 }
+              } else if (data.type === 'error') {
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantMsgId
+                      ? { ...m, content: data.msg || 'Something went wrong. Please try again.' }
+                      : m
+                  )
+                )
               } else if (data.type === 'limit_reached') {
                 setLimitModalData({
                   messages_used: data.messages_used,
