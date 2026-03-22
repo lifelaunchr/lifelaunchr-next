@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, Suspense } from 'react'
+import { useEffect, useState, useRef, Suspense } from 'react'
 import { useAuth, useUser } from '@clerk/nextjs'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -12,15 +12,35 @@ interface Profile {
   sat_math?: number
   sat_reading?: number
   act_composite?: number
+  act_english?: number
+  act_math?: number
+  act_reading?: number
+  act_science?: number
+  class_rank?: number
+  class_size?: number
   graduation_year?: number
+  home_state?: string
+  citizenship?: string
+  residence?: string
   high_school_name?: string
   high_school_city?: string
   high_school_state?: string
-  home_state?: string
+  high_school_ncessch?: string
+  school_profile_url?: string
+  college_interests?: string[]
   intended_majors?: string
   college_preferences?: string
   family_income_tier?: string
+  expected_family_contribution?: number
   budget_max?: number
+  personal_statement_draft?: string
+  // Counselor-only
+  ec_rating?: string
+  athletic_rating?: string
+  academic_rigor_rating?: string
+  coach_notes?: string
+  essay_reviews_allowed?: number
+  prompt_user_id?: string
 }
 
 interface Activity {
@@ -35,12 +55,89 @@ interface Activity {
   is_current: boolean
 }
 
+interface HsSuggestion {
+  ncessch: string
+  school_name: string
+  city: string
+  state: string
+}
+
 const INCOME_TIERS = [
   { value: '0_30k', label: 'Under $30,000' },
   { value: '30_48k', label: '$30,000 – $48,000' },
   { value: '48_75k', label: '$48,000 – $75,000' },
   { value: '75_110k', label: '$75,000 – $110,000' },
   { value: '110k_plus', label: 'Over $110,000' },
+]
+
+const US_STATES = [
+  { value: 'AL', label: 'Alabama' }, { value: 'AK', label: 'Alaska' },
+  { value: 'AZ', label: 'Arizona' }, { value: 'AR', label: 'Arkansas' },
+  { value: 'CA', label: 'California' }, { value: 'CO', label: 'Colorado' },
+  { value: 'CT', label: 'Connecticut' }, { value: 'DE', label: 'Delaware' },
+  { value: 'DC', label: 'District of Columbia' }, { value: 'FL', label: 'Florida' },
+  { value: 'GA', label: 'Georgia' }, { value: 'HI', label: 'Hawaii' },
+  { value: 'ID', label: 'Idaho' }, { value: 'IL', label: 'Illinois' },
+  { value: 'IN', label: 'Indiana' }, { value: 'IA', label: 'Iowa' },
+  { value: 'KS', label: 'Kansas' }, { value: 'KY', label: 'Kentucky' },
+  { value: 'LA', label: 'Louisiana' }, { value: 'ME', label: 'Maine' },
+  { value: 'MD', label: 'Maryland' }, { value: 'MA', label: 'Massachusetts' },
+  { value: 'MI', label: 'Michigan' }, { value: 'MN', label: 'Minnesota' },
+  { value: 'MS', label: 'Mississippi' }, { value: 'MO', label: 'Missouri' },
+  { value: 'MT', label: 'Montana' }, { value: 'NE', label: 'Nebraska' },
+  { value: 'NV', label: 'Nevada' }, { value: 'NH', label: 'New Hampshire' },
+  { value: 'NJ', label: 'New Jersey' }, { value: 'NM', label: 'New Mexico' },
+  { value: 'NY', label: 'New York' }, { value: 'NC', label: 'North Carolina' },
+  { value: 'ND', label: 'North Dakota' }, { value: 'OH', label: 'Ohio' },
+  { value: 'OK', label: 'Oklahoma' }, { value: 'OR', label: 'Oregon' },
+  { value: 'PA', label: 'Pennsylvania' }, { value: 'RI', label: 'Rhode Island' },
+  { value: 'SC', label: 'South Carolina' }, { value: 'SD', label: 'South Dakota' },
+  { value: 'TN', label: 'Tennessee' }, { value: 'TX', label: 'Texas' },
+  { value: 'UT', label: 'Utah' }, { value: 'VT', label: 'Vermont' },
+  { value: 'VA', label: 'Virginia' }, { value: 'WA', label: 'Washington' },
+  { value: 'WV', label: 'West Virginia' }, { value: 'WI', label: 'Wisconsin' },
+  { value: 'WY', label: 'Wyoming' },
+  { value: 'outside_us', label: 'Outside the U.S.' },
+]
+
+const COLLEGE_INTERESTS = [
+  { value: 'super_selective', label: 'Super-Selective Universities' },
+  { value: 'liberal_arts', label: 'Liberal Arts Colleges' },
+  { value: 'social_sciences_humanities', label: 'Social Sciences or Humanities Programs' },
+  { value: 'engineering_cs', label: 'Engineering or Computer Science' },
+  { value: 'stem', label: 'STEM Fields' },
+  { value: 'pre_med', label: 'Pre-Med, Pre-Vet, and Other Pre-Health Programs' },
+  { value: 'nursing', label: 'Direct-Admit and Other Nursing Programs' },
+  { value: 'performing_arts', label: 'Music, Theater, and Other Performing Arts Programs' },
+  { value: 'design_visual_arts', label: 'Design and Visual Arts Programs' },
+  { value: 'uk_canada', label: 'Universities in the UK and Canada' },
+]
+
+const EC_RATINGS = [
+  { value: 'exceptional_unusual', label: 'Exceptional Accomplishment or Unusual Strengths' },
+  { value: 'strong_school_district', label: 'Strong Accomplishments at School or District Level' },
+  { value: 'solid_participation', label: 'Solid Participation' },
+  { value: 'minimal', label: 'Minimal: Not Very Active' },
+  { value: 'family_commitments', label: 'Substantial Family or Other Commitments' },
+  { value: 'special_circumstances', label: 'Special Circumstances Limit Participation' },
+]
+
+const ATHLETIC_RATINGS = [
+  { value: 'exceptional_state_national', label: 'Exceptional: State or National Recognition' },
+  { value: 'very_good_school_district', label: 'Very Good: Stands Out in School, District, or Region' },
+  { value: 'moderate_solid', label: 'Moderate: Solid Achievements' },
+  { value: 'minimal', label: 'Minimal: Not Very Active' },
+  { value: 'family_commitments', label: 'Substantial Family or Other Commitments' },
+  { value: 'special_circumstances', label: 'Special Circumstances Limit Participation' },
+]
+
+const ACADEMIC_RIGOR_RATINGS = [
+  { value: 'exceptionally_rigorous', label: 'Exceptionally Rigorous Curriculum Based on Offerings' },
+  { value: 'very_good_rigorous', label: 'Very Good: Took Several Rigorous Courses' },
+  { value: 'moderate_rigor', label: 'Moderate Rigor' },
+  { value: 'minimal_rigor', label: 'Minimal Rigor in Curriculum' },
+  { value: 'family_commitments', label: 'Substantial Family or Other Commitments' },
+  { value: 'special_circumstances', label: 'Special Circumstances Limit Participation' },
 ]
 
 function ProfileContent() {
@@ -67,6 +164,14 @@ function ProfileContent() {
   const [counselorOrg, setCounselorOrg] = useState('')
   const [counselorType, setCounselorType] = useState('')
   const [savingCounselor, setSavingCounselor] = useState(false)
+
+  // High school autocomplete state
+  const [hsSearchState, setHsSearchState] = useState('')
+  const [hsQuery, setHsQuery] = useState('')
+  const [hsSuggestions, setHsSuggestions] = useState<HsSuggestion[]>([])
+  const [hsShowManual, setHsShowManual] = useState(false)
+  const [hsLoading, setHsLoading] = useState(false)
+  const hsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // New activity form
   const [showAddActivity, setShowAddActivity] = useState(false)
@@ -110,12 +215,20 @@ function ProfileContent() {
         })
         if (profRes.ok) {
           const data = await profRes.json()
-          setProfile(data.profile || {})
+          const p = data.profile || {}
+          setProfile(p)
           setActivities(data.activities || [])
           if (typeof data.can_write === 'boolean') setCanWrite(data.can_write)
           if (data.counselor_info) {
             setCounselorOrg(data.counselor_info.organization || '')
             setCounselorType(data.counselor_info.counselor_type || '')
+          }
+          // Sync HS state selector
+          if (p.high_school_state) {
+            setHsSearchState(p.high_school_state)
+          }
+          if (p.high_school_name) {
+            setHsQuery(p.high_school_name)
           }
         }
       } catch {
@@ -129,6 +242,32 @@ function ProfileContent() {
 
   const targetId = forStudentId ?? myUserId
 
+  // HS autocomplete debounced fetch
+  useEffect(() => {
+    if (!hsQuery || hsSearchState === 'outside_us' || hsShowManual) {
+      setHsSuggestions([])
+      return
+    }
+    if (hsDebounceRef.current) clearTimeout(hsDebounceRef.current)
+    hsDebounceRef.current = setTimeout(async () => {
+      setHsLoading(true)
+      try {
+        const token = await getToken()
+        const res = await fetch(
+          `${apiUrl}/schools?q=${encodeURIComponent(hsQuery)}&state=${encodeURIComponent(hsSearchState)}&limit=8`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
+        if (res.ok) {
+          const suggestions: HsSuggestion[] = await res.json()
+          setHsSuggestions(suggestions)
+        }
+      } catch { /* ignore */ } finally {
+        setHsLoading(false)
+      }
+    }, 300)
+    return () => { if (hsDebounceRef.current) clearTimeout(hsDebounceRef.current) }
+  }, [hsQuery, hsSearchState, hsShowManual, apiUrl, getToken])
+
   const saveProfile = async () => {
     if (!targetId || !canWrite) return
     setSaving(true)
@@ -137,7 +276,10 @@ function ProfileContent() {
       const res = await fetch(`${apiUrl}/profile/${targetId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(profile),
+        body: JSON.stringify({
+          ...profile,
+          college_interests: profile.college_interests || [],
+        }),
       })
       if (res.ok) { setSaved(true); setTimeout(() => setSaved(false), 2000) }
     } catch { /* ignore */ } finally { setSaving(false) }
@@ -186,6 +328,18 @@ function ProfileContent() {
     ...extra,
   })
 
+  const selectStyle = (extra?: React.CSSProperties): React.CSSProperties => ({
+    width: '100%',
+    border: '1px solid #e5e7eb',
+    borderRadius: 8,
+    padding: '8px 12px',
+    fontSize: '0.875rem',
+    outline: 'none',
+    background: !canWrite ? '#f9fafb' : '#fff',
+    color: !canWrite ? '#6b7280' : '#111827',
+    ...extra,
+  })
+
   const field = (label: string, key: keyof Profile, type: string = 'text', placeholder: string = '') => (
     <div>
       <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: 4 }}>{label}</label>
@@ -199,6 +353,22 @@ function ProfileContent() {
       />
     </div>
   )
+
+  const counselorField = (label: string, key: keyof Profile, type: string = 'text', placeholder: string = '') => (
+    <div>
+      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#92400e', marginBottom: 4 }}>{label}</label>
+      <input
+        type={type}
+        value={(profile[key] as string | number) ?? ''}
+        onChange={(e) => canWrite && setProfile((p) => ({ ...p, [key]: type === 'number' ? (e.target.value === '' ? undefined : Number(e.target.value)) : e.target.value }))}
+        placeholder={placeholder}
+        readOnly={!canWrite}
+        style={inputStyle()}
+      />
+    </div>
+  )
+
+  const isCounselorViewing = isViewingStudent && accountType === 'counselor'
 
   if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: '#9ca3af' }}>Loading...</div>
   if (error) return (
@@ -233,8 +403,8 @@ function ProfileContent() {
         {isViewingStudent && (
           <div style={{ background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 10, padding: '10px 16px', marginBottom: 24, fontSize: '0.875rem', color: '#4338ca' }}>
             {canWrite
-              ? `✏️ You're viewing ${studentName ? `${studentName}'s` : 'this student\'s'} profile. You can edit on their behalf.`
-              : `👁 You're viewing ${studentName ? `${studentName}'s` : 'this student\'s'} profile. Fields are read-only.`}
+              ? `You're viewing ${studentName ? `${studentName}'s` : 'this student\'s'} profile. You can edit on their behalf.`
+              : `You're viewing ${studentName ? `${studentName}'s` : 'this student\'s'} profile. Fields are read-only.`}
           </div>
         )}
 
@@ -292,38 +462,248 @@ function ProfileContent() {
               disabled={savingCounselor}
               style={{ marginTop: 16, background: savingCounselor ? '#818cf8' : '#4f46e5', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}
             >
-              {saved ? '✓ Saved' : savingCounselor ? 'Saving…' : 'Save'}
+              {saved ? 'Saved' : savingCounselor ? 'Saving...' : 'Save'}
             </button>
           </div>
         )}
 
         {/* Academic info + student sections */}
         {(accountType !== 'counselor' || isViewingStudent) && (<>
+
+        {/* Academic Information */}
         <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 24, marginBottom: 24 }}>
           <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0c1b33', marginBottom: 16 }}>Academic Information</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
-            {field('GPA (Weighted)', 'gpa_weighted', 'number', '4.0')}
-            {field('GPA (Unweighted)', 'gpa_unweighted', 'number', '3.8')}
-            {field('SAT Total', 'sat_total', 'number', '1400')}
-            {field('SAT Math', 'sat_math', 'number', '720')}
-            {field('SAT Reading/Writing', 'sat_reading', 'number', '680')}
-            {field('ACT Composite', 'act_composite', 'number', '32')}
-            {field('Graduation Year', 'graduation_year', 'number', '2026')}
-            {field('Home State', 'home_state', 'text', 'CA')}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {/* Row 1: GPA, Class Rank/Size */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12 }}>
+              {field('GPA (Weighted)', 'gpa_weighted', 'number', '4.0')}
+              {field('GPA (Unweighted)', 'gpa_unweighted', 'number', '3.8')}
+              {field('Class Rank', 'class_rank', 'number', '12')}
+              {field('Class Size', 'class_size', 'number', '350')}
+            </div>
+            {/* Row 2: SAT */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12 }}>
+              {field('SAT Total', 'sat_total', 'number', '1400')}
+              {field('SAT Math', 'sat_math', 'number', '720')}
+              {field('SAT Reading/Writing', 'sat_reading', 'number', '680')}
+            </div>
+            {/* Row 3: ACT */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12 }}>
+              {field('ACT Composite', 'act_composite', 'number', '32')}
+              {field('ACT English', 'act_english', 'number', '34')}
+              {field('ACT Math', 'act_math', 'number', '30')}
+              {field('ACT Reading', 'act_reading', 'number', '33')}
+              {field('ACT Science', 'act_science', 'number', '31')}
+            </div>
+            {/* Row 4: Grad year, home state */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12 }}>
+              {field('Graduation Year', 'graduation_year', 'number', '2026')}
+              {field('Home State', 'home_state', 'text', 'CA')}
+            </div>
           </div>
         </div>
 
-        {/* High school */}
+        {/* Background */}
+        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 24, marginBottom: 24 }}>
+          <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0c1b33', marginBottom: 16 }}>Background</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 16 }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: 4 }}>Citizenship</label>
+              <select
+                value={profile.citizenship ?? ''}
+                onChange={(e) => canWrite && setProfile((p) => ({ ...p, citizenship: e.target.value || undefined }))}
+                disabled={!canWrite}
+                style={selectStyle()}
+              >
+                <option value="">— Select —</option>
+                <option value="us_citizen">US Citizen</option>
+                <option value="international">International Student</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: 4 }}>Residence</label>
+              <select
+                value={profile.residence ?? ''}
+                onChange={(e) => canWrite && setProfile((p) => ({ ...p, residence: e.target.value || undefined }))}
+                disabled={!canWrite}
+                style={selectStyle()}
+              >
+                <option value="">— Select —</option>
+                <option value="us">U.S. Resident</option>
+                <option value="international">International Resident</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* High School */}
         <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 24, marginBottom: 24 }}>
           <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0c1b33', marginBottom: 16 }}>High School</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
-            {field('School Name', 'high_school_name', 'text', 'Lincoln High School')}
-            {field('City', 'high_school_city', 'text', 'San Francisco')}
-            {field('State', 'high_school_state', 'text', 'CA')}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* State dropdown */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: 4 }}>State</label>
+              <select
+                value={hsSearchState}
+                onChange={(e) => {
+                  const val = e.target.value
+                  setHsSearchState(val)
+                  setProfile((p) => ({ ...p, high_school_state: val || undefined }))
+                  setHsSuggestions([])
+                }}
+                disabled={!canWrite}
+                style={selectStyle()}
+              >
+                <option value="">— Select —</option>
+                {US_STATES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+              </select>
+            </div>
+
+            {/* School name: autocomplete or manual */}
+            <div style={{ position: 'relative' }}>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: 4 }}>
+                School Name
+                {!hsShowManual && hsSearchState && hsSearchState !== 'outside_us' && canWrite && (
+                  <button
+                    type="button"
+                    onClick={() => { setHsShowManual(true); setHsSuggestions([]) }}
+                    style={{ marginLeft: 8, fontSize: '0.7rem', color: '#6b7280', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+                  >
+                    Can&apos;t find it? Enter manually
+                  </button>
+                )}
+              </label>
+
+              {hsSearchState === 'outside_us' || hsShowManual ? (
+                // Free text input
+                <input
+                  type="text"
+                  value={profile.high_school_name ?? ''}
+                  onChange={(e) => canWrite && setProfile((p) => ({ ...p, high_school_name: e.target.value }))}
+                  placeholder="Enter school name"
+                  readOnly={!canWrite}
+                  style={inputStyle()}
+                />
+              ) : (
+                // Autocomplete input
+                <>
+                  <input
+                    type="text"
+                    value={hsQuery}
+                    onChange={(e) => {
+                      if (!canWrite) return
+                      setHsQuery(e.target.value)
+                      setProfile((p) => ({ ...p, high_school_name: e.target.value, high_school_ncessch: undefined }))
+                    }}
+                    placeholder={hsSearchState ? 'Search for your school...' : 'Select a state first'}
+                    readOnly={!canWrite || !hsSearchState}
+                    style={inputStyle()}
+                  />
+                  {hsLoading && (
+                    <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: '0.75rem', color: '#9ca3af' }}>
+                      Searching...
+                    </div>
+                  )}
+                  {hsSuggestions.length > 0 && (
+                    <div style={{
+                      position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
+                      background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8,
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)', marginTop: 2, overflow: 'hidden',
+                    }}>
+                      {hsSuggestions.map((s) => (
+                        <button
+                          key={s.ncessch}
+                          type="button"
+                          onClick={() => {
+                            setProfile((p) => ({
+                              ...p,
+                              high_school_name: s.school_name,
+                              high_school_city: s.city,
+                              high_school_state: s.state,
+                              high_school_ncessch: s.ncessch,
+                            }))
+                            setHsQuery(s.school_name)
+                            setHsSearchState(s.state)
+                            setHsSuggestions([])
+                          }}
+                          style={{
+                            display: 'block', width: '100%', textAlign: 'left',
+                            padding: '8px 12px', background: 'none', border: 'none',
+                            cursor: 'pointer', fontSize: '0.875rem', color: '#111827',
+                            borderBottom: '1px solid #f3f4f6',
+                          }}
+                          onMouseOver={(e) => (e.currentTarget.style.background = '#f9fafb')}
+                          onMouseOut={(e) => (e.currentTarget.style.background = 'none')}
+                        >
+                          <span style={{ fontWeight: 600 }}>{s.school_name}</span>
+                          <span style={{ color: '#6b7280', marginLeft: 6, fontSize: '0.8rem' }}>{s.city}, {s.state}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* City */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: 4 }}>City</label>
+              <input
+                type="text"
+                value={profile.high_school_city ?? ''}
+                onChange={(e) => canWrite && setProfile((p) => ({ ...p, high_school_city: e.target.value }))}
+                placeholder="San Francisco"
+                readOnly={!canWrite}
+                style={inputStyle()}
+              />
+            </div>
+
+            {/* School Profile URL */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: 4 }}>School Profile URL</label>
+              <input
+                type="text"
+                value={profile.school_profile_url ?? ''}
+                onChange={(e) => canWrite && setProfile((p) => ({ ...p, school_profile_url: e.target.value }))}
+                placeholder="https://..."
+                readOnly={!canWrite}
+                style={inputStyle()}
+              />
+            </div>
           </div>
         </div>
 
-        {/* Preferences */}
+        {/* College Interests */}
+        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 24, marginBottom: 24 }}>
+          <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0c1b33', marginBottom: 16 }}>College Interests</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            {COLLEGE_INTERESTS.map((ci) => {
+              const checked = (profile.college_interests || []).includes(ci.value)
+              return (
+                <label key={ci.value} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: canWrite ? 'pointer' : 'default', fontSize: '0.875rem', color: '#374151' }}>
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    disabled={!canWrite}
+                    onChange={(e) => {
+                      if (!canWrite) return
+                      const current = profile.college_interests || []
+                      const updated = e.target.checked
+                        ? [...current, ci.value]
+                        : current.filter((v) => v !== ci.value)
+                      setProfile((p) => ({ ...p, college_interests: updated }))
+                    }}
+                    style={{ width: 16, height: 16, accentColor: '#4f46e5' }}
+                  />
+                  {ci.label}
+                </label>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Preferences & Goals */}
         <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 24, marginBottom: 24 }}>
           <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0c1b33', marginBottom: 16 }}>Preferences &amp; Goals</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -354,11 +734,22 @@ function ProfileContent() {
                 value={profile.family_income_tier ?? ''}
                 onChange={(e) => canWrite && setProfile((p) => ({ ...p, family_income_tier: e.target.value }))}
                 disabled={!canWrite}
-                style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 12px', fontSize: '0.875rem', outline: 'none', background: !canWrite ? '#f9fafb' : '#fff', color: !canWrite ? '#6b7280' : '#111827' }}
+                style={selectStyle()}
               >
                 <option value="">— Select —</option>
                 {INCOME_TIERS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: 4 }}>Student Aid Index / Expected Family Contribution ($)</label>
+              <input
+                type="number"
+                value={profile.expected_family_contribution ?? ''}
+                onChange={(e) => canWrite && setProfile((p) => ({ ...p, expected_family_contribution: e.target.value === '' ? undefined : Number(e.target.value) }))}
+                placeholder="15000"
+                readOnly={!canWrite}
+                style={inputStyle()}
+              />
             </div>
             <div>
               <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: 4 }}>Max Annual Budget (net price, $)</label>
@@ -374,6 +765,80 @@ function ProfileContent() {
           </div>
         </div>
 
+        {/* Coach Assessment — counselor-only */}
+        {isCounselorViewing && (
+          <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 12, padding: 24, marginBottom: 24 }}>
+            <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#92400e', marginBottom: 4 }}>Coach Assessment</h2>
+            <p style={{ fontSize: '0.8rem', color: '#b45309', marginBottom: 16 }}>Only visible and editable by counselors</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#92400e', marginBottom: 4 }}>Extracurricular Accomplishments</label>
+                <select
+                  value={profile.ec_rating ?? ''}
+                  onChange={(e) => canWrite && setProfile((p) => ({ ...p, ec_rating: e.target.value || undefined }))}
+                  disabled={!canWrite}
+                  style={selectStyle({ background: !canWrite ? '#fef3c7' : '#fff' })}
+                >
+                  <option value="">— Select —</option>
+                  {EC_RATINGS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#92400e', marginBottom: 4 }}>Athletic Accomplishments</label>
+                <select
+                  value={profile.athletic_rating ?? ''}
+                  onChange={(e) => canWrite && setProfile((p) => ({ ...p, athletic_rating: e.target.value || undefined }))}
+                  disabled={!canWrite}
+                  style={selectStyle({ background: !canWrite ? '#fef3c7' : '#fff' })}
+                >
+                  <option value="">— Select —</option>
+                  {ATHLETIC_RATINGS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#92400e', marginBottom: 4 }}>Academic Rigor</label>
+                <select
+                  value={profile.academic_rigor_rating ?? ''}
+                  onChange={(e) => canWrite && setProfile((p) => ({ ...p, academic_rigor_rating: e.target.value || undefined }))}
+                  disabled={!canWrite}
+                  style={selectStyle({ background: !canWrite ? '#fef3c7' : '#fff' })}
+                >
+                  <option value="">— Select —</option>
+                  {ACADEMIC_RIGOR_RATINGS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Coach Notes — counselor-only */}
+        {isCounselorViewing && (
+          <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 12, padding: 24, marginBottom: 24 }}>
+            <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#92400e', marginBottom: 4 }}>Coach Notes</h2>
+            <p style={{ fontSize: '0.8rem', color: '#b45309', marginBottom: 16 }}>Only visible and editable by counselors</p>
+            <textarea
+              value={profile.coach_notes ?? ''}
+              onChange={(e) => canWrite && setProfile((p) => ({ ...p, coach_notes: e.target.value }))}
+              placeholder="Internal notes about this student..."
+              rows={5}
+              readOnly={!canWrite}
+              style={{ ...inputStyle({ background: !canWrite ? '#fef3c7' : '#fff' }), resize: 'vertical' }}
+            />
+          </div>
+        )}
+
+        {/* Coaching Settings — counselor-only */}
+        {isCounselorViewing && (
+          <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 12, padding: 24, marginBottom: 24 }}>
+            <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#92400e', marginBottom: 4 }}>Coaching Settings</h2>
+            <p style={{ fontSize: '0.8rem', color: '#b45309', marginBottom: 16 }}>Only visible and editable by counselors</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 16 }}>
+              {counselorField('Essay Reviews Allowed', 'essay_reviews_allowed', 'number', '3')}
+              {counselorField('Prompt User ID', 'prompt_user_id', 'text', 'user_abc123')}
+            </div>
+          </div>
+        )}
+
         {/* Save button — editable profiles only */}
         {canWrite && (
           <button
@@ -381,7 +846,7 @@ function ProfileContent() {
             disabled={saving}
             style={{ background: saving ? '#818cf8' : '#4f46e5', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 24px', fontSize: '0.9rem', fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', marginBottom: 32 }}
           >
-            {saved ? '✓ Saved' : saving ? 'Saving…' : 'Save Profile'}
+            {saved ? 'Saved' : saving ? 'Saving...' : 'Save Profile'}
           </button>
         )}
         </>)}
@@ -405,15 +870,15 @@ function ProfileContent() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', marginBottom: 4 }}>Category*</label>
-                  <input value={newActivity.category} onChange={(e) => setNewActivity((p) => ({ ...p, category: e.target.value }))} placeholder="Sports, Arts, Leadership…" style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 6, padding: '6px 10px', fontSize: '0.85rem', boxSizing: 'border-box' }} />
+                  <input value={newActivity.category} onChange={(e) => setNewActivity((p) => ({ ...p, category: e.target.value }))} placeholder="Sports, Arts, Leadership..." style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 6, padding: '6px 10px', fontSize: '0.85rem', boxSizing: 'border-box' }} />
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', marginBottom: 4 }}>Role / Position*</label>
-                  <input value={newActivity.role} onChange={(e) => setNewActivity((p) => ({ ...p, role: e.target.value }))} placeholder="Captain, President…" style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 6, padding: '6px 10px', fontSize: '0.85rem', boxSizing: 'border-box' }} />
+                  <input value={newActivity.role} onChange={(e) => setNewActivity((p) => ({ ...p, role: e.target.value }))} placeholder="Captain, President..." style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 6, padding: '6px 10px', fontSize: '0.85rem', boxSizing: 'border-box' }} />
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', marginBottom: 4 }}>Organization*</label>
-                  <input value={newActivity.organization} onChange={(e) => setNewActivity((p) => ({ ...p, organization: e.target.value }))} placeholder="School name, club name…" style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 6, padding: '6px 10px', fontSize: '0.85rem', boxSizing: 'border-box' }} />
+                  <input value={newActivity.organization} onChange={(e) => setNewActivity((p) => ({ ...p, organization: e.target.value }))} placeholder="School name, club name..." style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 6, padding: '6px 10px', fontSize: '0.85rem', boxSizing: 'border-box' }} />
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', marginBottom: 4 }}>Hrs/week · Weeks/year</label>
