@@ -377,13 +377,16 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
               {/* Usage counter */}
               {userId && usageData && (
                 <p className={`text-center text-xs mt-1 ${usageColor}`}>
-                  {usageData.messages_used} of {usageData.effective_limit} free messages used this
-                  month ·{' '}
-                  <a href="/upgrade" className="underline hover:text-indigo-500">
-                    Learn about upgrades →
-                  </a>
+                  {usageData.messages_used} of {usageData.effective_limit} messages used this month
+                  {usagePercent >= 66 && (
+                    <> · <a href="/upgrade" className="underline hover:text-indigo-500">Upgrade for more →</a></>
+                  )}
                 </p>
               )}
+              {/* Safety link */}
+              <p className="text-center text-xs mt-1 text-gray-300">
+                <a href="/safety" className="hover:text-gray-400 transition-colors">Student safety</a>
+              </p>
             </div>
           </div>
         </div>
