@@ -1,17 +1,16 @@
 'use client'
 
 import Link from 'next/link'
+import { UserButton } from '@clerk/nextjs'
 
 interface ChatHeaderProps {
   userId: string | null
-  userName: string | null
   onNewConversation: () => void
   onToggleSidebar: () => void
 }
 
 export function ChatHeader({
   userId,
-  userName,
   onNewConversation,
   onToggleSidebar,
 }: ChatHeaderProps) {
@@ -77,9 +76,7 @@ export function ChatHeader({
 
         {/* Auth section */}
         {userId ? (
-          <span className="text-sm text-white/50 max-w-[120px] truncate hidden sm:block">
-            {userName}
-          </span>
+          <UserButton afterSignOutUrl="/" />
         ) : (
           <>
             <Link

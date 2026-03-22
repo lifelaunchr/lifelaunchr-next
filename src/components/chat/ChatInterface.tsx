@@ -28,10 +28,9 @@ interface LimitReachedData {
 
 interface ChatInterfaceProps {
   userId: string | null
-  userName: string | null
 }
 
-export function ChatInterface({ userId, userName }: ChatInterfaceProps) {
+export function ChatInterface({ userId }: ChatInterfaceProps) {
   const { getToken } = useAuth()
 
   const [messages, setMessages] = useState<Message[]>([])
@@ -270,7 +269,6 @@ export function ChatInterface({ userId, userName }: ChatInterfaceProps) {
     <div className="flex flex-col h-screen bg-slate-50 overflow-hidden">
       <ChatHeader
         userId={userId}
-        userName={userName}
         onNewConversation={handleNewConversation}
         onToggleSidebar={() => setSidebarOpen((v) => !v)}
       />
