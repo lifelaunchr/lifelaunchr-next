@@ -108,8 +108,10 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
       const res = await fetch(`${apiUrl}/my-usage`, {
         headers: { Authorization: `Bearer ${token}` },
       })
+      console.log('[fetchUsage] /my-usage status:', res.status)
       if (res.ok) {
         const data = await res.json()
+        console.log('[fetchUsage] account_type:', data.account_type, 'user_id:', data.user_id)
         setUsageData(data)
 
         const accountType = data.account_type ?? 'student'
@@ -129,13 +131,17 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
         // Student list — counselors and parents only
         if (counselor || parent) {
           const studentsRes = await fetch(`${apiUrl}/my-students`, { headers: { Authorization: `Bearer ${token}` } })
+          console.log('[fetchUsage] /my-students status:', studentsRes.status)
           if (studentsRes.ok) {
             const students = await studentsRes.json()
+            console.log('[fetchUsage] students returned:', students.length)
             setMyStudents(students.map((s: { id: number; full_name: string; email: string }) => ({ id: s.id, full_name: s.full_name, email: s.email })))
           }
         }
       }
-    } catch { /* silently ignore */ }
+    } catch (err) {
+      console.error('[fetchUsage] error:', err)
+    }
   }, [userId, getToken, apiUrl])
 
   const fetchSessions = useCallback(async () => {
