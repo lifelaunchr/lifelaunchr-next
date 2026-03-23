@@ -57,7 +57,7 @@ interface Activity {
 
 interface HsSuggestion {
   ncessch: string
-  school_name: string
+  name: string
   city: string
   state: string
 }
@@ -158,6 +158,7 @@ function ProfileContent() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [studentName, setStudentName] = useState<string | null>(null)
   // Counselor-specific fields
@@ -271,18 +272,33 @@ function ProfileContent() {
   const saveProfile = async () => {
     if (!targetId || !canWrite) return
     setSaving(true)
+    setSaveError(null)
     try {
       const token = await getToken()
+      // Send null for empty college_interests array to avoid psycopg2 type inference issues
+      const interests = profile.college_interests && profile.college_interests.length > 0
+        ? profile.college_interests
+        : null
       const res = await fetch(`${apiUrl}/profile/${targetId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           ...profile,
-          college_interests: profile.college_interests || [],
+          college_interests: interests,
         }),
       })
-      if (res.ok) { setSaved(true); setTimeout(() => setSaved(false), 2000) }
-    } catch { /* ignore */ } finally { setSaving(false) }
+      if (res.ok) {
+        setSaved(true)
+        setTimeout(() => setSaved(false), 2000)
+      } else {
+        const body = await res.json().catch(() => ({}))
+        setSaveError(body.detail || `Save failed (${res.status})`)
+      }
+    } catch (e) {
+      setSaveError('Network error — check your connection.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const deleteActivity = async (activityId: number) => {
@@ -618,12 +634,12 @@ function ProfileContent() {
                           onClick={() => {
                             setProfile((p) => ({
                               ...p,
-                              high_school_name: s.school_name,
+                              high_school_name: s.name,
                               high_school_city: s.city,
                               high_school_state: s.state,
                               high_school_ncessch: s.ncessch,
                             }))
-                            setHsQuery(s.school_name)
+                            setHsQuery(s.name)
                             setHsSearchState(s.state)
                             setHsSuggestions([])
                           }}
@@ -636,7 +652,7 @@ function ProfileContent() {
                           onMouseOver={(e) => (e.currentTarget.style.background = '#f9fafb')}
                           onMouseOut={(e) => (e.currentTarget.style.background = 'none')}
                         >
-                          <span style={{ fontWeight: 600 }}>{s.school_name}</span>
+                          <span style={{ fontWeight: 600 }}>{s.name}</span>
                           <span style={{ color: '#6b7280', marginLeft: 6, fontSize: '0.8rem' }}>{s.city}, {s.state}</span>
                         </button>
                       ))}
@@ -841,13 +857,18 @@ function ProfileContent() {
 
         {/* Save button — editable profiles only */}
         {canWrite && (
-          <button
-            onClick={saveProfile}
-            disabled={saving}
-            style={{ background: saving ? '#818cf8' : '#4f46e5', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 24px', fontSize: '0.9rem', fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', marginBottom: 32 }}
-          >
-            {saved ? 'Saved' : saving ? 'Saving...' : 'Save Profile'}
-          </button>
+          <div style={{ marginBottom: 32 }}>
+            <button
+              onClick={saveProfile}
+              disabled={saving}
+              style={{ background: saved ? '#059669' : saving ? '#818cf8' : '#4f46e5', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 24px', fontSize: '0.9rem', fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer' }}
+            >
+              {saved ? '✓ Saved' : saving ? 'Saving...' : 'Save Profile'}
+            </button>
+            {saveError && (
+              <p style={{ marginTop: 8, fontSize: '0.8rem', color: '#dc2626' }}>⚠ {saveError}</p>
+            )}
+          </div>
         )}
         </>)}
 
