@@ -154,6 +154,10 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
 
   // Auth sync — ensure user exists in our DB so profile/lists work.
   // Also claims any guest sessions from localStorage so history/usage carry over.
+  // IMPORTANT: fetchUsage() is called AFTER sync completes so that /my-usage sees
+  // the correct clerk_user_id (auth/sync may have just reconnected it). Without this,
+  // counselor accounts whose Clerk ID was recreated would appear as students because
+  // /my-usage ran before the DB row was updated.
   useEffect(() => {
     if (!userId || !clerkUser) return
     const sync = async () => {
@@ -183,9 +187,11 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
           setGuestToken(null)
         }
       } catch { /* ignore */ }
+      // Re-fetch usage after sync so account_type is always correct
+      fetchUsage()
     }
     sync()
-  }, [userId, clerkUser, getToken, apiUrl])
+  }, [userId, clerkUser, getToken, apiUrl, fetchUsage])
 
   useEffect(() => {
     fetchUsage()
