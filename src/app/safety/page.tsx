@@ -25,7 +25,7 @@ const layers = [
 const faqs = [
   {
     q: 'Does Soar monitor everything students type?',
-    a: 'No. Soar is not surveillance. Conversations are private by default. The only time a counselor is notified is when Soar detects a safety concern — like a student expressing thoughts of self-harm, or a message that triggers a content refusal. Normal college research conversations are never flagged.',
+    a: "Soar is not surveillance — it's a shared research workspace. Your linked counselor can view your conversations as part of the college planning process (similar to a shared notebook), but conversations are never shared with third parties or sold. Safety monitoring is separate: every message is scanned for crisis language, and counselors are notified immediately if a genuine safety concern is detected.",
   },
   {
     q: 'What happens if a student expresses thoughts of self-harm?',
@@ -33,8 +33,8 @@ const faqs = [
     link: { href: 'https://988lifeline.org', text: '988 Suicide & Crisis Lifeline' },
   },
   {
-    q: 'Will my counselor see everything I type?',
-    a: "No. Your counselor can view sessions you've shared with them as part of the college research process, but they are not notified of every conversation. Alerts only go to your counselor when Soar detects a genuine safety concern.",
+    q: 'Will my counselor see my conversations?',
+    a: "Yes. Soar is a shared workspace — your linked counselor or coach can view your conversations. This is intentional: it lets them understand your research, track your progress, and come fully prepared to every session. Think of it like a shared notebook, not a private journal. The more your counselor knows about where you are in the process, the more useful your time together becomes. Counselors are also notified immediately if Soar detects a safety concern.",
   },
   {
     q: "What kinds of questions is Soar not able to help with?",
