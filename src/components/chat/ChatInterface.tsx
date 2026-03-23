@@ -148,7 +148,10 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
     if (!userId) return
     try {
       const token = await getToken()
-      const res = await fetch(`${apiUrl}/sessions`, {
+      const url = forStudentId
+        ? `${apiUrl}/student-sessions/${forStudentId}`
+        : `${apiUrl}/sessions`
+      const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (res.ok) {
@@ -156,7 +159,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
         setSessions(data)
       }
     } catch { /* silently ignore */ }
-  }, [userId, getToken, apiUrl])
+  }, [userId, getToken, apiUrl, forStudentId])
 
   // Auth sync — ensure user exists in our DB so profile/lists work.
   // Also claims any guest sessions from localStorage so history/usage carry over.
@@ -341,7 +344,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                 setMessages((prev) =>
                   prev.map((m) =>
                     m.id === assistantMsgId
-                      ? { ...m, content: `_${data.msg}_` }
+                      ? { ...m, content: m.content ? `${m.content}\n\n_${data.msg}_` : `_${data.msg}_` }
                       : m
                   )
                 )
@@ -428,6 +431,8 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
         userId={userId}
         onNewConversation={handleNewConversation}
         onToggleSidebar={() => setSidebarOpen((v) => !v)}
+        messagesUsed={usageData?.messages_used}
+        effectiveLimit={usageData?.effective_limit ?? null}
       />
 
       <div className="flex flex-1 overflow-hidden">
@@ -543,6 +548,13 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
 
               <div className="border-t border-white/10 mt-1 mb-1" />
 
+              {/* Logged-in user */}
+              {clerkUser && (
+                <div className="text-[10px] text-slate-500 px-3 pb-0.5 truncate">
+                  {clerkUser.fullName || clerkUser.emailAddresses[0]?.emailAddress || ''}
+                </div>
+              )}
+
               {/* My Info / Profile — always own profile */}
               <Link
                 href="/profile"
@@ -582,6 +594,15 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                   <span>My College Lists</span>
                 </Link>
               )}
+
+              {/* Upgrade link */}
+              <a
+                href="/upgrade"
+                className="flex items-center gap-3 px-3 py-2 text-xs text-slate-500 hover:text-slate-300 hover:bg-white/10 rounded-lg transition-all"
+              >
+                <span className="text-sm leading-none">⬆️</span>
+                <span>Upgrade Soar</span>
+              </a>
             </div>
           )}
         </aside>
