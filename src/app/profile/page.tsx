@@ -185,6 +185,21 @@ function ProfileContent() {
     const load = async () => {
       try {
         const token = await getToken()
+        if (!token) { setError('Not signed in.'); setLoading(false); return }
+
+        // Ensure user exists in DB (needed if user navigates here without loading chat first)
+        if (clerkUser) {
+          await fetch(`${apiUrl}/auth/sync`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({
+              clerk_user_id: clerkUser.id,
+              email: clerkUser.emailAddresses[0]?.emailAddress || '',
+              full_name: clerkUser.fullName || clerkUser.firstName || '',
+              account_type: 'student',
+            }),
+          })
+        }
 
         // Always fetch our own usage first (for account_type + myUserId)
         const usageRes = await fetch(`${apiUrl}/my-usage`, {

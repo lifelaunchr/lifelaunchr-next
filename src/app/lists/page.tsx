@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, Suspense } from 'react'
-import { useAuth } from '@clerk/nextjs'
+import { useAuth, useUser } from '@clerk/nextjs'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
@@ -36,6 +36,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 function ListsContent() {
   const { getToken } = useAuth()
+  const { user: clerkUser } = useUser()
   const searchParams = useSearchParams()
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -58,6 +59,22 @@ function ListsContent() {
     const load = async () => {
       try {
         const token = await getToken()
+        if (!token) { setError('Not signed in.'); setLoading(false); return }
+
+        // Ensure user exists in DB (needed if navigating here without loading chat first)
+        if (clerkUser) {
+          await fetch(`${apiUrl}/auth/sync`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({
+              clerk_user_id: clerkUser.id,
+              email: clerkUser.emailAddresses[0]?.emailAddress || '',
+              full_name: clerkUser.fullName || clerkUser.firstName || '',
+              account_type: 'student',
+            }),
+          })
+        }
+
         const usageRes = await fetch(`${apiUrl}/my-usage`, {
           headers: { Authorization: `Bearer ${token}` },
         })
