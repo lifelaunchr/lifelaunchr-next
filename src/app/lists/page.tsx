@@ -56,24 +56,25 @@ function ListsContent() {
   const [activeTab, setActiveTab] = useState<'research' | 'applications'>('research')
 
   useEffect(() => {
+    // Wait for Clerk to finish loading the session before proceeding.
+    // clerkUser is null on first render; the effect re-runs once it's available.
+    if (!clerkUser) return
     const load = async () => {
       try {
         const token = await getToken()
         if (!token) { setError('Not signed in.'); setLoading(false); return }
 
         // Ensure user exists in DB (needed if navigating here without loading chat first)
-        if (clerkUser) {
-          await fetch(`${apiUrl}/auth/sync`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({
-              clerk_user_id: clerkUser.id,
-              email: clerkUser.emailAddresses[0]?.emailAddress || '',
-              full_name: clerkUser.fullName || clerkUser.firstName || '',
-              account_type: 'student',
-            }),
-          })
-        }
+        await fetch(`${apiUrl}/auth/sync`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            clerk_user_id: clerkUser.id,
+            email: clerkUser.emailAddresses[0]?.emailAddress || '',
+            full_name: clerkUser.fullName || clerkUser.firstName || '',
+            account_type: 'student',
+          }),
+        })
 
         const usageRes = await fetch(`${apiUrl}/my-usage`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -108,7 +109,7 @@ function ListsContent() {
       } catch { setError('Failed to load lists.') } finally { setLoading(false) }
     }
     load()
-  }, [getToken, apiUrl, forStudentId])
+  }, [getToken, apiUrl, forStudentId, clerkUser])
 
   const targetId = forStudentId ?? myUserId
 
