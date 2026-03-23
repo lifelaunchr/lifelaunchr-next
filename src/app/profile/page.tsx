@@ -288,6 +288,18 @@ function ProfileContent() {
         }),
       })
       if (res.ok) {
+        // Re-fetch the profile from the server to confirm what was actually persisted
+        const token2 = await getToken()
+        const fresh = await fetch(`${apiUrl}/profile/${targetId}`, {
+          headers: { Authorization: `Bearer ${token2}` },
+        })
+        if (fresh.ok) {
+          const freshData = await fresh.json()
+          const p = freshData.profile || {}
+          setProfile(p)
+          if (p.high_school_state) setHsSearchState(p.high_school_state)
+          if (p.high_school_name) setHsQuery(p.high_school_name)
+        }
         setSaved(true)
         setTimeout(() => setSaved(false), 2000)
       } else {
