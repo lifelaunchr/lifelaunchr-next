@@ -37,6 +37,10 @@ const faqs = [
     a: "Yes. Soar is a shared workspace — your linked counselor or coach can view your conversations. This is intentional: it lets them understand your research, track your progress, and come fully prepared to every session. Think of it like a shared notebook, not a private journal. The more your counselor knows about where you are in the process, the more useful your time together becomes. Counselors are also notified immediately if Soar detects a safety concern.",
   },
   {
+    q: 'I\'m working with a school counselor. Are they a mandated reporter?',
+    a: 'It depends on their role. School counselors (those employed by a K–12 school or district) are typically mandated reporters under state law — meaning if they become aware of information suggesting you or someone else may be in danger, they may be legally required to report it to authorities, even if shared in confidence. Independent college counselors and educational consultants (IECs) are generally not mandated reporters, though their specific obligations vary. Soar itself never makes mandatory reports — but because your counselor can see your conversations, their legal obligations may require them to act on something they read. If you\'re unsure about your counselor\'s reporting obligations, ask them directly before sharing sensitive information.',
+  },
+  {
     q: "What kinds of questions is Soar not able to help with?",
     a: "Soar is designed for college and career research. It won't help with requests involving violence, explicit content, or anything harmful. If a student asks something outside Soar's scope, it will say so clearly and, where appropriate, point to better resources.",
   },

@@ -2,6 +2,8 @@
 
 interface WelcomeCardProps {
   onSendMessage: (text: string) => void
+  accountType?: 'student' | 'counselor' | 'parent'
+  isFreeTier?: boolean
 }
 
 const STARTERS = [
@@ -39,7 +41,17 @@ const VALUE_PROPS = [
   },
 ]
 
-export function WelcomeCard({ onSendMessage }: WelcomeCardProps) {
+function getHowDoesThisWorkMessage(accountType?: 'student' | 'counselor' | 'parent'): string {
+  if (accountType === 'counselor') {
+    return 'How does Soar work, and how can I use it for my own research and for my students?'
+  }
+  if (accountType === 'parent') {
+    return 'How does Soar work, and how can it help my family through the college planning process?'
+  }
+  return 'How does Soar work, and what can it help me with as a student applying to colleges?'
+}
+
+export function WelcomeCard({ onSendMessage, accountType, isFreeTier }: WelcomeCardProps) {
   return (
     <div className="flex-1 flex items-start justify-center pt-8 pb-4 px-4">
       <div className="max-w-2xl w-full text-center">
@@ -97,7 +109,7 @@ export function WelcomeCard({ onSendMessage }: WelcomeCardProps) {
 
         {/* How does this work */}
         <button
-          onClick={() => onSendMessage('How does this work?')}
+          onClick={() => onSendMessage(getHowDoesThisWorkMessage(accountType))}
           className="text-xs text-gray-400 hover:text-gray-600 underline transition-colors"
         >
           How does this work?
@@ -107,6 +119,9 @@ export function WelcomeCard({ onSendMessage }: WelcomeCardProps) {
         <p className="text-xs text-gray-400 mt-4 border-t border-gray-100 pt-4">
           Your conversations are private and used only to improve your experience.
         </p>
+        {isFreeTier && (
+          <p className="text-xs text-gray-400 mt-2">On the free tier · <a href="/upgrade" className="underline hover:text-indigo-500">Learn about Soar Plus →</a></p>
+        )}
       </div>
     </div>
   )

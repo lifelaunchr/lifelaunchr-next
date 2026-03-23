@@ -591,7 +591,11 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
           {/* Messages area */}
           <div className="flex-1 overflow-y-auto px-4 py-6 flex flex-col gap-4">
             {messages.length === 0 ? (
-              <WelcomeCard onSendMessage={sendMessage} />
+              <WelcomeCard
+                onSendMessage={sendMessage}
+                accountType={isCounselor ? 'counselor' : isParent ? 'parent' : 'student'}
+                isFreeTier={!!(usageData?.effective_limit && usageData.effective_limit <= 30)}
+              />
             ) : (
               messages.map((msg) => (
                 <ChatMessage
