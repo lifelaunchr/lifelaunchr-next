@@ -644,14 +644,6 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                 </Link>
               )}
 
-              {/* Upgrade link */}
-              <a
-                href="/upgrade"
-                className="flex items-center gap-3 px-3 py-2 text-xs text-slate-500 hover:text-slate-300 hover:bg-white/10 rounded-lg transition-all"
-              >
-                <span className="text-sm leading-none">⬆️</span>
-                <span>Upgrade Soar</span>
-              </a>
             </div>
           )}
         </aside>
@@ -724,8 +716,10 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                 </p>
               )}
 
-              {/* Safety link */}
+              {/* Safety + upgrade links */}
               <p className="text-center text-xs mt-1 text-gray-400">
+                <a href="/upgrade" className="hover:text-indigo-500 transition-colors">Upgrade Soar</a>
+                <span className="mx-1.5">·</span>
                 <a href="/safety" className="hover:text-white transition-colors">How we help keep teens safe →</a>
               </p>
             </div>
