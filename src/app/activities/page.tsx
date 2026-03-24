@@ -353,6 +353,38 @@ function ActivitiesContent() {
   }
   const handleDragEnd = () => { setDragSrcIndex(null); setDragOverIndex(null) }
 
+  // ── Hours sanity check ──────────────────────────────────────────────────────
+  // A typical week: 168 hrs total − 56 sleep − 35 school − 14 basic needs = ~63 free hrs during school year
+  // Summer: ~98 free hrs (no school). We warn at 50 / 80 to leave headroom.
+  const SCHOOL_YEAR_WARN = 50
+  const SUMMER_WARN = 80
+
+  const schoolYearHours = activities.reduce((sum, a) => {
+    if (a.timing === 'school_year' || a.timing === 'year_round') {
+      return sum + (Number(a.hours_per_week) || 0)
+    }
+    return sum
+  }, 0)
+
+  const summerHours = activities.reduce((sum, a) => {
+    if (a.timing === 'summer' || a.timing === 'year_round') {
+      return sum + (Number(a.hours_per_week) || 0)
+    }
+    return sum
+  }, 0)
+
+  const hoursWarnings: string[] = []
+  if (schoolYearHours > SCHOOL_YEAR_WARN) {
+    hoursWarnings.push(
+      `School year: ${schoolYearHours} hrs/week across all activities — that's likely more than a realistic week allows (~${SCHOOL_YEAR_WARN} hrs free after school, sleep, and meals). Admissions officers may question these numbers.`
+    )
+  }
+  if (summerHours > SUMMER_WARN) {
+    hoursWarnings.push(
+      `Summer: ${summerHours} hrs/week across all activities — this exceeds a realistic cap (~${SUMMER_WARN} hrs free after sleep and meals). Consider reviewing your estimates.`
+    )
+  }
+
   // ── Render ──────────────────────────────────────────────────────────────────
 
   if (loading) return <div style={centerStyle}>Loading…</div>
@@ -411,6 +443,24 @@ function ActivitiesContent() {
             )
           })}
         </div>
+
+        {/* Hours sanity warning */}
+        {hoursWarnings.length > 0 && (
+          <div style={{ background: '#fffbeb', border: '1px solid #f59e0b', borderRadius: 12, padding: '12px 16px', marginBottom: 20, display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+            <span style={{ fontSize: '1.2rem', flexShrink: 0, lineHeight: 1.4 }}>⚠️</span>
+            <div>
+              <p style={{ fontWeight: 700, fontSize: '0.85rem', color: '#92400e', marginBottom: 4 }}>
+                Hours per week may look unrealistic to admissions offices
+              </p>
+              {hoursWarnings.map((w, i) => (
+                <p key={i} style={{ fontSize: '0.8rem', color: '#78350f', margin: '2px 0', lineHeight: 1.5 }}>{w}</p>
+              ))}
+              <p style={{ fontSize: '0.75rem', color: '#92400e', marginTop: 6, opacity: 0.8 }}>
+                Double-check your hours/week entries — even honest students get flagged when totals look impossible.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Cards */}
         {activities.length === 0 ? (
