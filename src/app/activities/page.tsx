@@ -33,7 +33,7 @@ interface Activity {
   is_common_app_award?: boolean
 }
 
-type FormState = Omit<Activity, 'id' | 'display_order'> & {
+type FormState = Omit<Activity, 'id' | 'display_order' | 'hours_per_week' | 'weeks_per_year'> & {
   hours_per_week: string
   weeks_per_year: string
 }
