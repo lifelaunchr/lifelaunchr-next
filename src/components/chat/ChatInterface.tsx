@@ -361,7 +361,14 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
             try {
               const data = JSON.parse(rawData)
 
-              if (data.type === 'text') {
+              if (data.type === 'text_start') {
+                // First real token incoming — wipe status messages so text streams into a clean bubble
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantMsgId ? { ...m, content: '' } : m
+                  )
+                )
+              } else if (data.type === 'text') {
                 setMessages((prev) =>
                   prev.map((m) =>
                     m.id === assistantMsgId
