@@ -33,9 +33,26 @@ interface Activity {
   is_common_app_award?: boolean
 }
 
-type FormState = Omit<Activity, 'id' | 'display_order' | 'hours_per_week' | 'weeks_per_year'> & {
+interface FormState {
+  uc_category: string
+  common_app_category?: string
+  category?: string
+  role?: string
+  organization?: string
+  organization_description?: string
+  description?: string
+  grade_levels?: string
   hours_per_week: string
   weeks_per_year: string
+  timing?: string
+  is_current: boolean
+  eligibility_requirements?: string
+  level_of_recognition?: string
+  award_type?: string
+  still_working?: boolean
+  earnings_use?: string
+  intend_to_continue?: boolean | null
+  is_common_app_award?: boolean
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -316,7 +333,15 @@ function ActivitiesContent() {
         closeModal()
       } else {
         const body = await res.json().catch(() => ({}))
-        setSaveError(body.detail || 'Save failed.')
+        const detail = body.detail
+        const msg = typeof detail === 'string'
+          ? detail
+          : Array.isArray(detail)
+            ? detail.map((d: { msg?: string }) => d.msg || JSON.stringify(d)).join('; ')
+            : detail
+              ? JSON.stringify(detail)
+              : body.message || `Error ${res.status}`
+        setSaveError(msg || 'Save failed.')
       }
     } catch { setSaveError('Network error.') }
     finally { setSaving(false) }
@@ -781,7 +806,7 @@ function ActivitiesContent() {
             {saveError && <p style={{ color: '#dc2626', fontSize: '0.8rem', marginTop: 14 }}>⚠ {saveError}</p>}
 
             <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
-              <button onClick={saveActivity} disabled={saving} style={{ ...btnPrimary, flex: 1, padding: '10px 0', opacity: saving ? 0.7 : 1 }}>
+              <button onClick={saveActivity} disabled={saving} style={{ ...btnPrimary, flex: 1, padding: '10px 0', justifyContent: 'center', opacity: saving ? 0.7 : 1 }}>
                 {saving ? 'Saving…' : editingId ? 'Save Changes' : 'Add Entry'}
               </button>
               <button onClick={closeModal} style={{ background: '#f9fafb', color: '#6b7280', border: '1px solid #e5e7eb', borderRadius: 8, padding: '10px 24px', fontSize: '0.875rem', cursor: 'pointer' }}>
