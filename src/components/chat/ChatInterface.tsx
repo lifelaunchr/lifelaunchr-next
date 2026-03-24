@@ -9,10 +9,17 @@ import { ModuleChips } from './ModuleChips'
 import { WelcomeCard } from './WelcomeCard'
 import { LimitModal } from './LimitModal'
 
+export interface MessageDownload {
+  filename: string
+  content: string
+  label: string
+}
+
 export interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
+  downloads?: MessageDownload[]
 }
 
 interface HistoryItem {
@@ -417,6 +424,20 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                   reset_date: data.reset_date,
                 })
                 setMessages((prev) => prev.filter((m) => m.id !== assistantMsgId))
+              } else if (data.type === 'file_ready') {
+                // Attach the download to the current assistant message
+                const dl: MessageDownload = {
+                  filename: data.filename,
+                  content: data.content,
+                  label: data.label,
+                }
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantMsgId
+                      ? { ...m, downloads: [...(m.downloads ?? []), dl] }
+                      : m
+                  )
+                )
               }
             } catch { /* skip malformed SSE lines */ }
           }
