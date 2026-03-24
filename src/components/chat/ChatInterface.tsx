@@ -83,6 +83,10 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
   const [inviteUrl, setInviteUrl] = useState<string | null>(null)
   const [inviteCopied, setInviteCopied] = useState(false)
   const [forStudentId, setForStudentId] = useState<number | null>(null)
+  const [myConnections, setMyConnections] = useState<{
+    counselors: Array<{ id: number; full_name: string; email: string; organization?: string }>
+    parents: Array<{ id: number; full_name: string; email: string }>
+  } | null>(null)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -206,6 +210,24 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
     fetchUsage()
     fetchSessions()
   }, [fetchUsage, fetchSessions])
+
+  // Fetch student's linked counselors/parents (students only — others get empty arrays)
+  useEffect(() => {
+    if (!userId) return
+    const fetchConnections = async () => {
+      try {
+        const token = await getToken()
+        const res = await fetch(`${apiUrl}/my-connections`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setMyConnections(data)
+        }
+      } catch { /* silently ignore */ }
+    }
+    fetchConnections()
+  }, [userId, getToken, apiUrl])
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -582,6 +604,33 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                     <span>College Lists</span>
                   </Link>
                 </>
+              )}
+
+              {/* Student connections — shown for students who are linked to a counselor or parent */}
+              {!isCounselor && !isParent && myConnections &&
+                (myConnections.counselors.length > 0 || myConnections.parents.length > 0) && (
+                <div className="mb-2">
+                  <p className="text-[10px] uppercase tracking-widest text-slate-600 px-3 mb-1">
+                    Connected to
+                  </p>
+                  {myConnections.counselors.map((c) => (
+                    <div key={c.id} className="flex items-center gap-2 px-3 py-1.5">
+                      <span className="text-sm leading-none flex-shrink-0">🧑‍🏫</span>
+                      <div className="min-w-0">
+                        <p className="text-xs text-slate-300 truncate">{c.full_name || c.email}</p>
+                        {c.organization && (
+                          <p className="text-[10px] text-slate-500 truncate">{c.organization}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {myConnections.parents.map((p) => (
+                    <div key={p.id} className="flex items-center gap-2 px-3 py-1.5">
+                      <span className="text-sm leading-none flex-shrink-0">👪</span>
+                      <p className="text-xs text-slate-300 truncate">{p.full_name || p.email}</p>
+                    </div>
+                  ))}
+                </div>
               )}
 
               {/* My College Lists — students only */}
