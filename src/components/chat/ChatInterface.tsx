@@ -640,6 +640,13 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                     <span>Student Profile</span>
                   </Link>
                   <Link
+                    href={`/activities?for=${forStudentId}`}
+                    className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                  >
+                    <span className="text-base leading-none">🏆</span>
+                    <span>Activities</span>
+                  </Link>
+                  <Link
                     href={`/lists?for=${forStudentId}`}
                     className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
                   >
@@ -676,15 +683,24 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                 </div>
               )}
 
-              {/* My College Lists — students only */}
+              {/* Activities + College Lists — students only */}
               {!isCounselor && !isParent && (
-                <Link
-                  href="/lists"
-                  className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
-                >
-                  <span className="text-base leading-none">🎓</span>
-                  <span>My College Lists</span>
-                </Link>
+                <>
+                  <Link
+                    href="/activities"
+                    className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                  >
+                    <span className="text-base leading-none">🏆</span>
+                    <span>My Activities</span>
+                  </Link>
+                  <Link
+                    href="/lists"
+                    className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                  >
+                    <span className="text-base leading-none">🎓</span>
+                    <span>My College Lists</span>
+                  </Link>
+                </>
               )}
 
             </div>

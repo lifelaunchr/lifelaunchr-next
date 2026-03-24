@@ -184,10 +184,6 @@ function ProfileContent() {
   const [hsLoading, setHsLoading] = useState(false)
   const hsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // New activity form
-  const [showAddActivity, setShowAddActivity] = useState(false)
-  const [newActivity, setNewActivity] = useState({ category: '', role: '', organization: '', description: '', hours_per_week: '', weeks_per_year: '', is_current: true })
-
   // True when we're viewing someone else's profile
   const isViewingStudent = forStudentId !== null
 
@@ -337,36 +333,6 @@ function ProfileContent() {
       setSaveError('Network error — check your connection.')
     } finally {
       setSaving(false)
-    }
-  }
-
-  const deleteActivity = async (activityId: number) => {
-    if (!canWrite) return
-    const token = await getToken()
-    await fetch(`${apiUrl}/profile/activities/${activityId}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    setActivities((prev) => prev.filter((a) => a.id !== activityId))
-  }
-
-  const addActivity = async () => {
-    if (!targetId || !canWrite || !newActivity.category || !newActivity.role || !newActivity.organization) return
-    const token = await getToken()
-    const res = await fetch(`${apiUrl}/profile/${targetId}/activities`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({
-        ...newActivity,
-        hours_per_week: newActivity.hours_per_week ? Number(newActivity.hours_per_week) : null,
-        weeks_per_year: newActivity.weeks_per_year ? Number(newActivity.weeks_per_year) : null,
-      }),
-    })
-    if (res.ok) {
-      const added = await res.json()
-      setActivities((prev) => [...prev, added])
-      setNewActivity({ category: '', role: '', organization: '', description: '', hours_per_week: '', weeks_per_year: '', is_current: true })
-      setShowAddActivity(false)
     }
   }
 
@@ -965,73 +931,47 @@ function ProfileContent() {
         )}
         </>)}
 
-        {/* Activities */}
-        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 24, marginBottom: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0c1b33' }}>Activities &amp; Awards</h2>
-            {canWrite && (
-              <button
-                onClick={() => setShowAddActivity((v) => !v)}
-                style={{ fontSize: '0.8rem', color: '#4f46e5', border: '1px solid #c7d2fe', borderRadius: 6, padding: '4px 12px', background: '#eef2ff', cursor: 'pointer' }}
-              >
-                + Add
-              </button>
-            )}
+        {/* Activities & Awards — link card */}
+        <Link
+          href={forStudentId ? `/activities?for=${forStudentId}` : '/activities'}
+          style={{ textDecoration: 'none', display: 'block', marginBottom: 24 }}
+        >
+          <div style={{
+            background: '#fff',
+            border: '1px solid #e2e8f0',
+            borderRadius: 12,
+            padding: '20px 24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            cursor: 'pointer',
+            transition: 'box-shadow 0.15s, border-color 0.15s',
+          }}
+            onMouseEnter={(e) => {
+              const el = e.currentTarget as HTMLDivElement
+              el.style.boxShadow = '0 4px 12px rgba(79,70,229,0.12)'
+              el.style.borderColor = '#c7d2fe'
+            }}
+            onMouseLeave={(e) => {
+              const el = e.currentTarget as HTMLDivElement
+              el.style.boxShadow = 'none'
+              el.style.borderColor = '#e2e8f0'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <span style={{ fontSize: '1.6rem' }}>🏆</span>
+              <div>
+                <p style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0c1b33', marginBottom: 2 }}>Activities &amp; Awards</p>
+                <p style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+                  {activities.length > 0
+                    ? `${activities.length} activit${activities.length === 1 ? 'y' : 'ies'} · drag to reorder, edit, or add more`
+                    : 'Add extracurriculars, sports, jobs, honors, and awards'}
+                </p>
+              </div>
+            </div>
+            <span style={{ color: '#4f46e5', fontWeight: 600, fontSize: '1.1rem', flexShrink: 0 }}>→</span>
           </div>
-
-          {canWrite && showAddActivity && (
-            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: 16, marginBottom: 16 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', marginBottom: 4 }}>Category*</label>
-                  <input value={newActivity.category} onChange={(e) => setNewActivity((p) => ({ ...p, category: e.target.value }))} placeholder="Sports, Arts, Leadership..." style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 6, padding: '6px 10px', fontSize: '0.85rem', boxSizing: 'border-box' }} />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', marginBottom: 4 }}>Role / Position*</label>
-                  <input value={newActivity.role} onChange={(e) => setNewActivity((p) => ({ ...p, role: e.target.value }))} placeholder="Captain, President..." style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 6, padding: '6px 10px', fontSize: '0.85rem', boxSizing: 'border-box' }} />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', marginBottom: 4 }}>Organization*</label>
-                  <input value={newActivity.organization} onChange={(e) => setNewActivity((p) => ({ ...p, organization: e.target.value }))} placeholder="School name, club name..." style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 6, padding: '6px 10px', fontSize: '0.85rem', boxSizing: 'border-box' }} />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', marginBottom: 4 }}>Hrs/week · Weeks/year</label>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <input type="number" value={newActivity.hours_per_week} onChange={(e) => setNewActivity((p) => ({ ...p, hours_per_week: e.target.value }))} placeholder="10" style={{ flex: 1, border: '1px solid #e5e7eb', borderRadius: 6, padding: '6px 10px', fontSize: '0.85rem' }} />
-                    <input type="number" value={newActivity.weeks_per_year} onChange={(e) => setNewActivity((p) => ({ ...p, weeks_per_year: e.target.value }))} placeholder="36" style={{ flex: 1, border: '1px solid #e5e7eb', borderRadius: 6, padding: '6px 10px', fontSize: '0.85rem' }} />
-                  </div>
-                </div>
-              </div>
-              <div style={{ marginBottom: 12 }}>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', marginBottom: 4 }}>Description</label>
-                <textarea value={newActivity.description} onChange={(e) => setNewActivity((p) => ({ ...p, description: e.target.value }))} rows={2} style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 6, padding: '6px 10px', fontSize: '0.85rem', resize: 'vertical', boxSizing: 'border-box' }} />
-              </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={addActivity} style={{ background: '#4f46e5', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 16px', fontSize: '0.85rem', cursor: 'pointer' }}>Save Activity</button>
-                <button onClick={() => setShowAddActivity(false)} style={{ background: 'transparent', color: '#6b7280', border: '1px solid #e5e7eb', borderRadius: 6, padding: '6px 16px', fontSize: '0.85rem', cursor: 'pointer' }}>Cancel</button>
-              </div>
-            </div>
-          )}
-
-          {activities.length === 0 ? (
-            <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>No activities added yet.</p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {activities.map((a) => (
-                <div key={a.id} style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div>
-                    <p style={{ fontWeight: 600, fontSize: '0.875rem', color: '#1f2937' }}>{a.role} — {a.organization}</p>
-                    <p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: 2 }}>{a.category}{a.hours_per_week ? ` · ${a.hours_per_week} hrs/wk` : ''}{a.weeks_per_year ? ` · ${a.weeks_per_year} wks/yr` : ''}</p>
-                    {a.description && <p style={{ fontSize: '0.8rem', color: '#374151', marginTop: 4 }}>{a.description}</p>}
-                  </div>
-                  {canWrite && (
-                    <button onClick={() => deleteActivity(a.id)} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', flexShrink: 0, marginLeft: 12 }}>Remove</button>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        </Link>
       </div>
     </div>
   )
