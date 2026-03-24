@@ -152,6 +152,16 @@ function ProfileContent() {
 
   const [myUserId, setMyUserId] = useState<number | null>(null)
   const [accountType, setAccountType] = useState<string>('student')
+  const [usageData, setUsageData] = useState<{
+    messages_used: number
+    effective_limit: number | null
+    display_plan?: string
+    breakdown?: string
+    can_use_essays?: boolean
+    can_use_plans?: boolean
+    history_retention_days?: number | null
+    account_type?: string
+  } | null>(null)
   const [canWrite, setCanWrite] = useState(true)   // from API; false for parents
   const [profile, setProfile] = useState<Profile>({})
   const [activities, setActivities] = useState<Activity[]>([])
@@ -210,6 +220,7 @@ function ProfileContent() {
         const usage = await usageRes.json()
         setMyUserId(usage.user_id)
         setAccountType(usage.account_type || 'student')
+        setUsageData(usage)
 
         // Determine which user's profile to load
         const targetId = forStudentId ?? usage.user_id
@@ -450,6 +461,60 @@ function ProfileContent() {
               ? `You're viewing ${studentName ? `${studentName}'s` : 'this student\'s'} profile. You can edit on their behalf.`
               : `You're viewing ${studentName ? `${studentName}'s` : 'this student\'s'} profile. Fields are read-only.`}
           </div>
+        )}
+
+        {/* Plan & Usage */}
+        {usageData && !forStudentId && (
+          <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
+            <h2 className="text-base font-semibold text-gray-800 mb-4">Your Plan &amp; Usage</h2>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="text-left py-2 pr-8 text-gray-500 font-medium">Limit</th>
+                    <th className="text-right py-2 pr-8 text-gray-500 font-medium">Used</th>
+                    <th className="text-right py-2 pr-8 text-gray-500 font-medium">Total</th>
+                    <th className="text-left py-2 text-gray-500 font-medium">How is this computed?</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  <tr>
+                    <td className="py-3 pr-8 font-medium text-gray-800">Messages this month</td>
+                    <td className="py-3 pr-8 text-right text-gray-700">{usageData.messages_used}</td>
+                    <td className="py-3 pr-8 text-right text-gray-700">
+                      {usageData.effective_limit === null ? '∞ unlimited' : usageData.effective_limit}
+                    </td>
+                    <td className="py-3 text-gray-500 text-xs">{usageData.breakdown || usageData.display_plan}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 pr-8 font-medium text-gray-800">History retention</td>
+                    <td className="py-3 pr-8 text-right text-gray-400">—</td>
+                    <td className="py-3 pr-8 text-right text-gray-700">
+                      {usageData.history_retention_days === null || usageData.history_retention_days === undefined
+                        ? '∞ unlimited'
+                        : `${usageData.history_retention_days} days`}
+                    </td>
+                    <td className="py-3 text-gray-500 text-xs">Based on your {usageData.display_plan || 'plan'}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 pr-8 font-medium text-gray-800">Essay assistance</td>
+                    <td className="py-3 pr-8 text-right text-gray-400">—</td>
+                    <td className="py-3 pr-8 text-right text-gray-700">
+                      {usageData.can_use_essays ? '✓ Included' : '✗ Not included'}
+                    </td>
+                    <td className="py-3 text-gray-500 text-xs">
+                      {usageData.can_use_essays ? 'Available on your plan' : <a href="/upgrade" className="text-indigo-500 hover:underline">Upgrade to unlock →</a>}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-3 text-xs text-gray-400">
+              Plan: <span className="font-medium text-gray-600">{usageData.display_plan || '—'}</span>
+              {' · '}
+              <a href="/upgrade" className="text-indigo-500 hover:underline">See all plans →</a>
+            </p>
+          </section>
         )}
 
         {/* Counselor info section — only when viewing own profile as counselor */}

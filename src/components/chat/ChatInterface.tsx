@@ -26,6 +26,13 @@ interface UsageData {
   effective_limit: number | null
   reset_date?: string
   account_type?: string
+  display_plan?: string
+  breakdown?: string
+  can_use_essays?: boolean
+  can_use_plans?: boolean
+  history_retention_days?: number | null
+  students_count?: number
+  max_students?: number
 }
 
 interface LimitReachedData {
@@ -526,6 +533,35 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
           {/* Bottom nav — pinned */}
           {userId && (
             <div className="border-t border-white/10 p-3 flex-shrink-0 flex flex-col gap-0.5">
+              {/* Usage bar — students/counselors/parents with a limit */}
+              {userId && usageData && usageData.effective_limit !== undefined && (
+                <div className="mb-2 px-3">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-[10px] uppercase tracking-widest text-slate-600">
+                      {usageData.display_plan || 'Your plan'}
+                    </span>
+                    <span className="text-[10px] text-slate-500">
+                      {usageData.effective_limit === null
+                        ? `${usageData.messages_used} msgs`
+                        : `${usageData.messages_used} / ${usageData.effective_limit}`}
+                    </span>
+                  </div>
+                  {usageData.effective_limit !== null && (
+                    <div className="w-full bg-white/10 rounded-full h-1">
+                      <div
+                        className={`h-1 rounded-full transition-all ${
+                          (usageData.messages_used / usageData.effective_limit) >= 0.85
+                            ? 'bg-red-400'
+                            : (usageData.messages_used / usageData.effective_limit) >= 0.6
+                            ? 'bg-amber-400'
+                            : 'bg-sky-400'
+                        }`}
+                        style={{ width: `${Math.min((usageData.messages_used / usageData.effective_limit) * 100, 100)}%` }}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
               {/* Counselors + Parents: student picker dropdown */}
               {(isCounselor || isParent) && myStudents.length > 0 && (
                 <div className="mb-2">
