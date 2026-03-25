@@ -521,6 +521,29 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
                   </div>
                 </>
               )}
+
+              {/* Campus visit — belongs in overview context */}
+              <div style={{ ...fieldStyle, marginTop: 6 }}>
+                <label style={labelStyle}>
+                  <input
+                    type="checkbox"
+                    checked={!!form.visited}
+                    onChange={(e) => set('visited', e.target.checked)}
+                    disabled={!canWrite || isParent}
+                    style={{ marginRight: 6 }}
+                  />
+                  Visited Campus
+                </label>
+                {form.visited && (
+                  <input
+                    type="date"
+                    value={form.visit_date || ''}
+                    onChange={(e) => set('visit_date', e.target.value || null)}
+                    disabled={!canWrite || isParent}
+                    style={{ ...inputStyle, marginTop: 8 }}
+                  />
+                )}
+              </div>
             </>
           )}
 
@@ -538,7 +561,25 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
                   />
                   <select
                     value={form.deadline_type || ''}
-                    onChange={(e) => set('deadline_type', e.target.value || null)}
+                    onChange={(e) => {
+                      const val = e.target.value || null
+                      set('deadline_type', val)
+                      // Auto-populate date from Peterson's data when a known type is selected
+                      if (val) {
+                        const match = deadlines.find((d) => d.type === val)
+                        if (match) {
+                          const now = new Date()
+                          // Pick year: if the deadline month/day is still in the future this year use this year,
+                          // otherwise use next year (for upcoming application cycle)
+                          const thisYear = now.getFullYear()
+                          const deadlineThisYear = new Date(thisYear, match.month - 1, match.day)
+                          const year = deadlineThisYear > now ? thisYear : thisYear + 1
+                          const mm = String(match.month).padStart(2, '0')
+                          const dd = String(match.day).padStart(2, '0')
+                          set('deadline_date', `${year}-${mm}-${dd}`)
+                        }
+                      }
+                    }}
                     disabled={!canWrite || isParent}
                     style={{ ...inputStyle, width: 160, flexShrink: 0 }}
                   >
@@ -610,28 +651,6 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
 
           {activeSection === 'financial' && (
             <>
-              <div style={fieldStyle}>
-                <label style={labelStyle}>
-                  <input
-                    type="checkbox"
-                    checked={!!form.visited}
-                    onChange={(e) => set('visited', e.target.checked)}
-                    disabled={!canWrite || isParent}
-                    style={{ marginRight: 6 }}
-                  />
-                  Visited Campus
-                </label>
-                {form.visited && (
-                  <input
-                    type="date"
-                    value={form.visit_date || ''}
-                    onChange={(e) => set('visit_date', e.target.value || null)}
-                    disabled={!canWrite || isParent}
-                    style={{ ...inputStyle, marginTop: 8 }}
-                  />
-                )}
-              </div>
-
               <div style={fieldStyle}>
                 <label style={labelStyle}>
                   <input
