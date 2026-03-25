@@ -997,8 +997,8 @@ function CardView({ entries, canWrite, accountType, onEdit, onDelete, onDrop }: 
   const [draggingId, setDraggingId] = useState<number | null>(null)
   const [dragOver, setDragOver] = useState<string | null>(null)
 
-  const researching = entries.filter((e) => e.status === 'researching')
-  const applying    = entries.filter((e) => e.status !== 'researching')
+  const researching = entries.filter((e) => !e.status || e.status === 'researching')
+  const applying    = entries.filter((e) => e.status && e.status !== 'researching')
 
   const handleDragStart = (e: React.DragEvent, id: number) => {
     setDraggingId(id)
@@ -1050,7 +1050,7 @@ function CardView({ entries, canWrite, accountType, onEdit, onDelete, onDrop }: 
         )}
       </div>
 
-      {/* Applying & Beyond column */}
+      {/* Applying column */}
       <div
         style={colStyle('applying')}
         onDragOver={(e) => { e.preventDefault(); setDragOver('applying') }}
@@ -1058,7 +1058,7 @@ function CardView({ entries, canWrite, accountType, onEdit, onDelete, onDrop }: 
         onDrop={(e) => handleDrop(e, 'applying')}
       >
         <p style={{ margin: '0 0 12px', fontSize: '0.8rem', fontWeight: 700, color: '#2563eb' }}>
-          Applying & Beyond ({applying.length})
+          Applying ({applying.length})
         </p>
         {applying.map((e) => (
           <CollegeCard
@@ -1298,8 +1298,8 @@ function ListsContent() {
         {/* Entry count summary */}
         <p style={{ fontSize: '0.8rem', color: '#9ca3af', marginBottom: 14 }}>
           {entries.length} college{entries.length !== 1 ? 's' : ''} on this list
-          {entries.filter((e) => e.status !== 'researching').length > 0
-            ? ` · ${entries.filter((e) => e.status !== 'researching').length} applying or beyond`
+          {entries.filter((e) => e.status && e.status !== 'researching').length > 0
+            ? ` · ${entries.filter((e) => e.status && e.status !== 'researching').length} applying`
             : ''}
         </p>
 
