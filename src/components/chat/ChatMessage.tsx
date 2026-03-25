@@ -7,9 +7,17 @@ import type { Message, MessageDownload } from './ChatInterface'
 interface ChatMessageProps {
   message: Message
   isStreaming?: boolean
+  onAddToList?: (collegeName: string) => void
+  addingToList?: string | null  // college name currently being added (shows spinner)
 }
 
-export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
+// Detect "Want to add [College Name] to your research list?" pattern
+function extractResearchListOffer(content: string): string | null {
+  const match = content.match(/Want to add (.+?) to your research list\?/i)
+  return match ? match[1].trim() : null
+}
+
+export function ChatMessage({ message, isStreaming, onAddToList, addingToList }: ChatMessageProps) {
   const isUser = message.role === 'user'
 
   if (isUser) {
@@ -138,6 +146,39 @@ export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
             )}
           </>
         )}
+
+        {/* Add to Research List button — shown when Claude offers it and streaming is done */}
+        {!isStreaming && onAddToList && (() => {
+          const collegeName = extractResearchListOffer(message.content)
+          if (!collegeName) return null
+          const isAdding = addingToList === collegeName
+          return (
+            <div className="mt-3">
+              <button
+                onClick={() => onAddToList(collegeName)}
+                disabled={isAdding}
+                className="inline-flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isAdding ? (
+                  <>
+                    <svg className="w-3.5 h-3.5 animate-spin flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                    Adding…
+                  </>
+                ) : (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 flex-shrink-0">
+                      <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                    </svg>
+                    Add {collegeName} to Research List
+                  </>
+                )}
+              </button>
+            </div>
+          )
+        })()}
 
         {/* Download buttons — shown when Claude prepared files */}
         {message.downloads && message.downloads.length > 0 && (

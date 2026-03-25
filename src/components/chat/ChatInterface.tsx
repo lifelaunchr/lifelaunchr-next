@@ -97,6 +97,8 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
   const [inviteUrl, setInviteUrl] = useState<string | null>(null)
   const [inviteCopied, setInviteCopied] = useState(false)
   const [forStudentId, setForStudentId] = useState<number | null>(null)
+  const [addingToList, setAddingToList] = useState<string | null>(null)
+  const [addedToListToast, setAddedToListToast] = useState<string | null>(null)
   const [myConnections, setMyConnections] = useState<{
     counselors: Array<{ id: number; full_name: string; email: string; organization?: string }>
     parents: Array<{ id: number; full_name: string; email: string }>
@@ -463,6 +465,37 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
     [isStreaming, userId, getToken, serverSessionId, conversationHistory, guestToken, activeModules, apiUrl, fetchSessions, forStudentId]
   )
 
+  const handleAddToList = useCallback(async (collegeName: string) => {
+    if (!userId) return
+    const studentId = forStudentId ?? usageData?.user_id
+    if (!studentId) return
+    setAddingToList(collegeName)
+    try {
+      const token = await getToken()
+      const res = await fetch(`${apiUrl}/lists/${studentId}/colleges`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ college_name: collegeName }),
+      })
+      if (res.ok) {
+        setAddedToListToast(`${collegeName} added to your research list!`)
+        setTimeout(() => setAddedToListToast(null), 3500)
+      } else {
+        const err = await res.json().catch(() => ({}))
+        setAddedToListToast(err.detail || 'Could not add college — please try again.')
+        setTimeout(() => setAddedToListToast(null), 4000)
+      }
+    } catch {
+      setAddedToListToast('Network error — please try again.')
+      setTimeout(() => setAddedToListToast(null), 4000)
+    } finally {
+      setAddingToList(null)
+    }
+  }, [userId, forStudentId, usageData, getToken, apiUrl])
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -744,6 +777,8 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                   key={msg.id}
                   message={msg}
                   isStreaming={isStreaming && msg.id === streamingMessageId}
+                  onAddToList={userId ? handleAddToList : undefined}
+                  addingToList={addingToList}
                 />
               ))
             )}
@@ -806,6 +841,16 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
           </div>
         </div>
       </div>
+
+      {/* Add-to-list toast */}
+      {addedToListToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-gray-900 text-white text-sm px-4 py-2.5 rounded-xl shadow-lg animate-fade-in">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-emerald-400 flex-shrink-0">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+          </svg>
+          {addedToListToast}
+        </div>
+      )}
 
       {/* Limit modal */}
       {limitModalData && (
