@@ -772,6 +772,27 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
 
         {/* Main panel */}
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+          {/* Active student banner — shown when counselor/parent has a student selected */}
+          {(isCounselor || isParent) && forStudentId && myStudents.length > 0 && (() => {
+            const s = myStudents.find((s) => s.id === forStudentId)
+            return s ? (
+              <div className="flex items-center justify-between bg-indigo-50 border-b border-indigo-100 px-4 py-1.5 flex-shrink-0">
+                <span className="text-xs text-indigo-700 font-medium">
+                  🎓 Researching for: <strong>{s.full_name || s.email}</strong>
+                </span>
+                <button
+                  onClick={() => {
+                    setForStudentId(null)
+                    localStorage.removeItem('ll_for_student_id')
+                  }}
+                  className="text-xs text-indigo-400 hover:text-indigo-700 transition-colors ml-4"
+                  title="Clear student selection"
+                >
+                  ✕ Clear
+                </button>
+              </div>
+            ) : null
+          })()}
           {/* Messages area */}
           <div className="flex-1 overflow-y-auto px-4 py-6 flex flex-col gap-4">
             {messages.length === 0 ? (
