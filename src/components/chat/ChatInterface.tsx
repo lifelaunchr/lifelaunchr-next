@@ -96,7 +96,11 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
   const [myStudents, setMyStudents] = useState<Array<{ id: number; full_name: string; email: string }>>([])
   const [inviteUrl, setInviteUrl] = useState<string | null>(null)
   const [inviteCopied, setInviteCopied] = useState(false)
-  const [forStudentId, setForStudentId] = useState<number | null>(null)
+  const [forStudentId, setForStudentId] = useState<number | null>(() => {
+    if (typeof window === 'undefined') return null
+    const saved = localStorage.getItem('ll_for_student_id')
+    return saved ? parseInt(saved, 10) : null
+  })
   const [addingToList, setAddingToList] = useState<string | null>(null)
   const [addedToListToast, setAddedToListToast] = useState<string | null>(null)
   const [myConnections, setMyConnections] = useState<{
@@ -631,7 +635,12 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                   </p>
                   <select
                     value={forStudentId ?? ''}
-                    onChange={(e) => setForStudentId(e.target.value ? Number(e.target.value) : null)}
+                    onChange={(e) => {
+                      const val = e.target.value ? Number(e.target.value) : null
+                      setForStudentId(val)
+                      if (val) localStorage.setItem('ll_for_student_id', String(val))
+                      else localStorage.removeItem('ll_for_student_id')
+                    }}
                     className="w-full bg-white/5 border border-white/10 text-slate-300 text-xs rounded-lg px-3 py-2 focus:outline-none"
                   >
                     <option value="">— Select student —</option>
