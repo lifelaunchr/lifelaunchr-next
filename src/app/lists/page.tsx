@@ -333,7 +333,6 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
   const isParent = accountType === 'parent'
 
   useEffect(() => {
-    if (!entry.ipeds_id) return
     const load = async () => {
       try {
         const token = await getToken()
@@ -347,7 +346,7 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
       } catch { /* ignore */ }
     }
     load()
-  }, [entry.id, entry.ipeds_id, apiUrl, getToken])
+  }, [entry.id, apiUrl, getToken])
 
   const set = (field: keyof CollegeEntry, value: unknown) =>
     setForm((prev) => ({ ...prev, [field]: value }))
