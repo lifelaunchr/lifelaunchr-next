@@ -40,6 +40,12 @@ interface CollegeEntry {
   programs_of_interest?: string | null
   display_order?: number
   created_at?: string
+  // Test score / application policy fields
+  program_test_required?: boolean
+  program_test_required_note?: string | null
+  score_submission_policy?: string | null
+  srar_required?: string | null
+  score_self_report?: string | null
 }
 
 interface CollegeSearchResult {
@@ -321,6 +327,7 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
   const [activeSection, setActiveSection] = useState<string>('overview')
   const [recalculating, setRecalculating] = useState(false)
   const [recalcMessage, setRecalcMessage] = useState<string | null>(null)
+  const [showLikelihoodModal, setShowLikelihoodModal] = useState(false)
 
   const isCounselor = accountType === 'counselor' || accountType === 'admin'
   const isParent = accountType === 'parent'
@@ -509,7 +516,16 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
               </div>
 
               <div style={fieldStyle}>
-                <label style={labelStyle}>Likelihood</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                  <label style={{ ...labelStyle, margin: 0 }}>Likelihood</label>
+                  <button
+                    onClick={() => setShowLikelihoodModal(true)}
+                    style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                             color: '#6366f1', fontSize: '0.75rem', fontWeight: 500 }}
+                  >
+                    What does this mean?
+                  </button>
+                </div>
                 {form.likelihood ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <LikelihoodBadge tier={form.likelihood} />
@@ -689,6 +705,112 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
                   placeholder="e.g., Honors College, Co-op Program"
                   style={canWrite && !isParent ? inputStyle : readonlyStyle}
                 />
+              </div>
+
+              {/* ── Test Score Policies ──────────────────────────────────────── */}
+              <div style={{ borderTop: '1px solid #e2e8f0', marginTop: 8, paddingTop: 16 }}>
+                <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase',
+                             letterSpacing: '0.08em', marginBottom: 12 }}>Test Score Policies</p>
+
+                {/* Program/scholarship test override */}
+                <div style={fieldStyle}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                    <input
+                      type="checkbox"
+                      checked={form.program_test_required ?? false}
+                      onChange={(e) => set('program_test_required', e.target.checked)}
+                      disabled={!canWrite || isParent}
+                      style={{ marginTop: 3, flexShrink: 0, accentColor: '#4f46e5' }}
+                    />
+                    <div>
+                      <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#374151', cursor: 'pointer' }}>
+                        A program or scholarship I&rsquo;m applying to requires test scores
+                      </label>
+                      <p style={{ fontSize: '0.78rem', color: '#6b7280', margin: '3px 0 0' }}>
+                        Even if this school is test-optional, check this if your specific program or scholarship requires SAT/ACT scores.
+                        This will be factored into your likelihood calculation.
+                      </p>
+                    </div>
+                  </div>
+                  {form.program_test_required && (
+                    <input
+                      value={form.program_test_required_note || ''}
+                      onChange={(e) => set('program_test_required_note', e.target.value)}
+                      disabled={!canWrite || isParent}
+                      placeholder="Which program or scholarship requires scores?"
+                      style={{ ...inputStyle, marginTop: 8 }}
+                    />
+                  )}
+                </div>
+
+                {/* Score submission policy */}
+                <div style={fieldStyle}>
+                  <label style={labelStyle}>
+                    Score Submission Policy{' '}
+                    <a href="https://www.compassprep.com/superscore-and-score-choice/"
+                       target="_blank" rel="noopener noreferrer"
+                       style={{ fontSize: '0.75rem', color: '#6366f1', fontWeight: 400 }}>
+                      Look this up ↗
+                    </a>
+                  </label>
+                  <select
+                    value={form.score_submission_policy || ''}
+                    onChange={(e) => set('score_submission_policy', e.target.value || null)}
+                    disabled={!canWrite || isParent}
+                    style={canWrite && !isParent ? inputStyle : readonlyStyle}
+                  >
+                    <option value="">Not specified — check college website</option>
+                    <option value="superscore">Superscores (takes your best section scores across dates)</option>
+                    <option value="single_sitting">Single best sitting (one test date only)</option>
+                    <option value="all_scores">All scores required (must submit every test date)</option>
+                  </select>
+                </div>
+
+                {/* Self-reporting vs. official */}
+                <div style={fieldStyle}>
+                  <label style={labelStyle}>
+                    Score Reporting Method{' '}
+                    <a href="https://www.compassprep.com/self-reporting-test-scores/"
+                       target="_blank" rel="noopener noreferrer"
+                       style={{ fontSize: '0.75rem', color: '#6366f1', fontWeight: 400 }}>
+                      Look this up ↗
+                    </a>
+                  </label>
+                  <select
+                    value={form.score_self_report || ''}
+                    onChange={(e) => set('score_self_report', e.target.value || null)}
+                    disabled={!canWrite || isParent}
+                    style={canWrite && !isParent ? inputStyle : readonlyStyle}
+                  >
+                    <option value="">Not specified — check college website</option>
+                    <option value="self_reported_ok">Self-reported scores accepted for application</option>
+                    <option value="official_at_application">Official scores required at application</option>
+                    <option value="official_after_admission">Self-report to apply; official required after admission</option>
+                  </select>
+                </div>
+
+                {/* SRAR */}
+                <div style={fieldStyle}>
+                  <label style={labelStyle}>
+                    Self-Reported Academic Record (SRAR){' '}
+                    <a href="https://srar.selfreportedtranscript.com/Login.aspx"
+                       target="_blank" rel="noopener noreferrer"
+                       style={{ fontSize: '0.75rem', color: '#6366f1', fontWeight: 400 }}>
+                      SRAR portal ↗
+                    </a>
+                  </label>
+                  <select
+                    value={form.srar_required || ''}
+                    onChange={(e) => set('srar_required', e.target.value || null)}
+                    disabled={!canWrite || isParent}
+                    style={canWrite && !isParent ? inputStyle : readonlyStyle}
+                  >
+                    <option value="">Not specified — check college website</option>
+                    <option value="required">Required</option>
+                    <option value="sometimes">Required for some applicants</option>
+                    <option value="not_required">Not required</option>
+                  </select>
+                </div>
               </div>
             </>
           )}
@@ -881,6 +1003,79 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
           </div>
         )}
       </div>
+
+      {/* ── Likelihood explainer modal ─────────────────────────────────────── */}
+      {showLikelihoodModal && (
+        <div
+          onClick={() => setShowLikelihoodModal(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 9999,
+                   display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ background: '#fff', borderRadius: 14, padding: '28px 30px', maxWidth: 560,
+                     width: '100%', maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1e293b', margin: 0 }}>
+                Understanding Your Likelihood
+              </h2>
+              <button onClick={() => setShowLikelihoodModal(false)}
+                style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: '#94a3b8', lineHeight: 1 }}>×</button>
+            </div>
+
+            <p style={{ fontSize: '0.9rem', color: '#374151', lineHeight: 1.65, marginBottom: 14 }}>
+              <strong>Important:</strong> Likelihood is a statistical estimate — it does <em>not</em> account for essays,
+              demonstrated interest, personal qualities, hooks (like legacy status, artistic talent, or athletic recruitment),
+              or the many other factors that shape admissions decisions. Colleges review each student individually.
+            </p>
+            <p style={{ fontSize: '0.9rem', color: '#374151', lineHeight: 1.65, marginBottom: 18 }}>
+              The most important reason we calculate likelihood is to help students build <strong>statistically balanced lists</strong>.
+              We use GPA, test scores, academic rigor, extracurricular activities, and athletic accomplishments
+              as inputs — the same signals colleges weigh most heavily in initial review.
+              Ask your counselor or coach to help you interpret and act on this information.
+            </p>
+
+            <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#1e293b', marginBottom: 12 }}>What Each Category Means</h3>
+            {[
+              { tier: 'likely',    color: '#16a34a', label: 'Likely',
+                desc: 'You have a greater than 50% chance of admission based on your academics, rigor, extracurriculars, and athletics.' },
+              { tier: 'target',   color: '#2563eb', label: 'Target',
+                desc: 'You have a 25–50% chance of admission. A solid application, but not a lock.' },
+              { tier: 'reach',    color: '#d97706', label: 'Reach',
+                desc: 'You may be competitive, but your chance of admission is below 25%. Strong applications sometimes succeed here.' },
+              { tier: 'far_reach',color: '#ea580c', label: 'Far Reach',
+                desc: 'You are marginally competitive based on the data. Success requires exceptional other factors — essays, hooks, or unique circumstances.' },
+              { tier: 'unlikely', color: '#dc2626', label: 'Unlikely',
+                desc: 'You are extremely unlikely to be a competitive applicant based on the data, unless there are significant other factors.' },
+              { tier: 'unknown',  color: '#9ca3af', label: 'Unknown',
+                desc: 'We don\'t have enough data to calculate — typically because the school is test-required and no test score is on file.' },
+            ].map(({ tier, color, label, desc }) => (
+              <div key={tier} style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+                <span style={{ background: color, color: '#fff', borderRadius: 6, padding: '2px 10px',
+                               fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap', alignSelf: 'flex-start', marginTop: 2 }}>
+                  {label}
+                </span>
+                <p style={{ fontSize: '0.85rem', color: '#4b5563', lineHeight: 1.55, margin: 0 }}>{desc}</p>
+              </div>
+            ))}
+
+            <p style={{ fontSize: '0.8rem', color: '#9ca3af', marginTop: 16, lineHeight: 1.5 }}>
+              Remember: a "Far Reach" or "Unlikely" rating doesn't mean a student <em>shouldn't</em> apply —
+              it means they should apply with eyes open, and balance their list with Likely and Target schools.
+              Students with strong essays, compelling stories, or special hooks sometimes exceed statistical expectations.
+            </p>
+
+            <button
+              onClick={() => setShowLikelihoodModal(false)}
+              style={{ marginTop: 20, width: '100%', background: '#4f46e5', color: '#fff', border: 'none',
+                       borderRadius: 8, padding: '10px 0', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
