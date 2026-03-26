@@ -59,6 +59,7 @@ const LIKELIHOOD_COLORS: Record<string, string> = {
   reach:     '#d97706',
   far_reach: '#ea580c',
   unlikely:  '#dc2626',
+  unknown:   '#9ca3af',
 }
 
 const LIKELIHOOD_LABELS: Record<string, string> = {
@@ -67,6 +68,7 @@ const LIKELIHOOD_LABELS: Record<string, string> = {
   reach:     'Reach',
   far_reach: 'Far Reach',
   unlikely:  'Unlikely',
+  unknown:   'Unknown',
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -317,6 +319,8 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
   const [generatingSummary, setGeneratingSummary] = useState(false)
   const [summaryText, setSummaryText] = useState(entry.soar_research_summary || '')
   const [activeSection, setActiveSection] = useState<string>('overview')
+  const [recalculating, setRecalculating] = useState(false)
+  const [recalcMessage, setRecalcMessage] = useState<string | null>(null)
 
   const isCounselor = accountType === 'counselor' || accountType === 'admin'
   const isParent = accountType === 'parent'
@@ -376,6 +380,37 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
       }
     } catch { /* ignore */ } finally {
       setGeneratingSummary(false)
+    }
+  }
+
+  const handleRecalculate = async () => {
+    setRecalculating(true)
+    setRecalcMessage(null)
+    try {
+      const token = await getToken()
+      const res = await fetch(`${apiUrl}/lists/colleges/${entry.id}/recalculate-likelihood`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        setRecalcMessage(`Error: ${err.detail || res.statusText}`)
+        return
+      }
+      const updated = await res.json()
+      setForm((prev) => ({
+        ...prev,
+        likelihood: updated.likelihood,
+        likelihood_explanation: updated.likelihood_explanation,
+        likelihood_set_by: updated.likelihood_set_by,
+        likelihood_override_note: updated.likelihood_override_note,
+      }))
+      setRecalcMessage('Updated')
+      setTimeout(() => setRecalcMessage(null), 3000)
+    } catch (e) {
+      setRecalcMessage('Error recalculating')
+    } finally {
+      setRecalculating(false)
     }
   }
 
@@ -491,6 +526,39 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
                       <span key={i} style={{ display: 'block' }}>{line}</span>
                     ))}
                   </p>
+                )}
+                {canWrite && (
+                  <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <button
+                      onClick={handleRecalculate}
+                      disabled={recalculating}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 5,
+                        background: 'none', border: '1px solid #e2e8f0', borderRadius: 5,
+                        padding: '4px 10px', fontSize: '0.78rem', cursor: recalculating ? 'default' : 'pointer',
+                        color: recalculating ? '#9ca3af' : '#4f46e5', fontWeight: 600,
+                        opacity: recalculating ? 0.7 : 1,
+                      }}
+                    >
+                      {recalculating ? (
+                        <>
+                          <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>↻</span>
+                          Recalculating…
+                        </>
+                      ) : (
+                        <>↻ Recalculate</>
+                      )}
+                    </button>
+                    {recalcMessage && (
+                      <span style={{
+                        fontSize: '0.75rem',
+                        color: recalcMessage.startsWith('Error') ? '#dc2626' : '#16a34a',
+                        fontWeight: 500,
+                      }}>
+                        {recalcMessage}
+                      </span>
+                    )}
+                  </div>
                 )}
               </div>
 
