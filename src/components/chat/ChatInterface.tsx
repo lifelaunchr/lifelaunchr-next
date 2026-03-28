@@ -96,6 +96,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
   const [myStudents, setMyStudents] = useState<Array<{ id: number; full_name: string; email: string }>>([])
   const [inviteUrl, setInviteUrl] = useState<string | null>(null)
   const [inviteCopied, setInviteCopied] = useState(false)
+  const [schedulingLink, setSchedulingLink] = useState<string | null>(null)
   const [forStudentId, setForStudentId] = useState<number | null>(() => {
     if (typeof window === 'undefined') return null
     const saved = localStorage.getItem('ll_for_student_id')
@@ -143,6 +144,9 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
         const parent = accountType === 'parent'
         setIsCounselor(counselor)
         setIsParent(parent)
+        if (!counselor && !parent && data.scheduling_link) {
+          setSchedulingLink(data.scheduling_link)
+        }
 
         // Invite link — available to everyone
         const inviteRes = await fetch(`${apiUrl}/my-invite`, { headers: { Authorization: `Bearer ${token}` } })
@@ -627,6 +631,19 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                   )}
                 </div>
               )}
+              {/* Schedule button — students only, when a scheduling link is available */}
+              {!isCounselor && !isParent && schedulingLink && (
+                <a
+                  href={schedulingLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 px-3 py-2 text-xs text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all w-full text-left"
+                >
+                  <span className="text-base leading-none">📅</span>
+                  <span>Schedule a session</span>
+                </a>
+              )}
+
               {/* Counselors + Parents: student picker dropdown */}
               {(isCounselor || isParent) && myStudents.length > 0 && (
                 <div className="mb-2">

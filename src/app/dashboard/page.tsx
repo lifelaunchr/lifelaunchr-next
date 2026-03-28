@@ -29,6 +29,9 @@ interface DashboardStudent {
   overall_status?: string
   essay_status?: string
   testing_status?: string
+  next_test_date?: string
+  coaching_package_name?: string
+  scheduling_link?: string
   financial_aid?: boolean
   dashboard_notes?: string
   next_deadline?: string
@@ -46,11 +49,17 @@ const ESSAY_LABELS: Record<string, string> = {
   on_track: 'On Track', behind: 'Behind', very_behind: 'Very Behind',
 }
 const TESTING_LABELS: Record<string, string> = {
-  complete: 'Complete', retaking: 'Retaking', waived: 'Waived', pending: 'Pending',
+  plan_to_take_retake: 'Plans to Take / Retake',
+  testing_complete:    'Testing Complete',
+  no_plan:             'No Plan to Test',
 }
 const ENGAGEMENT_LABELS: Record<string, string> = {
-  full_service: 'Full Service', college_only: 'College Only',
-  essay_only: 'Essay Only', test_prep: 'Test Prep',
+  not_a_client_yet: 'Not a coaching client yet',
+  comprehensive:    'Comprehensive client',
+  stay_on_track:    'Stay on track client',
+  hourly_on_demand: 'Hourly / On-Demand client',
+  test_prep:        'Test-prep client',
+  essay:            'Essay client',
 }
 const BILLING_LABELS: Record<string, string> = {
   current: 'Current', overdue: 'Overdue', comped: "Comp'd", paused: 'Paused',
@@ -226,6 +235,7 @@ function EditPanel({
             <Field label="Testing Status">
               <Select field="testing_status" options={TESTING_LABELS} />
             </Field>
+            <Field label="Next Test Date"><DateInput field="next_test_date" /></Field>
             <Field label="">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -244,6 +254,15 @@ function EditPanel({
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Engagement</h3>
             <Field label="Engagement Type">
               <Select field="engagement_type" options={ENGAGEMENT_LABELS} />
+            </Field>
+            <Field label="Package Name">
+              <input
+                type="text"
+                value={(form.coaching_package_name as string) || ''}
+                onChange={e => set('coaching_package_name', e.target.value || null)}
+                placeholder="e.g. Diamond Package"
+                className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
             </Field>
             <Field label="Primary Contact">
               <Select field="primary_contact" options={{ student: 'Student', parent: 'Parent' }} />
@@ -269,6 +288,16 @@ function EditPanel({
                 />
                 <span className="text-sm text-gray-700">Send weekly deadline digest</span>
               </label>
+            </Field>
+            <Field label="Scheduling Link (override)">
+              <input
+                type="url"
+                value={(form.scheduling_link as string) || ''}
+                onChange={e => set('scheduling_link', e.target.value || null)}
+                placeholder="https://calendly.com/…"
+                className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <p className="text-xs text-gray-400 mt-1">Overrides the default scheduling link for this student only.</p>
             </Field>
           </section>
 

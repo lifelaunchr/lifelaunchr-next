@@ -34,6 +34,8 @@ interface Profile {
   expected_family_contribution?: number
   budget_max?: number
   personal_statement_draft?: string
+  testing_status?: string
+  next_test_date?: string
   // Counselor-only
   ec_rating?: string
   athletic_rating?: string
@@ -569,6 +571,33 @@ function ProfileContent() {
               {field('ACT Math', 'act_math', 'number', '30')}
               {field('ACT Reading', 'act_reading', 'number', '33')}
               {field('ACT Science', 'act_science', 'number', '31')}
+            </div>
+            {/* Row 3b: Testing status */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: 4 }}>Testing Status</label>
+                <select
+                  value={profile.testing_status ?? ''}
+                  onChange={(e) => canWrite && setProfile((p) => ({ ...p, testing_status: e.target.value || undefined }))}
+                  disabled={!canWrite}
+                  style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: 8, padding: '6px 10px', fontSize: '0.875rem', background: canWrite ? '#fff' : '#f9fafb', color: '#111827' }}
+                >
+                  <option value="">— Select —</option>
+                  <option value="plan_to_take_retake">Plans to Take / Retake</option>
+                  <option value="testing_complete">Testing Complete</option>
+                  <option value="no_plan">No Plan to Test</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: 4 }}>Next Test Date</label>
+                <input
+                  type="date"
+                  value={profile.next_test_date ?? ''}
+                  onChange={(e) => canWrite && setProfile((p) => ({ ...p, next_test_date: e.target.value || undefined }))}
+                  disabled={!canWrite}
+                  style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: 8, padding: '6px 10px', fontSize: '0.875rem', background: canWrite ? '#fff' : '#f9fafb', color: '#111827' }}
+                />
+              </div>
             </div>
             {/* Row 4: Grad year, home state */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12 }}>
