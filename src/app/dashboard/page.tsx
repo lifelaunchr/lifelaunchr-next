@@ -362,12 +362,28 @@ function EditPanel({
             {saving ? 'Saving…' : 'Save Changes'}
           </button>
           <button
-            onClick={() => {
+            onClick={async () => {
               const nowArchived = !form.archived
-              set('archived', nowArchived)
-              if (!nowArchived) set('archived_at', null)
+              const updated = { ...form, archived: nowArchived, archived_at: nowArchived ? new Date().toISOString() : null }
+              setForm(updated)
+              setSaving(true)
+              try {
+                const token = await getToken()
+                const res = await fetch(`${apiUrl}/counselor/dashboard/students/${student.id}`, {
+                  method: 'PATCH',
+                  headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ archived: nowArchived }),
+                })
+                if (res.ok) {
+                  const data = await res.json()
+                  onSave({ ...student, ...data, archived: nowArchived })
+                }
+              } finally {
+                setSaving(false)
+              }
             }}
-            className={`w-full px-4 py-2 text-sm font-medium rounded-lg border ${
+            disabled={saving}
+            className={`w-full px-4 py-2 text-sm font-medium rounded-lg border disabled:opacity-50 ${
               form.archived
                 ? 'border-green-300 text-green-700 hover:bg-green-50'
                 : 'border-red-200 text-red-600 hover:bg-red-50'
