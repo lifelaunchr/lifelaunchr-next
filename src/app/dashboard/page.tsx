@@ -353,13 +353,27 @@ function EditPanel({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-100">
+        <div className="px-6 py-4 border-t border-gray-100 space-y-2">
           <button
             onClick={save}
             disabled={saving}
             className="w-full px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50"
           >
             {saving ? 'Saving…' : 'Save Changes'}
+          </button>
+          <button
+            onClick={() => {
+              const nowArchived = !form.archived
+              set('archived', nowArchived)
+              if (!nowArchived) set('archived_at', null)
+            }}
+            className={`w-full px-4 py-2 text-sm font-medium rounded-lg border ${
+              form.archived
+                ? 'border-green-300 text-green-700 hover:bg-green-50'
+                : 'border-red-200 text-red-600 hover:bg-red-50'
+            }`}
+          >
+            {form.archived ? 'Unarchive Student' : 'Archive Student'}
           </button>
         </div>
       </div>
