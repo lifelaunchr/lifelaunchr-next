@@ -345,6 +345,7 @@ export default function DashboardPage() {
 
   const [students, setStudents]     = useState<DashboardStudent[]>([])
   const [loading, setLoading]       = useState(true)
+  const [accessDenied, setAccessDenied] = useState(false)
   const [filter, setFilter]         = useState<'active' | 'archived' | 'all'>('active')
   const [search, setSearch]         = useState('')
   const [sortKey, setSortKey]       = useState<keyof DashboardStudent>('full_name')
@@ -362,6 +363,10 @@ export default function DashboardPage() {
       const res = await fetch(`${apiUrl}/counselor/dashboard/students?archived=${param}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
+      if (res.status === 403 || res.status === 401) {
+        setAccessDenied(true)
+        return
+      }
       if (res.ok) {
         const data = await res.json()
         setStudents(data.students || [])
@@ -450,6 +455,21 @@ export default function DashboardPage() {
       )}
     </th>
   )
+
+  if (accessDenied) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-sm">
+          <div className="text-4xl mb-4">🔒</div>
+          <h1 className="text-xl font-semibold text-gray-900 mb-2">Counselor Access Only</h1>
+          <p className="text-gray-500 text-sm">
+            The Student Dashboard is available to counselors and admins.
+            If you&apos;re a student, your counselor manages this view on your behalf.
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
