@@ -364,7 +364,7 @@ function EditPanel({
           <button
             onClick={async () => {
               const nowArchived = !form.archived
-              const updated = { ...form, archived: nowArchived, archived_at: nowArchived ? new Date().toISOString() : null }
+              const updated = { ...form, archived: nowArchived, archived_at: nowArchived ? new Date().toISOString() : undefined }
               setForm(updated)
               setSaving(true)
               try {
