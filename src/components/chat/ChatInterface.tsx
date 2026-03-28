@@ -93,6 +93,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
   const [activeSessionId, setActiveSessionId] = useState<number | null>(null)
   const [isCounselor, setIsCounselor] = useState(false)
   const [isParent, setIsParent] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
   const [myStudents, setMyStudents] = useState<Array<{ id: number; full_name: string; email: string }>>([])
   const [inviteUrl, setInviteUrl] = useState<string | null>(null)
   const [inviteCopied, setInviteCopied] = useState(false)
@@ -144,6 +145,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
         const parent = accountType === 'parent'
         setIsCounselor(counselor)
         setIsParent(parent)
+        setIsAdmin(!!data.is_admin)
         if (!counselor && !parent && data.scheduling_link) {
           setSchedulingLink(data.scheduling_link)
         }
@@ -708,6 +710,28 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                 <span className="text-base leading-none">👤</span>
                 <span>{isCounselor || isParent ? 'My Info' : 'Profile'}</span>
               </Link>
+
+              {/* Counselor dashboard link */}
+              {isCounselor && (
+                <Link
+                  href="/dashboard"
+                  className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                >
+                  <span className="text-base leading-none">📋</span>
+                  <span>Student Dashboard</span>
+                </Link>
+              )}
+
+              {/* Admin dashboard link */}
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                >
+                  <span className="text-base leading-none">⚙️</span>
+                  <span>Admin Dashboard</span>
+                </Link>
+              )}
 
               {/* Student profile + lists — shown when a student is selected (counselor/parent) */}
               {(isCounselor || isParent) && forStudentId && (

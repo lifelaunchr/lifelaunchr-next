@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useAuth } from '@clerk/nextjs'
+import Link from 'next/link'
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -532,6 +533,16 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Top nav bar — matches profile/lists pages */}
+      <header style={{ background: '#0c1b33', color: '#fff', padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Link href="/" style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>
+          <span style={{ color: '#7dd3fc' }}>Soar</span> by LifeLaunchr
+        </Link>
+        <Link href="/chat" style={{ fontSize: '0.82rem', color: '#8888aa', textDecoration: 'none', border: '1px solid #444466', padding: '4px 12px', borderRadius: 6 }}>
+          ← Back to Soar
+        </Link>
+      </header>
+
       <div className="max-w-screen-xl mx-auto px-6 py-8">
 
         {/* Header */}
