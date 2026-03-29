@@ -155,6 +155,7 @@ function ProfileContent() {
   const [myUserId, setMyUserId] = useState<number | null>(null)
   const [accountType, setAccountType] = useState<string>('student')
   const [usageData, setUsageData] = useState<{
+    user_id?: number
     messages_used: number
     effective_limit: number | null
     display_plan?: string
@@ -163,6 +164,8 @@ function ProfileContent() {
     can_use_plans?: boolean
     history_retention_days?: number | null
     account_type?: string
+    active_students?: number | null
+    student_limit?: number | null
   } | null>(null)
   const [canWrite, setCanWrite] = useState(true)   // from API; false for parents
   const [profile, setProfile] = useState<Profile>({})
@@ -448,32 +451,46 @@ function ProfileContent() {
                 <tbody className="divide-y divide-gray-50">
                   <tr>
                     <td className="py-3 pr-8 font-medium text-gray-800">Messages this month</td>
-                    <td className="py-3 pr-8 text-right text-gray-700">{usageData.messages_used}</td>
+                    <td className="py-3 pr-8 text-right text-gray-700">{usageData.messages_used ?? 0}</td>
                     <td className="py-3 pr-8 text-right text-gray-700">
-                      {usageData.effective_limit === null ? '∞ unlimited' : usageData.effective_limit}
+                      {usageData.effective_limit === null || usageData.effective_limit === undefined ? '∞ unlimited' : usageData.effective_limit}
                     </td>
                     <td className="py-3 text-gray-500 text-xs">{usageData.breakdown || usageData.display_plan}</td>
                   </tr>
-                  <tr>
-                    <td className="py-3 pr-8 font-medium text-gray-800">History retention</td>
-                    <td className="py-3 pr-8 text-right text-gray-400">—</td>
-                    <td className="py-3 pr-8 text-right text-gray-700">
-                      {usageData.history_retention_days === null || usageData.history_retention_days === undefined
-                        ? '∞ unlimited'
-                        : `${usageData.history_retention_days} days`}
-                    </td>
-                    <td className="py-3 text-gray-500 text-xs">Based on your {usageData.display_plan || 'plan'}</td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 pr-8 font-medium text-gray-800">Essay assistance</td>
-                    <td className="py-3 pr-8 text-right text-gray-400">—</td>
-                    <td className="py-3 pr-8 text-right text-gray-700">
-                      {usageData.can_use_essays ? '✓ Included' : '✗ Not included'}
-                    </td>
-                    <td className="py-3 text-gray-500 text-xs">
-                      {usageData.can_use_essays ? 'Available on your plan' : <a href="/upgrade" className="text-indigo-500 hover:underline">Upgrade to unlock →</a>}
-                    </td>
-                  </tr>
+                  {usageData.account_type === 'counselor' && (
+                    <tr>
+                      <td className="py-3 pr-8 font-medium text-gray-800">Active students</td>
+                      <td className="py-3 pr-8 text-right text-gray-700">{usageData.active_students ?? 0}</td>
+                      <td className="py-3 pr-8 text-right text-gray-700">
+                        {usageData.student_limit === null || usageData.student_limit === undefined ? '∞ unlimited' : usageData.student_limit}
+                      </td>
+                      <td className="py-3 text-gray-500 text-xs">Based on your plan</td>
+                    </tr>
+                  )}
+                  {usageData.account_type !== 'counselor' && (
+                    <>
+                      <tr>
+                        <td className="py-3 pr-8 font-medium text-gray-800">History retention</td>
+                        <td className="py-3 pr-8 text-right text-gray-400">—</td>
+                        <td className="py-3 pr-8 text-right text-gray-700">
+                          {usageData.history_retention_days === null || usageData.history_retention_days === undefined
+                            ? '∞ unlimited'
+                            : `${usageData.history_retention_days} days`}
+                        </td>
+                        <td className="py-3 text-gray-500 text-xs">Based on your {usageData.display_plan || 'plan'}</td>
+                      </tr>
+                      <tr>
+                        <td className="py-3 pr-8 font-medium text-gray-800">Essay assistance</td>
+                        <td className="py-3 pr-8 text-right text-gray-400">—</td>
+                        <td className="py-3 pr-8 text-right text-gray-700">
+                          {usageData.can_use_essays ? '✓ Included' : '✗ Not included'}
+                        </td>
+                        <td className="py-3 text-gray-500 text-xs">
+                          {usageData.can_use_essays ? 'Available on your plan' : <a href="/upgrade" className="text-indigo-500 hover:underline">Upgrade to unlock →</a>}
+                        </td>
+                      </tr>
+                    </>
+                  )}
                 </tbody>
               </table>
             </div>
