@@ -633,6 +633,30 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                   )}
                 </div>
               )}
+              {/* Student connection count — counselors only */}
+              {isCounselor && usageData?.active_students != null && (
+                <div className="mb-1 px-3">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-[10px] uppercase tracking-widest text-slate-600">Student connections</span>
+                    <span className="text-[10px] text-slate-500">
+                      {usageData.active_students}{usageData.student_limit != null ? ` / ${usageData.student_limit}` : ''}
+                    </span>
+                  </div>
+                  {usageData.student_limit != null && (
+                    <div className="w-full bg-white/10 rounded-full h-1">
+                      <div
+                        className={`h-1 rounded-full transition-all ${
+                          usageData.active_students / usageData.student_limit >= 0.85 ? 'bg-red-400'
+                          : usageData.active_students / usageData.student_limit >= 0.6 ? 'bg-amber-400'
+                          : 'bg-sky-400'
+                        }`}
+                        style={{ width: `${Math.min((usageData.active_students / usageData.student_limit) * 100, 100)}%` }}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Schedule button — students only, when a scheduling link is available */}
               {!isCounselor && !isParent && schedulingLink && (
                 <a
