@@ -40,6 +40,10 @@ interface UsageData {
   history_retention_days?: number | null
   students_count?: number
   max_students?: number
+  active_students?: number | null
+  student_limit?: number | null
+  is_admin?: boolean
+  scheduling_link?: string | null
 }
 
 interface LimitReachedData {
