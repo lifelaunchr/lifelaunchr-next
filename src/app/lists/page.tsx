@@ -358,6 +358,36 @@ function ScholarshipEditDrawer({ entry, canWrite, onClose, onSave, onDelete }: S
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.4rem', color: '#9ca3af', flexShrink: 0 }}>×</button>
         </div>
 
+        {/* DB info block — shown when matched from Peterson's DB */}
+        {entry.in_db && (
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '12px 14px', marginBottom: 16, fontSize: '0.83rem', color: '#374151' }}>
+            <p style={{ margin: '0 0 6px', fontSize: '0.7rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>From Peterson&apos;s Database</p>
+            {(entry.award_low || entry.award_high) && (
+              <p style={{ margin: '0 0 3px' }}>
+                <span style={{ fontWeight: 600 }}>Award: </span>
+                {formatScholarshipAward(entry)}
+              </p>
+            )}
+            {(entry.deadline_date || (entry.deadline_month && entry.deadline_day)) && (
+              <p style={{ margin: '0 0 3px' }}>
+                <span style={{ fontWeight: 600 }}>Deadline: </span>
+                {formatScholarshipDeadline(entry)}
+              </p>
+            )}
+            {entry.custom_description && (
+              <p style={{ margin: '6px 0 0', color: '#6b7280', lineHeight: 1.5 }}>{entry.custom_description}</p>
+            )}
+            <div style={{ marginTop: 8, display: 'flex', gap: 12 }}>
+              {entry.program_url && (
+                <a href={entry.program_url} target="_blank" rel="noopener noreferrer" style={{ color: '#6366f1', fontSize: '0.8rem' }}>Program info ↗</a>
+              )}
+              {entry.application_url && (
+                <a href={entry.application_url} target="_blank" rel="noopener noreferrer" style={{ color: '#d97706', fontSize: '0.8rem' }}>Apply ↗</a>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Status */}
         <div style={fieldStyle}>
           <label style={labelStyle}>Status</label>
@@ -414,9 +444,9 @@ function ScholarshipEditDrawer({ entry, canWrite, onClose, onSave, onDelete }: S
           />
         </div>
 
-        {/* Custom deadline */}
+        {/* Deadline override */}
         <div style={fieldStyle}>
-          <label style={labelStyle}>Deadline (override)</label>
+          <label style={labelStyle}>{entry.deadline_date ? 'Deadline Override (DB date shown above)' : 'Deadline'}</label>
           <input
             type="date"
             value={form.custom_deadline ?? ''}
