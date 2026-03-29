@@ -821,6 +821,13 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                     <span className="text-base leading-none">🎓</span>
                     <span>College Lists</span>
                   </Link>
+                  <Link
+                    href={`/lists?for=${forStudentId}&tab=scholarships`}
+                    className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                  >
+                    <span className="text-base leading-none">🏅</span>
+                    <span>Scholarships</span>
+                  </Link>
                 </>
               )}
 
@@ -851,7 +858,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                 </div>
               )}
 
-              {/* Activities + College Lists — students only */}
+              {/* Activities + College Lists + Scholarships — students only */}
               {!isCounselor && !isParent && (
                 <>
                   <Link
@@ -867,6 +874,13 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                   >
                     <span className="text-base leading-none">🎓</span>
                     <span>My College Lists</span>
+                  </Link>
+                  <Link
+                    href="/lists?tab=scholarships"
+                    className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                  >
+                    <span className="text-base leading-none">🏅</span>
+                    <span>My Scholarships</span>
                   </Link>
                 </>
               )}

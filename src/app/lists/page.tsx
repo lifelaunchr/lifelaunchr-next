@@ -1822,6 +1822,8 @@ function ListsContent() {
   const forStudentId = forParam ? parseInt(forParam, 10) : null
   const isViewingStudent = forStudentId !== null
 
+  const tabParam = searchParams.get('tab')
+
   const [myUserId, setMyUserId] = useState<number | null>(null)
   const [accountType, setAccountType] = useState<string>('student')
   const [canWrite, setCanWrite] = useState(true)
@@ -1830,7 +1832,9 @@ function ListsContent() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [studentName, setStudentName] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'colleges' | 'scholarships'>('colleges')
+  const [activeTab, setActiveTab] = useState<'colleges' | 'scholarships'>(
+    tabParam === 'scholarships' ? 'scholarships' : 'colleges'
+  )
   const [viewMode, setViewMode] = useState<'spreadsheet' | 'card'>('spreadsheet')
   const [showAddModal, setShowAddModal] = useState(false)
   const [showAddScholarshipModal, setShowAddScholarshipModal] = useState(false)
