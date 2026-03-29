@@ -81,6 +81,32 @@ interface ScholarshipEntry {
   created_at?: string
 }
 
+interface EnrichmentEntry {
+  id: number
+  student_id: number
+  program_name: string
+  organization?: string
+  program_id?: string
+  in_db: boolean
+  source: 'partner' | 'db' | 'custom'
+  program_category: 'program' | 'service'
+  status: string
+  deadline_date?: string
+  program_url?: string
+  application_url?: string
+  cost_estimate?: string
+  notes?: string
+  created_at: string
+  updated_at: string
+}
+
+interface EnrichmentSearchResult {
+  id: string
+  name: string
+  organization?: string
+  website_url?: string
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const LIKELIHOOD_COLORS: Record<string, string> = {
@@ -146,6 +172,34 @@ const SCHOLARSHIP_STATUS_LABELS: Record<string, string> = {
   submitted:   'Submitted',
   awarded:     'Awarded',
   not_awarded: 'Not Awarded',
+}
+
+const ENRICHMENT_STATUS_COLORS: Record<string, string> = {
+  researching: '#6b7280',
+  applying:    '#3b82f6',
+  submitted:   '#8b5cf6',
+  accepted:    '#10b981',
+  waitlisted:  '#f59e0b',
+  rejected:    '#ef4444',
+  attending:   '#059669',
+  enrolled:    '#10b981',
+  completed:   '#059669',
+}
+
+const ENRICHMENT_PROGRAM_STATUS_LABELS: Record<string, string> = {
+  researching: 'Researching',
+  applying:    'Applying',
+  submitted:   'Submitted',
+  accepted:    'Accepted',
+  waitlisted:  'Waitlisted',
+  rejected:    'Rejected',
+  attending:   'Attending',
+}
+
+const ENRICHMENT_SERVICE_STATUS_LABELS: Record<string, string> = {
+  researching: 'Researching',
+  enrolled:    'Enrolled',
+  completed:   'Completed',
 }
 
 // ─── Small UI helpers ─────────────────────────────────────────────────────────
@@ -838,6 +892,645 @@ function ScholarshipCardView({ entries, canWrite, onEdit, onDelete, onDrop }: Sc
         </p>
         {active.map((e) => (
           <ScholarshipCard
+            key={e.id}
+            entry={e}
+            canWrite={canWrite}
+            onEdit={() => onEdit(e)}
+            onDelete={() => onDelete(e.id)}
+            onDragStart={(ev) => handleDragStart(ev, e.id)}
+          />
+        ))}
+        {active.length === 0 && (
+          <p style={{ color: '#fbbf24', fontSize: '0.82rem', textAlign: 'center', margin: 0 }}>Drag cards here</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Enrichment Status Badge ───────────────────────────────────────────────────
+
+function EnrichmentStatusBadge({ status }: { status: string }) {
+  const color = ENRICHMENT_STATUS_COLORS[status] || '#6b7280'
+  const allLabels = { ...ENRICHMENT_PROGRAM_STATUS_LABELS, ...ENRICHMENT_SERVICE_STATUS_LABELS }
+  const label = allLabels[status] || status
+  return (
+    <span style={{
+      background: color + '18',
+      color,
+      border: `1px solid ${color}55`,
+      borderRadius: 4,
+      padding: '2px 8px',
+      fontSize: '0.72rem',
+      fontWeight: 700,
+      whiteSpace: 'nowrap',
+    }}>
+      {label}
+    </span>
+  )
+}
+
+// ─── Add Enrichment Modal ──────────────────────────────────────────────────────
+
+interface AddEnrichmentModalProps {
+  onClose: () => void
+  onAdd: (name: string, programId?: string, organization?: string, source?: string, programCategory?: string) => Promise<void>
+  apiUrl: string
+  getToken: () => Promise<string | null>
+}
+
+function AddEnrichmentModal({ onClose, onAdd, apiUrl, getToken }: AddEnrichmentModalProps) {
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<EnrichmentSearchResult[]>([])
+  const [searching, setSearching] = useState(false)
+  const [selected, setSelected] = useState<EnrichmentSearchResult | null>(null)
+  const [manualMode, setManualMode] = useState(false)
+  const [manualName, setManualName] = useState('')
+  const [adding, setAdding] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const search = useCallback(async (q: string) => {
+    if (q.length < 2) { setResults([]); setSelected(null); return }
+    setSearching(true)
+    try {
+      const token = await getToken()
+      const res = await fetch(`${apiUrl}/enrichment-lookup?name=${encodeURIComponent(q)}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      const data = await res.json()
+      setResults(data.results || [])
+    } catch {
+      setResults([])
+    } finally {
+      setSearching(false)
+    }
+  }, [apiUrl, getToken])
+
+  const handleQueryChange = (v: string) => {
+    setQuery(v)
+    setSelected(null)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => search(v), 300)
+  }
+
+  const handleConfirmAdd = async () => {
+    if (!selected) return
+    setAdding(true)
+    await onAdd(selected.name, selected.id, selected.organization)
+    setAdding(false)
+  }
+
+  const handleManualAdd = async () => {
+    if (!manualName.trim()) return
+    setAdding(true)
+    await onAdd(manualName.trim())
+    setAdding(false)
+  }
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+    }} onClick={onClose}>
+      <div style={{
+        background: '#fff', borderRadius: 14, padding: '28px 28px 24px', width: 480,
+        maxWidth: '95vw', maxHeight: '80vh', display: 'flex', flexDirection: 'column',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.18)',
+      }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+          <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0c1b33', margin: 0 }}>Add Program</h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#9ca3af' }}>×</button>
+        </div>
+
+        {!manualMode ? (
+          <>
+            <input
+              autoFocus
+              value={query}
+              onChange={(e) => handleQueryChange(e.target.value)}
+              placeholder="Search enrichment programs…"
+              style={{
+                border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '9px 14px',
+                fontSize: '0.9rem', outline: 'none', marginBottom: 12,
+              }}
+            />
+            <div style={{ flex: 1, overflowY: 'auto' }}>
+              {searching && <p style={{ color: '#9ca3af', fontSize: '0.85rem', textAlign: 'center', padding: 12 }}>Searching…</p>}
+              {!searching && results.length === 0 && query.length >= 2 && (
+                <p style={{ color: '#9ca3af', fontSize: '0.85rem', textAlign: 'center', padding: 12 }}>No matches found.</p>
+              )}
+              {results.map((r, i) => {
+                const isSelected = selected?.id === r.id && selected?.name === r.name
+                return (
+                  <button
+                    key={i}
+                    onClick={() => setSelected(isSelected ? null : r)}
+                    style={{
+                      display: 'block', width: '100%', textAlign: 'left',
+                      background: isSelected ? '#fef3c7' : 'none',
+                      border: isSelected ? '1.5px solid #d97706' : '1.5px solid transparent',
+                      cursor: 'pointer', padding: '10px 12px', borderRadius: 8,
+                      marginBottom: 4,
+                    }}
+                    onMouseOver={(e) => { if (!isSelected) e.currentTarget.style.background = '#f8fafc' }}
+                    onMouseOut={(e) => { if (!isSelected) e.currentTarget.style.background = 'none' }}
+                  >
+                    <p style={{ margin: 0, fontWeight: 600, color: '#1f2937', fontSize: '0.875rem' }}>{r.name}</p>
+                    {r.organization && (
+                      <p style={{ margin: 0, color: '#9ca3af', fontSize: '0.78rem' }}>{r.organization}</p>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+            <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {selected && (
+                <button
+                  onClick={handleConfirmAdd}
+                  disabled={adding}
+                  style={{ background: '#d97706', color: '#fff', border: 'none', borderRadius: 8, padding: '10px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', opacity: adding ? 0.7 : 1 }}
+                >
+                  {adding ? 'Adding…' : `Add "${selected.name}"`}
+                </button>
+              )}
+              <button
+                onClick={() => setManualMode(true)}
+                style={{ color: '#6366f1', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', textDecoration: 'underline' }}
+              >
+                Not in list? Add manually
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p style={{ color: '#6b7280', fontSize: '0.85rem', marginBottom: 12 }}>Enter the program name as you want it to appear. You can add details after.</p>
+            <input
+              autoFocus
+              value={manualName}
+              onChange={(e) => setManualName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleManualAdd()}
+              placeholder="Program name…"
+              style={{
+                border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '9px 14px',
+                fontSize: '0.9rem', outline: 'none', marginBottom: 14,
+              }}
+            />
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => setManualMode(false)}
+                style={{ flex: 1, border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '9px', fontSize: '0.875rem', cursor: 'pointer', background: '#fff', color: '#374151' }}
+              >Back to Search</button>
+              <button
+                onClick={handleManualAdd}
+                disabled={adding || !manualName.trim()}
+                style={{ flex: 1, background: '#d97706', color: '#fff', border: 'none', borderRadius: 8, padding: '9px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', opacity: adding ? 0.7 : 1 }}
+              >Add to List</button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Enrichment Edit Drawer ────────────────────────────────────────────────────
+
+interface EnrichmentEditDrawerProps {
+  entry: EnrichmentEntry
+  canWrite: boolean
+  onClose: () => void
+  onSave: (entryId: number, updates: Partial<EnrichmentEntry>) => Promise<void>
+  onDelete: (entryId: number) => void
+  apiUrl: string
+  getToken: () => Promise<string | null>
+  onRefreshed: (updated: EnrichmentEntry) => void
+}
+
+function EnrichmentEditDrawer({ entry, canWrite, onClose, onSave, onDelete, apiUrl, getToken, onRefreshed }: EnrichmentEditDrawerProps) {
+  const [form, setForm] = useState<Partial<EnrichmentEntry>>({ ...entry })
+  const [saving, setSaving] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
+  // Auto-refresh from DB if key fields are missing
+  useEffect(() => {
+    const needsRefresh = !entry.program_url && !entry.application_url && !entry.deadline_date && !entry.cost_estimate
+    if (!needsRefresh) return
+    getToken().then(async (token) => {
+      if (!token) return
+      const res = await fetch(`${apiUrl}/lists/enrichment/${entry.id}/refresh-from-db`, {
+        method: 'POST', headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.updated && data.entry) {
+          setForm((prev) => ({ ...prev, ...data.entry }))
+          onRefreshed(data.entry)
+        }
+      }
+    })
+  }, [entry.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const set = (field: keyof EnrichmentEntry, value: unknown) =>
+    setForm((prev) => ({ ...prev, [field]: value }))
+
+  const handleSave = async () => {
+    setSaving(true)
+    await onSave(entry.id, form)
+    setSaving(false)
+    onClose()
+  }
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%', border: '1.5px solid #e2e8f0', borderRadius: 7, padding: '7px 11px',
+    fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box', background: '#fafafa',
+  }
+  const labelStyle: React.CSSProperties = { fontSize: '0.78rem', fontWeight: 600, color: '#6b7280', marginBottom: 4, display: 'block' }
+  const fieldStyle: React.CSSProperties = { marginBottom: 14 }
+
+  const currentCategory = (form.program_category ?? entry.program_category) as 'program' | 'service'
+  const statusLabels = currentCategory === 'service' ? ENRICHMENT_SERVICE_STATUS_LABELS : ENRICHMENT_PROGRAM_STATUS_LABELS
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 500, display: 'flex', justifyContent: 'flex-end',
+      background: 'rgba(0,0,0,0.25)',
+    }} onClick={onClose}>
+      <div style={{
+        width: 420, maxWidth: '100vw', background: '#fff', height: '100%', overflowY: 'auto',
+        boxShadow: '-4px 0 32px rgba(0,0,0,0.12)', display: 'flex', flexDirection: 'column',
+        padding: '24px 24px 32px',
+      }} onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
+          <div>
+            <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0c1b33', margin: '0 0 4px' }}>
+              {entry.program_name}
+            </h2>
+            <EnrichmentStatusBadge status={entry.status} />
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.4rem', color: '#9ca3af', flexShrink: 0 }}>×</button>
+        </div>
+
+        {/* Status */}
+        <div style={fieldStyle}>
+          <label style={labelStyle}>Status</label>
+          <select
+            value={form.status ?? entry.status}
+            onChange={(e) => set('status', e.target.value)}
+            disabled={!canWrite}
+            style={inputStyle}
+          >
+            {Object.entries(statusLabels).map(([v, l]) => (
+              <option key={v} value={v}>{l}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Program Category */}
+        <div style={fieldStyle}>
+          <label style={labelStyle}>Category</label>
+          <select
+            value={form.program_category ?? entry.program_category}
+            onChange={(e) => set('program_category', e.target.value)}
+            disabled={!canWrite}
+            style={inputStyle}
+          >
+            <option value="program">Program / Internship / Research</option>
+            <option value="service">Tutoring / Service</option>
+          </select>
+        </div>
+
+        {/* Organization */}
+        <div style={fieldStyle}>
+          <label style={labelStyle}>Organization</label>
+          <input
+            type="text"
+            value={form.organization ?? ''}
+            onChange={(e) => set('organization', e.target.value)}
+            disabled={!canWrite}
+            placeholder="e.g. Johns Hopkins, MIT, Khan Academy"
+            style={inputStyle}
+          />
+        </div>
+
+        {/* Program URL */}
+        <div style={fieldStyle}>
+          <label style={labelStyle}>Program / Info URL</label>
+          <input
+            type="url"
+            value={form.program_url ?? ''}
+            onChange={(e) => set('program_url', e.target.value)}
+            disabled={!canWrite}
+            placeholder="https://…"
+            style={inputStyle}
+          />
+        </div>
+
+        {/* Application URL */}
+        <div style={fieldStyle}>
+          <label style={labelStyle}>Application URL</label>
+          <input
+            type="url"
+            value={form.application_url ?? ''}
+            onChange={(e) => set('application_url', e.target.value)}
+            disabled={!canWrite}
+            placeholder="https://…"
+            style={inputStyle}
+          />
+        </div>
+
+        {/* Deadline — programs only */}
+        {currentCategory === 'program' && (
+          <div style={fieldStyle}>
+            <label style={labelStyle}>Deadline</label>
+            <input
+              type="date"
+              value={form.deadline_date ?? ''}
+              onChange={(e) => set('deadline_date', e.target.value || null)}
+              disabled={!canWrite}
+              style={inputStyle}
+            />
+          </div>
+        )}
+
+        {/* Cost estimate */}
+        <div style={fieldStyle}>
+          <label style={labelStyle}>Cost Estimate</label>
+          <input
+            type="text"
+            value={form.cost_estimate ?? ''}
+            onChange={(e) => set('cost_estimate', e.target.value)}
+            disabled={!canWrite}
+            placeholder="e.g. Free, $1,499, $5,999"
+            style={inputStyle}
+          />
+        </div>
+
+        {/* Notes */}
+        <div style={fieldStyle}>
+          <label style={labelStyle}>Notes</label>
+          <textarea
+            value={form.notes ?? ''}
+            onChange={(e) => set('notes', e.target.value)}
+            disabled={!canWrite}
+            rows={4}
+            placeholder="Your notes about this program…"
+            style={{ ...inputStyle, resize: 'vertical' }}
+          />
+        </div>
+
+        {/* Actions */}
+        {canWrite && (
+          <div style={{ marginTop: 'auto', paddingTop: 20, borderTop: '1px solid #f3f4f6', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              style={{ background: '#d97706', color: '#fff', border: 'none', borderRadius: 8, padding: '10px', fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}
+            >
+              {saving ? 'Saving…' : 'Save Changes'}
+            </button>
+            {confirmDelete ? (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => setConfirmDelete(false)} style={{ flex: 1, border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '8px', fontSize: '0.85rem', cursor: 'pointer', background: '#fff' }}>
+                  Cancel
+                </button>
+                <button onClick={() => { onDelete(entry.id); onClose() }} style={{ flex: 1, background: '#dc2626', color: '#fff', border: 'none', borderRadius: 8, padding: '8px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}>
+                  Confirm Delete
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => setConfirmDelete(true)} style={{ background: 'none', border: '1px solid #fca5a5', borderRadius: 8, padding: '8px', fontSize: '0.85rem', color: '#dc2626', cursor: 'pointer' }}>
+                Remove from List
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Enrichment Spreadsheet View ───────────────────────────────────────────────
+
+interface EnrichmentSpreadsheetViewProps {
+  entries: EnrichmentEntry[]
+  canWrite: boolean
+  onEdit: (entry: EnrichmentEntry) => void
+  onStatusChange: (id: number, status: string) => void
+}
+
+function EnrichmentSpreadsheetView({ entries, canWrite, onEdit, onStatusChange }: EnrichmentSpreadsheetViewProps) {
+  if (entries.length === 0) {
+    return (
+      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', padding: '40px 24px', textAlign: 'center', color: '#9ca3af', fontSize: '0.9rem' }}>
+        No enrichment programs yet. Click &quot;+ Add Program&quot; or ask Soar to suggest programs.
+      </div>
+    )
+  }
+  return (
+    <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <thead>
+          <tr style={{ borderBottom: '2px solid #e2e8f0', background: '#f8fafc' }}>
+            {['Program', 'Organization', 'Cost', 'Deadline', 'Status', ''].map((h, i) => (
+              <th key={i} style={{ padding: '10px 14px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 700, color: '#6b7280', letterSpacing: '0.05em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {entries.map((entry) => {
+            const statusLabels = entry.program_category === 'service' ? ENRICHMENT_SERVICE_STATUS_LABELS : ENRICHMENT_PROGRAM_STATUS_LABELS
+            return (
+              <tr
+                key={entry.id}
+                style={{ borderBottom: '1px solid #f3f4f6', cursor: 'pointer' }}
+                onMouseOver={(e) => (e.currentTarget.style.background = '#fafafa')}
+                onMouseOut={(e) => (e.currentTarget.style.background = '')}
+                onClick={() => onEdit(entry)}
+              >
+                <td style={{ padding: '10px 14px' }}>
+                  <p style={{ margin: 0, fontWeight: 600, color: '#1f2937', fontSize: '0.875rem' }}>{entry.program_name}</p>
+                  {entry.program_url && (
+                    <a href={entry.program_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{ fontSize: '0.75rem', color: '#6366f1' }}>
+                      Info ↗
+                    </a>
+                  )}
+                </td>
+                <td style={{ padding: '10px 14px', fontSize: '0.85rem', color: '#374151' }}>
+                  {entry.organization || <span style={{ color: '#d1d5db' }}>—</span>}
+                </td>
+                <td style={{ padding: '10px 14px', fontSize: '0.85rem', color: '#374151', whiteSpace: 'nowrap' }}>
+                  {entry.cost_estimate || <span style={{ color: '#d1d5db' }}>—</span>}
+                </td>
+                <td style={{ padding: '10px 14px', fontSize: '0.85rem', color: '#374151', whiteSpace: 'nowrap' }}>
+                  {entry.program_category === 'program' && entry.deadline_date
+                    ? (() => {
+                        const d = new Date(entry.deadline_date + 'T00:00:00')
+                        return `${d.toLocaleString('en-US', { month: 'short' })} ${d.getDate()}, ${d.getFullYear()}`
+                      })()
+                    : <span style={{ color: '#d1d5db' }}>—</span>}
+                </td>
+                <td style={{ padding: '10px 14px' }} onClick={(e) => e.stopPropagation()}>
+                  {canWrite ? (
+                    <select
+                      value={entry.status}
+                      onChange={(e) => onStatusChange(entry.id, e.target.value)}
+                      style={{ border: '1px solid #e2e8f0', borderRadius: 6, padding: '4px 8px', fontSize: '0.8rem', cursor: 'pointer', background: '#fff' }}
+                    >
+                      {Object.entries(statusLabels).map(([v, l]) => (
+                        <option key={v} value={v}>{l}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <EnrichmentStatusBadge status={entry.status} />
+                  )}
+                </td>
+                <td style={{ padding: '10px 14px' }}>
+                  <button onClick={(e) => { e.stopPropagation(); onEdit(entry) }} style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: 6, padding: '4px 10px', fontSize: '0.78rem', color: '#6b7280', cursor: 'pointer' }}>
+                    Details
+                  </button>
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+// ─── Enrichment Card View ──────────────────────────────────────────────────────
+
+interface EnrichmentCardViewProps {
+  entries: EnrichmentEntry[]
+  canWrite: boolean
+  onEdit: (entry: EnrichmentEntry) => void
+  onDelete: (id: number) => void
+  onDrop: (entryId: number, targetStatus: string) => void
+}
+
+function EnrichmentCard({ entry, canWrite, onEdit, onDelete, onDragStart }:
+  { entry: EnrichmentEntry; canWrite: boolean; onEdit: () => void; onDelete: () => void; onDragStart: (e: React.DragEvent) => void }) {
+  return (
+    <div
+      draggable={canWrite}
+      onDragStart={onDragStart}
+      onClick={onEdit}
+      style={{
+        background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10,
+        padding: '14px 16px', cursor: 'pointer', userSelect: 'none', marginBottom: 8,
+      }}
+      onMouseOver={(e) => (e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)')}
+      onMouseOut={(e) => (e.currentTarget.style.boxShadow = 'none')}
+    >
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+        <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem', color: '#0c1b33', lineHeight: 1.3 }}>
+          {entry.program_name}
+        </p>
+        {canWrite && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete() }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d1d5db', fontSize: '1rem', flexShrink: 0, padding: 0, lineHeight: 1 }}
+          >×</button>
+        )}
+      </div>
+      {entry.organization && (
+        <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#6b7280' }}>{entry.organization}</p>
+      )}
+      {entry.cost_estimate && (
+        <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: '#9ca3af' }}>Cost: {entry.cost_estimate}</p>
+      )}
+      {entry.program_category === 'program' && entry.deadline_date && (
+        <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#9ca3af' }}>
+          Due: {(() => {
+            const d = new Date(entry.deadline_date + 'T00:00:00')
+            return `${d.toLocaleString('en-US', { month: 'short' })} ${d.getDate()}, ${d.getFullYear()}`
+          })()}
+        </p>
+      )}
+      {entry.status !== 'researching' && (
+        <div style={{ marginTop: 8 }}>
+          <EnrichmentStatusBadge status={entry.status} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+function EnrichmentCardView({ entries, canWrite, onEdit, onDelete, onDrop }: EnrichmentCardViewProps) {
+  const [draggingId, setDraggingId] = useState<number | null>(null)
+  const [dragOver, setDragOver] = useState<string | null>(null)
+
+  const researching = entries.filter((e) => e.status === 'researching')
+  const active      = entries.filter((e) => e.status !== 'researching')
+
+  const handleDragStart = (e: React.DragEvent, id: number) => {
+    setDraggingId(id)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  const handleDrop = (e: React.DragEvent, targetSide: string) => {
+    e.preventDefault()
+    if (draggingId !== null) onDrop(draggingId, targetSide)
+    setDraggingId(null)
+    setDragOver(null)
+  }
+
+  const colStyle = (side: string): React.CSSProperties => ({
+    flex: 1, minHeight: 300,
+    background: dragOver === side ? '#fffbeb' : '#f9fafb',
+    border: `2px dashed ${dragOver === side ? '#d97706' : '#e2e8f0'}`,
+    borderRadius: 12, padding: '16px 14px',
+    transition: 'background 0.15s, border-color 0.15s',
+  })
+
+  if (entries.length === 0) {
+    return (
+      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', padding: '40px 24px', textAlign: 'center', color: '#9ca3af', fontSize: '0.9rem' }}>
+        No enrichment programs yet. Click &quot;+ Add Program&quot; or ask Soar to suggest programs.
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', gap: 16 }}>
+      {/* Researching column */}
+      <div
+        style={colStyle('researching')}
+        onDragOver={(e) => { e.preventDefault(); setDragOver('researching') }}
+        onDragLeave={() => setDragOver(null)}
+        onDrop={(e) => handleDrop(e, 'researching')}
+      >
+        <p style={{ margin: '0 0 12px', fontSize: '0.8rem', fontWeight: 700, color: '#6b7280' }}>
+          Researching ({researching.length})
+        </p>
+        {researching.map((e) => (
+          <EnrichmentCard
+            key={e.id}
+            entry={e}
+            canWrite={canWrite}
+            onEdit={() => onEdit(e)}
+            onDelete={() => onDelete(e.id)}
+            onDragStart={(ev) => handleDragStart(ev, e.id)}
+          />
+        ))}
+        {researching.length === 0 && (
+          <p style={{ color: '#c4b5fd', fontSize: '0.82rem', textAlign: 'center', margin: 0 }}>Drag cards here</p>
+        )}
+      </div>
+
+      {/* Active column */}
+      <div
+        style={colStyle('active')}
+        onDragOver={(e) => { e.preventDefault(); setDragOver('active') }}
+        onDragLeave={() => setDragOver(null)}
+        onDrop={(e) => handleDrop(e, 'active')}
+      >
+        <p style={{ margin: '0 0 12px', fontSize: '0.8rem', fontWeight: 700, color: '#d97706' }}>
+          Active ({active.length})
+        </p>
+        {active.map((e) => (
+          <EnrichmentCard
             key={e.id}
             entry={e}
             canWrite={canWrite}
@@ -2073,14 +2766,18 @@ function ListsContent() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [studentName, setStudentName] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'colleges' | 'scholarships'>(
-    tabParam === 'scholarships' ? 'scholarships' : 'colleges'
+  const [activeTab, setActiveTab] = useState<'colleges' | 'scholarships' | 'enrichment'>(
+    tabParam === 'scholarships' ? 'scholarships' : tabParam === 'enrichment' ? 'enrichment' : 'colleges'
   )
   const [viewMode, setViewMode] = useState<'spreadsheet' | 'card'>('spreadsheet')
   const [showAddModal, setShowAddModal] = useState(false)
   const [showAddScholarshipModal, setShowAddScholarshipModal] = useState(false)
   const [editEntry, setEditEntry] = useState<CollegeEntry | null>(null)
   const [editScholarship, setEditScholarship] = useState<ScholarshipEntry | null>(null)
+  const [enrichmentEntries, setEnrichmentEntries] = useState<EnrichmentEntry[]>([])
+  const [enrichmentLoaded, setEnrichmentLoaded] = useState(false)
+  const [editEnrichment, setEditEnrichment] = useState<EnrichmentEntry | null>(null)
+  const [showAddEnrichment, setShowAddEnrichment] = useState(false)
 
   useEffect(() => {
     if (!clerkUser) return
@@ -2233,6 +2930,88 @@ function ListsContent() {
     setScholarships((prev) => prev.map((e) => e.id === entryId ? { ...e, status: newStatus } : e))
   }
 
+  // Lazy-load enrichment when tab is first opened
+  const loadEnrichment = useCallback(async () => {
+    if (enrichmentLoaded) return
+    const id = forStudentId ?? myUserId
+    if (!id) return
+    try {
+      const token = await getToken()
+      const res = await fetch(`${apiUrl}/lists/${id}/enrichment`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setEnrichmentEntries(data.enrichment || data || [])
+      }
+    } catch { /* ignore */ } finally {
+      setEnrichmentLoaded(true)
+    }
+  }, [enrichmentLoaded, forStudentId, myUserId, getToken, apiUrl])
+
+  useEffect(() => {
+    if (activeTab === 'enrichment') loadEnrichment()
+  }, [activeTab, loadEnrichment])
+
+  const addEnrichment = async (name: string, programId?: string, organization?: string, source?: string, programCategory?: string) => {
+    if (!targetId || !canWrite) return
+    const token = await getToken()
+    const res = await fetch(`${apiUrl}/lists/${targetId}/enrichment`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        program_name: name,
+        ...(programId ? { program_id: programId } : {}),
+        ...(organization ? { organization } : {}),
+        ...(source ? { source } : {}),
+        ...(programCategory ? { program_category: programCategory } : {}),
+      }),
+    })
+    if (res.ok) {
+      const added = await res.json()
+      if (added.id) setEnrichmentEntries((prev) => [added, ...prev])
+    }
+    setShowAddEnrichment(false)
+  }
+
+  const updateEnrichment = async (entryId: number, updates: Partial<EnrichmentEntry>) => {
+    const token = await getToken()
+    const res = await fetch(`${apiUrl}/lists/enrichment/${entryId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(updates),
+    })
+    if (res.ok) {
+      const updated = await res.json()
+      setEnrichmentEntries((prev) => prev.map((e) => e.id === entryId ? { ...e, ...updated } : e))
+    }
+  }
+
+  const removeEnrichment = async (entryId: number) => {
+    if (!canWrite) return
+    const token = await getToken()
+    await fetch(`${apiUrl}/lists/enrichment/${entryId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    setEnrichmentEntries((prev) => prev.filter((e) => e.id !== entryId))
+  }
+
+  const handleEnrichmentDrop = (entryId: number, targetStatus: string) => {
+    const entry = enrichmentEntries.find((e) => e.id === entryId)
+    if (!entry) return
+    let newStatus: string
+    if (targetStatus === 'active' && entry.status === 'researching') {
+      newStatus = entry.program_category === 'service' ? 'enrolled' : 'applying'
+    } else if (targetStatus === 'researching' && entry.status !== 'researching') {
+      newStatus = 'researching'
+    } else {
+      return
+    }
+    updateEnrichment(entryId, { status: newStatus })
+    setEnrichmentEntries((prev) => prev.map((e) => e.id === entryId ? { ...e, status: newStatus } : e))
+  }
+
   const handleDrop = (entryId: number, targetStatus: string) => {
     const entry = entries.find((e) => e.id === entryId)
     if (!entry) return
@@ -2263,9 +3042,10 @@ function ListsContent() {
     </div>
   )
 
+  const activeTabLabel = activeTab === 'scholarships' ? 'Scholarship' : activeTab === 'enrichment' ? 'Enrichment' : 'College'
   const pageTitle = isViewingStudent
-    ? `${studentName ? `${studentName}'s` : 'Student'} ${activeTab === 'scholarships' ? 'Scholarship' : 'College'} Lists`
-    : `My ${activeTab === 'scholarships' ? 'Scholarship' : 'College'} Lists`
+    ? `${studentName ? `${studentName}'s` : 'Student'} ${activeTabLabel} Lists`
+    : `My ${activeTabLabel} Lists`
 
   return (
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', background: '#f5f6fa', minHeight: '100dvh' }}>
@@ -2286,9 +3066,11 @@ function ListsContent() {
             <h1 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#0c1b33', marginBottom: 4 }}>{pageTitle}</h1>
             <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
               {isViewingStudent
-                ? `Viewing ${studentName ? `${studentName}'s` : 'this student\'s'} ${activeTab === 'scholarships' ? 'scholarship' : 'college'} lists.`
+                ? `Viewing ${studentName ? `${studentName}'s` : 'this student\'s'} ${activeTab === 'scholarships' ? 'scholarship' : activeTab === 'enrichment' ? 'enrichment' : 'college'} lists.`
                 : activeTab === 'scholarships'
                   ? 'Soar adds scholarships here as you research them. Add and update them manually below.'
+                  : activeTab === 'enrichment'
+                  ? 'Soar adds enrichment programs here as you research them. Add and update them manually below.'
                   : 'Soar adds colleges here as you research them. Add and update them manually below.'}
             </p>
           </div>
@@ -2313,10 +3095,14 @@ function ListsContent() {
             {/* Add button */}
             {canWrite && accountType !== 'parent' && (
               <button
-                onClick={() => activeTab === 'colleges' ? setShowAddModal(true) : setShowAddScholarshipModal(true)}
-                style={{ background: activeTab === 'scholarships' ? '#d97706' : '#4f46e5', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}
+                onClick={() => {
+                  if (activeTab === 'colleges') setShowAddModal(true)
+                  else if (activeTab === 'scholarships') setShowAddScholarshipModal(true)
+                  else setShowAddEnrichment(true)
+                }}
+                style={{ background: activeTab === 'colleges' ? '#4f46e5' : '#d97706', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}
               >
-                {activeTab === 'scholarships' ? '+ Add Scholarship' : '+ Add College'}
+                {activeTab === 'scholarships' ? '+ Add Scholarship' : activeTab === 'enrichment' ? '+ Add Program' : '+ Add College'}
               </button>
             )}
           </div>
@@ -2333,7 +3119,7 @@ function ListsContent() {
 
         {/* Tab switcher */}
         <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '2px solid #e2e8f0' }}>
-          {([['colleges', 'Colleges'], ['scholarships', 'Scholarships']] as const).map(([tab, label]) => (
+          {([['colleges', 'Colleges', entries.length], ['scholarships', 'Scholarships', scholarships.length], ['enrichment', 'Enrichment', enrichmentEntries.length]] as const).map(([tab, label, count]) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -2360,7 +3146,7 @@ function ListsContent() {
                 fontSize: '0.75rem',
                 fontWeight: 700,
               }}>
-                {tab === 'colleges' ? entries.length : scholarships.length}
+                {count}
               </span>
             </button>
           ))}
@@ -2397,7 +3183,7 @@ function ListsContent() {
               />
             )}
           </>
-        ) : (
+        ) : activeTab === 'scholarships' ? (
           <>
             {/* Scholarship count summary */}
             <p style={{ fontSize: '0.8rem', color: '#9ca3af', marginBottom: 14 }}>
@@ -2422,6 +3208,34 @@ function ListsContent() {
                 onEdit={setEditScholarship}
                 onDelete={removeScholarship}
                 onDrop={handleScholarshipDrop}
+              />
+            )}
+          </>
+        ) : (
+          <>
+            {/* Enrichment count summary */}
+            <p style={{ fontSize: '0.8rem', color: '#9ca3af', marginBottom: 14 }}>
+              {enrichmentEntries.length} program{enrichmentEntries.length !== 1 ? 's' : ''} on this list
+              {enrichmentEntries.filter((e) => e.status === 'accepted' || e.status === 'attending' || e.status === 'enrolled').length > 0
+                ? ` · ${enrichmentEntries.filter((e) => e.status === 'accepted' || e.status === 'attending' || e.status === 'enrolled').length} active/accepted`
+                : ''}
+            </p>
+
+            {/* Enrichment view */}
+            {viewMode === 'spreadsheet' ? (
+              <EnrichmentSpreadsheetView
+                entries={enrichmentEntries}
+                canWrite={canWrite}
+                onEdit={setEditEnrichment}
+                onStatusChange={(id, status) => updateEnrichment(id, { status })}
+              />
+            ) : (
+              <EnrichmentCardView
+                entries={enrichmentEntries}
+                canWrite={canWrite}
+                onEdit={setEditEnrichment}
+                onDelete={removeEnrichment}
+                onDrop={handleEnrichmentDrop}
               />
             )}
           </>
@@ -2482,6 +3296,36 @@ function ListsContent() {
           }}
           apiUrl={apiUrl}
           getToken={getToken}
+        />
+      )}
+
+      {/* Add Enrichment modal */}
+      {showAddEnrichment && (
+        <AddEnrichmentModal
+          onClose={() => setShowAddEnrichment(false)}
+          onAdd={addEnrichment}
+          apiUrl={apiUrl}
+          getToken={getToken}
+        />
+      )}
+
+      {/* Enrichment edit drawer */}
+      {editEnrichment && (
+        <EnrichmentEditDrawer
+          entry={editEnrichment}
+          canWrite={canWrite}
+          onClose={() => setEditEnrichment(null)}
+          onSave={async (id, updates) => {
+            await updateEnrichment(id, updates)
+            setEditEnrichment(null)
+          }}
+          onDelete={removeEnrichment}
+          apiUrl={apiUrl}
+          getToken={getToken}
+          onRefreshed={(updated) => {
+            setEnrichmentEntries((prev) => prev.map((e) => e.id === updated.id ? { ...e, ...updated } : e))
+            setEditEnrichment((prev) => prev ? { ...prev, ...updated } : prev)
+          }}
         />
       )}
     </div>

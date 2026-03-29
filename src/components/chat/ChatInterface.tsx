@@ -110,6 +110,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
   const [addingToList, setAddingToList] = useState<string | null>(null)
   const [addedToListToast, setAddedToListToast] = useState<string | null>(null)
   const [addingToScholarshipList, setAddingToScholarshipList] = useState<string | null>(null)
+  const [addingToEnrichmentList, setAddingToEnrichmentList] = useState<string | null>(null)
   const [myConnections, setMyConnections] = useState<{
     counselors: Array<{ id: number; full_name: string; email: string; organization?: string }>
     parents: Array<{ id: number; full_name: string; email: string }>
@@ -546,6 +547,32 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
     }
   }, [userId, forStudentId, usageData, getToken, apiUrl])
 
+  const handleAddToEnrichmentList = useCallback(async (programName: string) => {
+    if (!userId) return
+    const studentId = forStudentId ?? usageData?.user_id
+    if (!studentId) return
+    setAddingToEnrichmentList(programName)
+    try {
+      const token = await getToken()
+      const res = await fetch(`${apiUrl}/lists/${studentId}/enrichment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ program_name: programName }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setAddedToListToast(`${programName} added to your enrichment list!`)
+      } else {
+        setAddedToListToast(data.detail || 'Could not add program — please try again.')
+      }
+    } catch {
+      setAddedToListToast('Could not add program — please try again.')
+    } finally {
+      setAddingToEnrichmentList(null)
+      setTimeout(() => setAddedToListToast(null), 3500)
+    }
+  }, [userId, forStudentId, usageData, getToken, apiUrl])
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -930,6 +957,8 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                   addingToList={addingToList}
                   onAddToScholarshipList={userId ? handleAddToScholarshipList : undefined}
                   addingToScholarshipList={addingToScholarshipList}
+                  onAddToEnrichmentList={userId ? handleAddToEnrichmentList : undefined}
+                  addingToEnrichmentList={addingToEnrichmentList}
                 />
               ))
             )}
