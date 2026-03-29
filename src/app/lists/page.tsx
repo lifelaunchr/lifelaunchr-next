@@ -427,12 +427,34 @@ interface ScholarshipEditDrawerProps {
   onClose: () => void
   onSave: (entryId: number, updates: Partial<ScholarshipEntry>) => Promise<void>
   onDelete: (entryId: number) => void
+  apiUrl: string
+  getToken: () => Promise<string | null>
+  onRefreshed: (updated: ScholarshipEntry) => void
 }
 
-function ScholarshipEditDrawer({ entry, canWrite, onClose, onSave, onDelete }: ScholarshipEditDrawerProps) {
+function ScholarshipEditDrawer({ entry, canWrite, onClose, onSave, onDelete, apiUrl, getToken, onRefreshed }: ScholarshipEditDrawerProps) {
   const [form, setForm] = useState<Partial<ScholarshipEntry>>({ ...entry })
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+
+  // Auto-refresh from DB if key fields are missing
+  useEffect(() => {
+    const needsRefresh = !entry.award_low && !entry.program_url && !entry.application_url && !entry.deadline_date
+    if (!needsRefresh) return
+    getToken().then(async (token) => {
+      if (!token) return
+      const res = await fetch(`${apiUrl}/lists/scholarships/${entry.id}/refresh-from-db`, {
+        method: 'POST', headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.updated && data.entry) {
+          setForm((prev) => ({ ...prev, ...data.entry }))
+          onRefreshed(data.entry)
+        }
+      }
+    })
+  }, [entry.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = (field: keyof ScholarshipEntry, value: unknown) =>
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -2437,6 +2459,12 @@ function ListsContent() {
             setEditScholarship(null)
           }}
           onDelete={removeScholarship}
+          apiUrl={apiUrl}
+          getToken={getToken}
+          onRefreshed={(updated) => {
+            setScholarships((prev) => prev.map((e) => e.id === updated.id ? { ...e, ...updated } : e))
+            setEditScholarship((prev) => prev ? { ...prev, ...updated } : prev)
+          }}
         />
       )}
 
