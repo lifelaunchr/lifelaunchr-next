@@ -109,6 +109,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
   })
   const [addingToList, setAddingToList] = useState<string | null>(null)
   const [addedToListToast, setAddedToListToast] = useState<string | null>(null)
+  const [addingToScholarshipList, setAddingToScholarshipList] = useState<string | null>(null)
   const [myConnections, setMyConnections] = useState<{
     counselors: Array<{ id: number; full_name: string; email: string; organization?: string }>
     parents: Array<{ id: number; full_name: string; email: string }>
@@ -514,6 +515,37 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
     }
   }, [userId, forStudentId, usageData, getToken, apiUrl])
 
+  const handleAddToScholarshipList = useCallback(async (scholarshipName: string) => {
+    if (!userId) return
+    const studentId = forStudentId ?? usageData?.user_id
+    if (!studentId) return
+    setAddingToScholarshipList(scholarshipName)
+    try {
+      const token = await getToken()
+      const res = await fetch(`${apiUrl}/lists/${studentId}/scholarships`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ scholarship_name: scholarshipName }),
+      })
+      if (res.ok) {
+        setAddedToListToast(`${scholarshipName} added to your scholarship list!`)
+        setTimeout(() => setAddedToListToast(null), 3500)
+      } else {
+        const err = await res.json().catch(() => ({}))
+        setAddedToListToast(err.detail || 'Could not add scholarship — please try again.')
+        setTimeout(() => setAddedToListToast(null), 4000)
+      }
+    } catch {
+      setAddedToListToast('Network error — please try again.')
+      setTimeout(() => setAddedToListToast(null), 4000)
+    } finally {
+      setAddingToScholarshipList(null)
+    }
+  }, [userId, forStudentId, usageData, getToken, apiUrl])
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -882,6 +914,8 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                   isStreaming={isStreaming && msg.id === streamingMessageId}
                   onAddToList={userId ? handleAddToList : undefined}
                   addingToList={addingToList}
+                  onAddToScholarshipList={userId ? handleAddToScholarshipList : undefined}
+                  addingToScholarshipList={addingToScholarshipList}
                 />
               ))
             )}
