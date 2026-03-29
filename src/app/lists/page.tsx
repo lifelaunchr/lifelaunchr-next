@@ -554,24 +554,76 @@ interface ScholarshipCardViewProps {
   entries: ScholarshipEntry[]
   canWrite: boolean
   onEdit: (entry: ScholarshipEntry) => void
-  onStatusChange: (id: number, status: string) => void
+  onDelete: (id: number) => void
+  onDrop: (entryId: number, targetSide: string) => void
 }
 
-function ScholarshipCardView({ entries, canWrite, onEdit, onStatusChange }: ScholarshipCardViewProps) {
-  // Group by status
-  const columns = [
-    { key: 'researching', label: 'Researching' },
-    { key: 'applying',    label: 'Applying' },
-    { key: 'submitted',   label: 'Submitted' },
-    { key: 'awarded',     label: 'Awarded' },
-    { key: 'not_awarded', label: 'Not Awarded' },
-  ]
-  const byStatus: Record<string, ScholarshipEntry[]> = {}
-  for (const c of columns) byStatus[c.key] = []
-  for (const e of entries) {
-    if (byStatus[e.status]) byStatus[e.status].push(e)
-    else byStatus['researching'].push(e)
+function ScholarshipCard({ entry, canWrite, onEdit, onDelete, onDragStart }:
+  { entry: ScholarshipEntry; canWrite: boolean; onEdit: () => void; onDelete: () => void; onDragStart: (e: React.DragEvent) => void }) {
+  return (
+    <div
+      draggable={canWrite}
+      onDragStart={onDragStart}
+      onClick={onEdit}
+      style={{
+        background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10,
+        padding: '14px 16px', cursor: 'pointer', userSelect: 'none', marginBottom: 8,
+      }}
+      onMouseOver={(e) => (e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)')}
+      onMouseOut={(e) => (e.currentTarget.style.boxShadow = 'none')}
+    >
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+        <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem', color: '#0c1b33', lineHeight: 1.3 }}>
+          {entry.scholarship_name}
+        </p>
+        {canWrite && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete() }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d1d5db', fontSize: '1rem', flexShrink: 0, padding: 0, lineHeight: 1 }}
+          >×</button>
+        )}
+      </div>
+      {formatScholarshipAward(entry) && (
+        <p style={{ margin: '6px 0 0', fontSize: '0.8rem', color: '#16a34a', fontWeight: 600 }}>{formatScholarshipAward(entry)}</p>
+      )}
+      {formatScholarshipDeadline(entry) && (
+        <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#9ca3af' }}>Due: {formatScholarshipDeadline(entry)}</p>
+      )}
+      {entry.status !== 'researching' && (
+        <div style={{ marginTop: 8 }}>
+          <ScholarshipStatusBadge status={entry.status} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ScholarshipCardView({ entries, canWrite, onEdit, onDelete, onDrop }: ScholarshipCardViewProps) {
+  const [draggingId, setDraggingId] = useState<number | null>(null)
+  const [dragOver, setDragOver] = useState<string | null>(null)
+
+  const researching = entries.filter((e) => e.status === 'researching')
+  const active      = entries.filter((e) => e.status !== 'researching')
+
+  const handleDragStart = (e: React.DragEvent, id: number) => {
+    setDraggingId(id)
+    e.dataTransfer.effectAllowed = 'move'
   }
+
+  const handleDrop = (e: React.DragEvent, targetSide: string) => {
+    e.preventDefault()
+    if (draggingId !== null) onDrop(draggingId, targetSide)
+    setDraggingId(null)
+    setDragOver(null)
+  }
+
+  const colStyle = (side: string): React.CSSProperties => ({
+    flex: 1, minHeight: 300,
+    background: dragOver === side ? '#fffbeb' : '#f9fafb',
+    border: `2px dashed ${dragOver === side ? '#d97706' : '#e2e8f0'}`,
+    borderRadius: 12, padding: '16px 14px',
+    transition: 'background 0.15s, border-color 0.15s',
+  })
 
   if (entries.length === 0) {
     return (
@@ -582,49 +634,56 @@ function ScholarshipCardView({ entries, canWrite, onEdit, onStatusChange }: Scho
   }
 
   return (
-    <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 8 }}>
-      {columns.map(({ key, label }) => (
-        <div key={key} style={{ minWidth: 240, flex: '0 0 240px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</span>
-            <span style={{ background: '#f3f4f6', borderRadius: 99, padding: '1px 8px', fontSize: '0.75rem', color: '#9ca3af', fontWeight: 600 }}>{byStatus[key].length}</span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {byStatus[key].map((entry) => (
-              <div
-                key={entry.id}
-                onClick={() => onEdit(entry)}
-                style={{
-                  background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10,
-                  padding: '14px', cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
-                }}
-                onMouseOver={(e) => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)')}
-                onMouseOut={(e) => (e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.04)')}
-              >
-                <p style={{ margin: '0 0 6px', fontWeight: 600, color: '#0c1b33', fontSize: '0.875rem', lineHeight: 1.3 }}>{entry.scholarship_name}</p>
-                {formatScholarshipAward(entry) && (
-                  <p style={{ margin: '0 0 4px', fontSize: '0.8rem', color: '#16a34a', fontWeight: 600 }}>{formatScholarshipAward(entry)}</p>
-                )}
-                {formatScholarshipDeadline(entry) && (
-                  <p style={{ margin: '0 0 8px', fontSize: '0.78rem', color: '#6b7280' }}>Due: {formatScholarshipDeadline(entry)}</p>
-                )}
-                {canWrite && (
-                  <select
-                    value={entry.status}
-                    onChange={(e) => { e.stopPropagation(); onStatusChange(entry.id, e.target.value) }}
-                    onClick={(e) => e.stopPropagation()}
-                    style={{ border: '1px solid #e2e8f0', borderRadius: 6, padding: '3px 6px', fontSize: '0.78rem', width: '100%', cursor: 'pointer', background: '#fafafa' }}
-                  >
-                    {Object.entries(SCHOLARSHIP_STATUS_LABELS).map(([v, l]) => (
-                      <option key={v} value={v}>{l}</option>
-                    ))}
-                  </select>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
+    <div style={{ display: 'flex', gap: 16 }}>
+      {/* Researching column */}
+      <div
+        style={colStyle('researching')}
+        onDragOver={(e) => { e.preventDefault(); setDragOver('researching') }}
+        onDragLeave={() => setDragOver(null)}
+        onDrop={(e) => handleDrop(e, 'researching')}
+      >
+        <p style={{ margin: '0 0 12px', fontSize: '0.8rem', fontWeight: 700, color: '#7c3aed' }}>
+          Researching ({researching.length})
+        </p>
+        {researching.map((e) => (
+          <ScholarshipCard
+            key={e.id}
+            entry={e}
+            canWrite={canWrite}
+            onEdit={() => onEdit(e)}
+            onDelete={() => onDelete(e.id)}
+            onDragStart={(ev) => handleDragStart(ev, e.id)}
+          />
+        ))}
+        {researching.length === 0 && (
+          <p style={{ color: '#c4b5fd', fontSize: '0.82rem', textAlign: 'center', margin: 0 }}>Drag cards here</p>
+        )}
+      </div>
+
+      {/* Applying / Active column */}
+      <div
+        style={colStyle('applying')}
+        onDragOver={(e) => { e.preventDefault(); setDragOver('applying') }}
+        onDragLeave={() => setDragOver(null)}
+        onDrop={(e) => handleDrop(e, 'applying')}
+      >
+        <p style={{ margin: '0 0 12px', fontSize: '0.8rem', fontWeight: 700, color: '#d97706' }}>
+          Applying / Active ({active.length})
+        </p>
+        {active.map((e) => (
+          <ScholarshipCard
+            key={e.id}
+            entry={e}
+            canWrite={canWrite}
+            onEdit={() => onEdit(e)}
+            onDelete={() => onDelete(e.id)}
+            onDragStart={(ev) => handleDragStart(ev, e.id)}
+          />
+        ))}
+        {active.length === 0 && (
+          <p style={{ color: '#fbbf24', fontSize: '0.82rem', textAlign: 'center', margin: 0 }}>Drag cards here</p>
+        )}
+      </div>
     </div>
   )
 }
@@ -1977,6 +2036,21 @@ function ListsContent() {
     setScholarships((prev) => prev.filter((e) => e.id !== entryId))
   }
 
+  const handleScholarshipDrop = (entryId: number, targetSide: string) => {
+    const entry = scholarships.find((e) => e.id === entryId)
+    if (!entry) return
+    let newStatus: string
+    if (targetSide === 'applying' && entry.status === 'researching') {
+      newStatus = 'applying'
+    } else if (targetSide === 'researching' && entry.status !== 'researching') {
+      newStatus = 'researching'
+    } else {
+      return
+    }
+    updateScholarship(entryId, { status: newStatus })
+    setScholarships((prev) => prev.map((e) => e.id === entryId ? { ...e, status: newStatus } : e))
+  }
+
   const handleDrop = (entryId: number, targetStatus: string) => {
     const entry = entries.find((e) => e.id === entryId)
     if (!entry) return
@@ -2030,8 +2104,10 @@ function ListsContent() {
             <h1 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#0c1b33', marginBottom: 4 }}>{pageTitle}</h1>
             <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
               {isViewingStudent
-                ? `Viewing ${studentName ? `${studentName}'s` : 'this student\'s'} college lists.`
-                : 'Soar adds colleges here as you research them. Add and update them manually below.'}
+                ? `Viewing ${studentName ? `${studentName}'s` : 'this student\'s'} ${activeTab === 'scholarships' ? 'scholarship' : 'college'} lists.`
+                : activeTab === 'scholarships'
+                  ? 'Soar adds scholarships here as you research them. Add and update them manually below.'
+                  : 'Soar adds colleges here as you research them. Add and update them manually below.'}
             </p>
           </div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexShrink: 0 }}>
@@ -2162,7 +2238,8 @@ function ListsContent() {
                 entries={scholarships}
                 canWrite={canWrite}
                 onEdit={setEditScholarship}
-                onStatusChange={(id, status) => updateScholarship(id, { status })}
+                onDelete={removeScholarship}
+                onDrop={handleScholarshipDrop}
               />
             )}
           </>
