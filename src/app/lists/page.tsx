@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef, useCallback, Suspense } from 'react'
+import React, { useEffect, useState, useRef, useCallback, Suspense } from 'react'
 import { useAuth, useUser } from '@clerk/nextjs'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -57,6 +57,30 @@ interface CollegeSearchResult {
   undergrad_enrollment?: number
 }
 
+interface ScholarshipEntry {
+  id: number
+  scholarship_name: string
+  scholarship_id?: string | null
+  in_db?: boolean
+  status: string
+  award_low?: number | null
+  award_high?: number | null
+  deadline_month?: number | null
+  deadline_day?: number | null
+  deadline_date?: string | null
+  custom_description?: string | null
+  custom_amount_low?: number | null
+  custom_amount_high?: number | null
+  custom_deadline?: string | null
+  custom_url?: string | null
+  program_url?: string | null
+  application_url?: string | null
+  award_amount?: number | null
+  notes?: string | null
+  added_by_name?: string | null
+  created_at?: string
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const LIKELIHOOD_COLORS: Record<string, string> = {
@@ -106,6 +130,22 @@ const DEADLINE_TYPE_LABELS: Record<string, string> = {
   ed2:      'Early Decision II',
   priority: 'Priority',
   custom:   'Custom',
+}
+
+const SCHOLARSHIP_STATUS_COLORS: Record<string, string> = {
+  researching: '#7c3aed',
+  applying:    '#2563eb',
+  submitted:   '#0891b2',
+  awarded:     '#16a34a',
+  not_awarded: '#6b7280',
+}
+
+const SCHOLARSHIP_STATUS_LABELS: Record<string, string> = {
+  researching: 'Researching',
+  applying:    'Applying',
+  submitted:   'Submitted',
+  awarded:     'Awarded',
+  not_awarded: 'Not Awarded',
 }
 
 // ─── Small UI helpers ─────────────────────────────────────────────────────────
@@ -158,6 +198,435 @@ function formatDeadline(entry: CollegeEntry): string {
   const year = d.getFullYear()
   const type = entry.deadline_type ? ` (${DEADLINE_TYPE_LABELS[entry.deadline_type] || entry.deadline_type})` : ''
   return `${mon} ${day}, ${year}${type}`
+}
+
+function ScholarshipStatusBadge({ status }: { status: string }) {
+  const color = SCHOLARSHIP_STATUS_COLORS[status] || '#6b7280'
+  const label = SCHOLARSHIP_STATUS_LABELS[status] || status
+  return (
+    <span style={{
+      background: color + '18',
+      color,
+      border: `1px solid ${color}55`,
+      borderRadius: 4,
+      padding: '2px 8px',
+      fontSize: '0.72rem',
+      fontWeight: 700,
+      whiteSpace: 'nowrap',
+    }}>
+      {label}
+    </span>
+  )
+}
+
+function formatScholarshipAward(entry: ScholarshipEntry): string {
+  const lo = entry.award_amount ?? entry.award_low ?? entry.custom_amount_low
+  const hi = entry.award_high ?? entry.custom_amount_high
+  if (entry.award_amount) return `$${Number(entry.award_amount).toLocaleString()} awarded`
+  if (lo && hi) return `$${Number(lo).toLocaleString()}–$${Number(hi).toLocaleString()}`
+  if (lo) return `$${Number(lo).toLocaleString()}+`
+  if (hi) return `Up to $${Number(hi).toLocaleString()}`
+  return ''
+}
+
+function formatScholarshipDeadline(entry: ScholarshipEntry): string {
+  const dateStr = entry.deadline_date || entry.custom_deadline
+  if (dateStr) {
+    const d = new Date(dateStr + 'T00:00:00')
+    const mon = d.toLocaleString('en-US', { month: 'short' })
+    return `${mon} ${d.getDate()}, ${d.getFullYear()}`
+  }
+  if (entry.deadline_month && entry.deadline_day) {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+    return `${months[entry.deadline_month - 1]} ${entry.deadline_day}`
+  }
+  return ''
+}
+
+// ─── Add Scholarship Modal ─────────────────────────────────────────────────────
+
+interface AddScholarshipModalProps {
+  onClose: () => void
+  onAdd: (name: string) => Promise<void>
+}
+
+function AddScholarshipModal({ onClose, onAdd }: AddScholarshipModalProps) {
+  const [name, setName] = useState('')
+  const [adding, setAdding] = useState(false)
+
+  const handleAdd = async () => {
+    if (!name.trim()) return
+    setAdding(true)
+    await onAdd(name.trim())
+    setAdding(false)
+  }
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+    }} onClick={onClose}>
+      <div style={{
+        background: '#fff', borderRadius: 14, padding: '28px 28px 24px', width: 440,
+        maxWidth: '95vw', boxShadow: '0 20px 60px rgba(0,0,0,0.18)',
+      }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+          <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0c1b33', margin: 0 }}>Add Scholarship</h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#9ca3af' }}>×</button>
+        </div>
+        <p style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: 14 }}>
+          Enter the scholarship name exactly as you want it to appear. You can add details after.
+        </p>
+        <input
+          autoFocus
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+          placeholder="Scholarship name…"
+          style={{
+            width: '100%', border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '9px 14px',
+            fontSize: '0.9rem', outline: 'none', marginBottom: 16, boxSizing: 'border-box',
+          }}
+        />
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={onClose} style={{ flex: 1, border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '9px', fontSize: '0.875rem', cursor: 'pointer', background: '#fff', color: '#374151' }}>
+            Cancel
+          </button>
+          <button
+            onClick={handleAdd}
+            disabled={adding || !name.trim()}
+            style={{ flex: 1, background: '#d97706', color: '#fff', border: 'none', borderRadius: 8, padding: '9px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', opacity: adding ? 0.7 : 1 }}
+          >
+            {adding ? 'Adding…' : 'Add Scholarship'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Scholarship Edit Drawer ────────────────────────────────────────────────────
+
+interface ScholarshipEditDrawerProps {
+  entry: ScholarshipEntry
+  canWrite: boolean
+  onClose: () => void
+  onSave: (entryId: number, updates: Partial<ScholarshipEntry>) => Promise<void>
+  onDelete: (entryId: number) => void
+}
+
+function ScholarshipEditDrawer({ entry, canWrite, onClose, onSave, onDelete }: ScholarshipEditDrawerProps) {
+  const [form, setForm] = useState<Partial<ScholarshipEntry>>({ ...entry })
+  const [saving, setSaving] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
+  const set = (field: keyof ScholarshipEntry, value: unknown) =>
+    setForm((prev) => ({ ...prev, [field]: value }))
+
+  const handleSave = async () => {
+    setSaving(true)
+    await onSave(entry.id, form)
+    setSaving(false)
+    onClose()
+  }
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%', border: '1.5px solid #e2e8f0', borderRadius: 7, padding: '7px 11px',
+    fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box', background: '#fafafa',
+  }
+  const labelStyle: React.CSSProperties = { fontSize: '0.78rem', fontWeight: 600, color: '#6b7280', marginBottom: 4, display: 'block' }
+  const fieldStyle: React.CSSProperties = { marginBottom: 14 }
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 500, display: 'flex', justifyContent: 'flex-end',
+      background: 'rgba(0,0,0,0.25)',
+    }} onClick={onClose}>
+      <div style={{
+        width: 420, maxWidth: '100vw', background: '#fff', height: '100%', overflowY: 'auto',
+        boxShadow: '-4px 0 32px rgba(0,0,0,0.12)', display: 'flex', flexDirection: 'column',
+        padding: '24px 24px 32px',
+      }} onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
+          <div>
+            <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0c1b33', margin: '0 0 4px' }}>
+              {entry.scholarship_name}
+            </h2>
+            <ScholarshipStatusBadge status={entry.status} />
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.4rem', color: '#9ca3af', flexShrink: 0 }}>×</button>
+        </div>
+
+        {/* Status */}
+        <div style={fieldStyle}>
+          <label style={labelStyle}>Status</label>
+          <select
+            value={form.status ?? entry.status}
+            onChange={(e) => set('status', e.target.value)}
+            disabled={!canWrite}
+            style={inputStyle}
+          >
+            {Object.entries(SCHOLARSHIP_STATUS_LABELS).map(([v, l]) => (
+              <option key={v} value={v}>{l}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Award amount (actual) */}
+        {(entry.status === 'awarded' || form.status === 'awarded') && (
+          <div style={fieldStyle}>
+            <label style={labelStyle}>Award Amount (actual $)</label>
+            <input
+              type="number"
+              value={form.award_amount ?? ''}
+              onChange={(e) => set('award_amount', e.target.value ? Number(e.target.value) : null)}
+              disabled={!canWrite}
+              placeholder="e.g. 5000"
+              style={inputStyle}
+            />
+          </div>
+        )}
+
+        {/* Program URL */}
+        <div style={fieldStyle}>
+          <label style={labelStyle}>Program / Info URL</label>
+          <input
+            type="url"
+            value={form.program_url ?? ''}
+            onChange={(e) => set('program_url', e.target.value)}
+            disabled={!canWrite}
+            placeholder="https://…"
+            style={inputStyle}
+          />
+        </div>
+
+        {/* Application URL */}
+        <div style={fieldStyle}>
+          <label style={labelStyle}>Application URL</label>
+          <input
+            type="url"
+            value={form.application_url ?? ''}
+            onChange={(e) => set('application_url', e.target.value)}
+            disabled={!canWrite}
+            placeholder="https://…"
+            style={inputStyle}
+          />
+        </div>
+
+        {/* Custom deadline */}
+        <div style={fieldStyle}>
+          <label style={labelStyle}>Deadline (override)</label>
+          <input
+            type="date"
+            value={form.custom_deadline ?? ''}
+            onChange={(e) => set('custom_deadline', e.target.value || null)}
+            disabled={!canWrite}
+            style={inputStyle}
+          />
+        </div>
+
+        {/* Notes */}
+        <div style={fieldStyle}>
+          <label style={labelStyle}>Notes</label>
+          <textarea
+            value={form.notes ?? ''}
+            onChange={(e) => set('notes', e.target.value)}
+            disabled={!canWrite}
+            rows={4}
+            placeholder="Your notes about this scholarship…"
+            style={{ ...inputStyle, resize: 'vertical' }}
+          />
+        </div>
+
+        {/* Actions */}
+        {canWrite && (
+          <div style={{ marginTop: 'auto', paddingTop: 20, borderTop: '1px solid #f3f4f6', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              style={{ background: '#d97706', color: '#fff', border: 'none', borderRadius: 8, padding: '10px', fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}
+            >
+              {saving ? 'Saving…' : 'Save Changes'}
+            </button>
+            {confirmDelete ? (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => setConfirmDelete(false)} style={{ flex: 1, border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '8px', fontSize: '0.85rem', cursor: 'pointer', background: '#fff' }}>
+                  Cancel
+                </button>
+                <button onClick={() => { onDelete(entry.id); onClose() }} style={{ flex: 1, background: '#dc2626', color: '#fff', border: 'none', borderRadius: 8, padding: '8px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}>
+                  Confirm Delete
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => setConfirmDelete(true)} style={{ background: 'none', border: '1px solid #fca5a5', borderRadius: 8, padding: '8px', fontSize: '0.85rem', color: '#dc2626', cursor: 'pointer' }}>
+                Remove from List
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Scholarship Spreadsheet View ──────────────────────────────────────────────
+
+interface ScholarshipSpreadsheetViewProps {
+  entries: ScholarshipEntry[]
+  canWrite: boolean
+  onEdit: (entry: ScholarshipEntry) => void
+  onStatusChange: (id: number, status: string) => void
+}
+
+function ScholarshipSpreadsheetView({ entries, canWrite, onEdit, onStatusChange }: ScholarshipSpreadsheetViewProps) {
+  if (entries.length === 0) {
+    return (
+      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', padding: '40px 24px', textAlign: 'center', color: '#9ca3af', fontSize: '0.9rem' }}>
+        No scholarships yet. Click &quot;+ Add Scholarship&quot; or ask Soar to search for scholarships.
+      </div>
+    )
+  }
+  return (
+    <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <thead>
+          <tr style={{ borderBottom: '2px solid #e2e8f0', background: '#f8fafc' }}>
+            {['Scholarship', 'Award', 'Deadline', 'Status', ''].map((h, i) => (
+              <th key={i} style={{ padding: '10px 14px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 700, color: '#6b7280', letterSpacing: '0.05em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {entries.map((entry) => (
+            <tr
+              key={entry.id}
+              style={{ borderBottom: '1px solid #f3f4f6', cursor: 'pointer' }}
+              onMouseOver={(e) => (e.currentTarget.style.background = '#fafafa')}
+              onMouseOut={(e) => (e.currentTarget.style.background = '')}
+              onClick={() => onEdit(entry)}
+            >
+              <td style={{ padding: '10px 14px' }}>
+                <p style={{ margin: 0, fontWeight: 600, color: '#1f2937', fontSize: '0.875rem' }}>{entry.scholarship_name}</p>
+                {entry.program_url && (
+                  <a href={entry.program_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{ fontSize: '0.75rem', color: '#6366f1' }}>
+                    Program info ↗
+                  </a>
+                )}
+              </td>
+              <td style={{ padding: '10px 14px', fontSize: '0.85rem', color: '#374151', whiteSpace: 'nowrap' }}>
+                {formatScholarshipAward(entry) || <span style={{ color: '#d1d5db' }}>—</span>}
+              </td>
+              <td style={{ padding: '10px 14px', fontSize: '0.85rem', color: '#374151', whiteSpace: 'nowrap' }}>
+                {formatScholarshipDeadline(entry) || <span style={{ color: '#d1d5db' }}>—</span>}
+              </td>
+              <td style={{ padding: '10px 14px' }} onClick={(e) => e.stopPropagation()}>
+                {canWrite ? (
+                  <select
+                    value={entry.status}
+                    onChange={(e) => onStatusChange(entry.id, e.target.value)}
+                    style={{ border: '1px solid #e2e8f0', borderRadius: 6, padding: '4px 8px', fontSize: '0.8rem', cursor: 'pointer', background: '#fff' }}
+                  >
+                    {Object.entries(SCHOLARSHIP_STATUS_LABELS).map(([v, l]) => (
+                      <option key={v} value={v}>{l}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <ScholarshipStatusBadge status={entry.status} />
+                )}
+              </td>
+              <td style={{ padding: '10px 14px' }}>
+                <button onClick={(e) => { e.stopPropagation(); onEdit(entry) }} style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: 6, padding: '4px 10px', fontSize: '0.78rem', color: '#6b7280', cursor: 'pointer' }}>
+                  Details
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+// ─── Scholarship Card View ─────────────────────────────────────────────────────
+
+interface ScholarshipCardViewProps {
+  entries: ScholarshipEntry[]
+  canWrite: boolean
+  onEdit: (entry: ScholarshipEntry) => void
+  onStatusChange: (id: number, status: string) => void
+}
+
+function ScholarshipCardView({ entries, canWrite, onEdit, onStatusChange }: ScholarshipCardViewProps) {
+  // Group by status
+  const columns = [
+    { key: 'researching', label: 'Researching' },
+    { key: 'applying',    label: 'Applying' },
+    { key: 'submitted',   label: 'Submitted' },
+    { key: 'awarded',     label: 'Awarded' },
+    { key: 'not_awarded', label: 'Not Awarded' },
+  ]
+  const byStatus: Record<string, ScholarshipEntry[]> = {}
+  for (const c of columns) byStatus[c.key] = []
+  for (const e of entries) {
+    if (byStatus[e.status]) byStatus[e.status].push(e)
+    else byStatus['researching'].push(e)
+  }
+
+  if (entries.length === 0) {
+    return (
+      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', padding: '40px 24px', textAlign: 'center', color: '#9ca3af', fontSize: '0.9rem' }}>
+        No scholarships yet. Click &quot;+ Add Scholarship&quot; or ask Soar to search for scholarships.
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 8 }}>
+      {columns.map(({ key, label }) => (
+        <div key={key} style={{ minWidth: 240, flex: '0 0 240px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</span>
+            <span style={{ background: '#f3f4f6', borderRadius: 99, padding: '1px 8px', fontSize: '0.75rem', color: '#9ca3af', fontWeight: 600 }}>{byStatus[key].length}</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {byStatus[key].map((entry) => (
+              <div
+                key={entry.id}
+                onClick={() => onEdit(entry)}
+                style={{
+                  background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10,
+                  padding: '14px', cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+                }}
+                onMouseOver={(e) => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)')}
+                onMouseOut={(e) => (e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.04)')}
+              >
+                <p style={{ margin: '0 0 6px', fontWeight: 600, color: '#0c1b33', fontSize: '0.875rem', lineHeight: 1.3 }}>{entry.scholarship_name}</p>
+                {formatScholarshipAward(entry) && (
+                  <p style={{ margin: '0 0 4px', fontSize: '0.8rem', color: '#16a34a', fontWeight: 600 }}>{formatScholarshipAward(entry)}</p>
+                )}
+                {formatScholarshipDeadline(entry) && (
+                  <p style={{ margin: '0 0 8px', fontSize: '0.78rem', color: '#6b7280' }}>Due: {formatScholarshipDeadline(entry)}</p>
+                )}
+                {canWrite && (
+                  <select
+                    value={entry.status}
+                    onChange={(e) => { e.stopPropagation(); onStatusChange(entry.id, e.target.value) }}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ border: '1px solid #e2e8f0', borderRadius: 6, padding: '3px 6px', fontSize: '0.78rem', width: '100%', cursor: 'pointer', background: '#fafafa' }}
+                  >
+                    {Object.entries(SCHOLARSHIP_STATUS_LABELS).map(([v, l]) => (
+                      <option key={v} value={v}>{l}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 // ─── Add College Modal ────────────────────────────────────────────────────────
@@ -1357,12 +1826,16 @@ function ListsContent() {
   const [accountType, setAccountType] = useState<string>('student')
   const [canWrite, setCanWrite] = useState(true)
   const [entries, setEntries] = useState<CollegeEntry[]>([])
+  const [scholarships, setScholarships] = useState<ScholarshipEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [studentName, setStudentName] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'colleges' | 'scholarships'>('colleges')
   const [viewMode, setViewMode] = useState<'spreadsheet' | 'card'>('spreadsheet')
   const [showAddModal, setShowAddModal] = useState(false)
+  const [showAddScholarshipModal, setShowAddScholarshipModal] = useState(false)
   const [editEntry, setEditEntry] = useState<CollegeEntry | null>(null)
+  const [editScholarship, setEditScholarship] = useState<ScholarshipEntry | null>(null)
 
   useEffect(() => {
     if (!clerkUser) return
@@ -1409,6 +1882,7 @@ function ListsContent() {
         if (listRes.ok) {
           const data = await listRes.json()
           setEntries(data.research || [])
+          setScholarships(data.scholarships || [])
           if (typeof data.can_write === 'boolean') setCanWrite(data.can_write)
         }
       } catch { setError('Failed to load lists.') } finally { setLoading(false) }
@@ -1461,6 +1935,44 @@ function ListsContent() {
     setEntries((prev) => prev.filter((e) => e.id !== entryId))
   }
 
+  const addScholarship = async (name: string) => {
+    if (!targetId || !canWrite) return
+    const token = await getToken()
+    const res = await fetch(`${apiUrl}/lists/${targetId}/scholarships`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ scholarship_name: name }),
+    })
+    if (res.ok) {
+      const added = await res.json()
+      if (added.id) setScholarships((prev) => [added, ...prev])
+    }
+    setShowAddScholarshipModal(false)
+  }
+
+  const updateScholarship = async (entryId: number, updates: Partial<ScholarshipEntry>) => {
+    const token = await getToken()
+    const res = await fetch(`${apiUrl}/lists/scholarships/${entryId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(updates),
+    })
+    if (res.ok) {
+      const updated = await res.json()
+      setScholarships((prev) => prev.map((e) => e.id === entryId ? { ...e, ...updated } : e))
+    }
+  }
+
+  const removeScholarship = async (entryId: number) => {
+    if (!canWrite) return
+    const token = await getToken()
+    await fetch(`${apiUrl}/lists/scholarships/${entryId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    setScholarships((prev) => prev.filter((e) => e.id !== entryId))
+  }
+
   const handleDrop = (entryId: number, targetStatus: string) => {
     const entry = entries.find((e) => e.id === entryId)
     if (!entry) return
@@ -1492,8 +2004,8 @@ function ListsContent() {
   )
 
   const pageTitle = isViewingStudent
-    ? `${studentName ? `${studentName}'s` : 'Student'} College Lists`
-    : 'My College Lists'
+    ? `${studentName ? `${studentName}'s` : 'Student'} ${activeTab === 'scholarships' ? 'Scholarship' : 'College'} Lists`
+    : `My ${activeTab === 'scholarships' ? 'Scholarship' : 'College'} Lists`
 
   return (
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', background: '#f5f6fa', minHeight: '100dvh' }}>
@@ -1539,10 +2051,10 @@ function ListsContent() {
             {/* Add button */}
             {canWrite && accountType !== 'parent' && (
               <button
-                onClick={() => setShowAddModal(true)}
-                style={{ background: '#4f46e5', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}
+                onClick={() => activeTab === 'colleges' ? setShowAddModal(true) : setShowAddScholarshipModal(true)}
+                style={{ background: activeTab === 'scholarships' ? '#d97706' : '#4f46e5', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}
               >
-                + Add College
+                {activeTab === 'scholarships' ? '+ Add Scholarship' : '+ Add College'}
               </button>
             )}
           </div>
@@ -1557,33 +2069,99 @@ function ListsContent() {
           </div>
         )}
 
-        {/* Entry count summary */}
-        <p style={{ fontSize: '0.8rem', color: '#9ca3af', marginBottom: 14 }}>
-          {entries.length} college{entries.length !== 1 ? 's' : ''} on this list
-          {entries.filter((e) => e.status && e.status !== 'researching').length > 0
-            ? ` · ${entries.filter((e) => e.status && e.status !== 'researching').length} applying`
-            : ''}
-        </p>
+        {/* Tab switcher */}
+        <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '2px solid #e2e8f0' }}>
+          {([['colleges', 'Colleges'], ['scholarships', 'Scholarships']] as const).map(([tab, label]) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              style={{
+                padding: '8px 18px',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                border: 'none',
+                cursor: 'pointer',
+                background: 'none',
+                color: activeTab === tab ? '#4f46e5' : '#6b7280',
+                borderBottom: activeTab === tab ? '2px solid #4f46e5' : '2px solid transparent',
+                marginBottom: -2,
+                transition: 'color 0.15s',
+              }}
+            >
+              {label}
+              <span style={{
+                marginLeft: 6,
+                background: activeTab === tab ? '#eef2ff' : '#f3f4f6',
+                color: activeTab === tab ? '#4f46e5' : '#9ca3af',
+                borderRadius: 99,
+                padding: '1px 7px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+              }}>
+                {tab === 'colleges' ? entries.length : scholarships.length}
+              </span>
+            </button>
+          ))}
+        </div>
 
-        {/* Main view */}
-        {viewMode === 'spreadsheet' ? (
-          <SpreadsheetView
-            entries={entries}
-            canWrite={canWrite}
-            accountType={accountType}
-            onEdit={setEditEntry}
-            onDelete={removeCollege}
-            onStatusChange={updateStatus}
-          />
+        {activeTab === 'colleges' ? (
+          <>
+            {/* Entry count summary */}
+            <p style={{ fontSize: '0.8rem', color: '#9ca3af', marginBottom: 14 }}>
+              {entries.length} college{entries.length !== 1 ? 's' : ''} on this list
+              {entries.filter((e) => e.status && e.status !== 'researching').length > 0
+                ? ` · ${entries.filter((e) => e.status && e.status !== 'researching').length} applying`
+                : ''}
+            </p>
+
+            {/* Main view */}
+            {viewMode === 'spreadsheet' ? (
+              <SpreadsheetView
+                entries={entries}
+                canWrite={canWrite}
+                accountType={accountType}
+                onEdit={setEditEntry}
+                onDelete={removeCollege}
+                onStatusChange={updateStatus}
+              />
+            ) : (
+              <CardView
+                entries={entries}
+                canWrite={canWrite}
+                accountType={accountType}
+                onEdit={setEditEntry}
+                onDelete={removeCollege}
+                onDrop={handleDrop}
+              />
+            )}
+          </>
         ) : (
-          <CardView
-            entries={entries}
-            canWrite={canWrite}
-            accountType={accountType}
-            onEdit={setEditEntry}
-            onDelete={removeCollege}
-            onDrop={handleDrop}
-          />
+          <>
+            {/* Scholarship count summary */}
+            <p style={{ fontSize: '0.8rem', color: '#9ca3af', marginBottom: 14 }}>
+              {scholarships.length} scholarship{scholarships.length !== 1 ? 's' : ''} on this list
+              {scholarships.filter((e) => e.status === 'awarded').length > 0
+                ? ` · ${scholarships.filter((e) => e.status === 'awarded').length} awarded`
+                : ''}
+            </p>
+
+            {/* Scholarship view */}
+            {viewMode === 'spreadsheet' ? (
+              <ScholarshipSpreadsheetView
+                entries={scholarships}
+                canWrite={canWrite}
+                onEdit={setEditScholarship}
+                onStatusChange={(id, status) => updateScholarship(id, { status })}
+              />
+            ) : (
+              <ScholarshipCardView
+                entries={scholarships}
+                canWrite={canWrite}
+                onEdit={setEditScholarship}
+                onStatusChange={(id, status) => updateScholarship(id, { status })}
+              />
+            )}
+          </>
         )}
       </div>
 
@@ -1594,6 +2172,28 @@ function ListsContent() {
           onAdd={addCollege}
           apiUrl={apiUrl}
           getToken={getToken}
+        />
+      )}
+
+      {/* Add Scholarship modal */}
+      {showAddScholarshipModal && (
+        <AddScholarshipModal
+          onClose={() => setShowAddScholarshipModal(false)}
+          onAdd={addScholarship}
+        />
+      )}
+
+      {/* Scholarship edit drawer */}
+      {editScholarship && (
+        <ScholarshipEditDrawer
+          entry={editScholarship}
+          canWrite={canWrite}
+          onClose={() => setEditScholarship(null)}
+          onSave={async (id, updates) => {
+            await updateScholarship(id, updates)
+            setEditScholarship(null)
+          }}
+          onDelete={removeScholarship}
         />
       )}
 

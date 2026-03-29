@@ -9,6 +9,8 @@ interface ChatMessageProps {
   isStreaming?: boolean
   onAddToList?: (collegeName: string) => void
   addingToList?: string | null  // college name currently being added (shows spinner)
+  onAddToScholarshipList?: (scholarshipName: string) => void
+  addingToScholarshipList?: string | null
 }
 
 // Detect "Want to add [College Name] to your research list?" pattern
@@ -17,7 +19,13 @@ function extractResearchListOffer(content: string): string | null {
   return match ? match[1].trim() : null
 }
 
-export function ChatMessage({ message, isStreaming, onAddToList, addingToList }: ChatMessageProps) {
+// Detect "Want to add [Scholarship Name] to your scholarship list?" pattern
+function extractScholarshipListOffer(content: string): string | null {
+  const match = content.match(/Want to add (.+?) to your scholarship list\?/i)
+  return match ? match[1].trim() : null
+}
+
+export function ChatMessage({ message, isStreaming, onAddToList, addingToList, onAddToScholarshipList, addingToScholarshipList }: ChatMessageProps) {
   const isUser = message.role === 'user'
 
   if (isUser) {
@@ -173,6 +181,39 @@ export function ChatMessage({ message, isStreaming, onAddToList, addingToList }:
                       <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
                     </svg>
                     Add {collegeName} to Research List
+                  </>
+                )}
+              </button>
+            </div>
+          )
+        })()}
+
+        {/* Add to Scholarship List button */}
+        {!isStreaming && onAddToScholarshipList && (() => {
+          const scholarshipName = extractScholarshipListOffer(message.content)
+          if (!scholarshipName) return null
+          const isAdding = addingToScholarshipList === scholarshipName
+          return (
+            <div className="mt-3">
+              <button
+                onClick={() => onAddToScholarshipList(scholarshipName)}
+                disabled={isAdding}
+                className="inline-flex items-center gap-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isAdding ? (
+                  <>
+                    <svg className="w-3.5 h-3.5 animate-spin flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                    Adding…
+                  </>
+                ) : (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 flex-shrink-0">
+                      <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                    </svg>
+                    Add {scholarshipName} to Scholarship List
                   </>
                 )}
               </button>
