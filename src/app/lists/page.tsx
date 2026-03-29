@@ -266,13 +266,14 @@ function AddScholarshipModal({ onClose, onAdd, apiUrl, getToken }: AddScholarshi
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<ScholarshipSearchResult[]>([])
   const [searching, setSearching] = useState(false)
+  const [selected, setSelected] = useState<ScholarshipSearchResult | null>(null)
   const [manualMode, setManualMode] = useState(false)
   const [manualName, setManualName] = useState('')
   const [adding, setAdding] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const search = useCallback(async (q: string) => {
-    if (q.length < 2) { setResults([]); return }
+    if (q.length < 2) { setResults([]); setSelected(null); return }
     setSearching(true)
     try {
       const res = await fetch(`${apiUrl}/scholarship-lookup?name=${encodeURIComponent(q)}`)
@@ -287,13 +288,15 @@ function AddScholarshipModal({ onClose, onAdd, apiUrl, getToken }: AddScholarshi
 
   const handleQueryChange = (v: string) => {
     setQuery(v)
+    setSelected(null)
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => search(v), 300)
   }
 
-  const handleSelect = async (r: ScholarshipSearchResult) => {
+  const handleConfirmAdd = async () => {
+    if (!selected) return
     setAdding(true)
-    await onAdd(r.name, r.id)
+    await onAdd(selected.name, selected.id)
     setAdding(false)
   }
 
@@ -342,33 +345,47 @@ function AddScholarshipModal({ onClose, onAdd, apiUrl, getToken }: AddScholarshi
               {!searching && results.length === 0 && query.length >= 2 && (
                 <p style={{ color: '#9ca3af', fontSize: '0.85rem', textAlign: 'center', padding: 12 }}>No matches found.</p>
               )}
-              {results.map((r, i) => (
-                <button
-                  key={i}
-                  onClick={() => handleSelect(r)}
-                  disabled={adding}
-                  style={{
-                    display: 'block', width: '100%', textAlign: 'left',
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    padding: '10px 12px', borderRadius: 8,
-                    borderBottom: '1px solid #f3f4f6',
-                  }}
-                  onMouseOver={(e) => (e.currentTarget.style.background = '#f8fafc')}
-                  onMouseOut={(e) => (e.currentTarget.style.background = 'none')}
-                >
-                  <p style={{ margin: 0, fontWeight: 600, color: '#1f2937', fontSize: '0.875rem' }}>{r.name}</p>
-                  <p style={{ margin: 0, color: '#9ca3af', fontSize: '0.78rem' }}>
-                    {[r.sponsor_name, fmtAward(r)].filter(Boolean).join(' · ')}
-                  </p>
-                </button>
-              ))}
+              {results.map((r, i) => {
+                const isSelected = selected?.id === r.id && selected?.name === r.name
+                return (
+                  <button
+                    key={i}
+                    onClick={() => setSelected(isSelected ? null : r)}
+                    style={{
+                      display: 'block', width: '100%', textAlign: 'left',
+                      background: isSelected ? '#fef3c7' : 'none',
+                      border: isSelected ? '1.5px solid #d97706' : '1.5px solid transparent',
+                      cursor: 'pointer', padding: '10px 12px', borderRadius: 8,
+                      marginBottom: 4,
+                    }}
+                    onMouseOver={(e) => { if (!isSelected) e.currentTarget.style.background = '#f8fafc' }}
+                    onMouseOut={(e) => { if (!isSelected) e.currentTarget.style.background = 'none' }}
+                  >
+                    <p style={{ margin: 0, fontWeight: 600, color: '#1f2937', fontSize: '0.875rem' }}>{r.name}</p>
+                    <p style={{ margin: 0, color: '#9ca3af', fontSize: '0.78rem' }}>
+                      {[r.sponsor_name, fmtAward(r)].filter(Boolean).join(' · ')}
+                    </p>
+                  </button>
+                )
+              })}
             </div>
-            <button
-              onClick={() => setManualMode(true)}
-              style={{ marginTop: 14, color: '#6366f1', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', textDecoration: 'underline' }}
-            >
-              Not in list? Add manually (local/community scholarships)
-            </button>
+            <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {selected && (
+                <button
+                  onClick={handleConfirmAdd}
+                  disabled={adding}
+                  style={{ background: '#d97706', color: '#fff', border: 'none', borderRadius: 8, padding: '10px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', opacity: adding ? 0.7 : 1 }}
+                >
+                  {adding ? 'Adding…' : `Add "${selected.name}"`}
+                </button>
+              )}
+              <button
+                onClick={() => setManualMode(true)}
+                style={{ color: '#6366f1', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', textDecoration: 'underline' }}
+              >
+                Not in list? Add manually (local/community scholarships)
+              </button>
+            </div>
           </>
         ) : (
           <>
@@ -828,13 +845,14 @@ function AddCollegeModal({ onClose, onAdd, apiUrl, getToken }: AddCollegeModalPr
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<CollegeSearchResult[]>([])
   const [searching, setSearching] = useState(false)
+  const [selected, setSelected] = useState<CollegeSearchResult | null>(null)
   const [manualMode, setManualMode] = useState(false)
   const [manualName, setManualName] = useState('')
   const [adding, setAdding] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const search = useCallback(async (q: string) => {
-    if (q.length < 2) { setResults([]); return }
+    if (q.length < 2) { setResults([]); setSelected(null); return }
     setSearching(true)
     try {
       const res = await fetch(`${apiUrl}/college-lookup?name=${encodeURIComponent(q)}`)
@@ -849,13 +867,15 @@ function AddCollegeModal({ onClose, onAdd, apiUrl, getToken }: AddCollegeModalPr
 
   const handleQueryChange = (v: string) => {
     setQuery(v)
+    setSelected(null)
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => search(v), 300)
   }
 
-  const handleSelect = async (r: CollegeSearchResult) => {
+  const handleConfirmAdd = async () => {
+    if (!selected) return
     setAdding(true)
-    await onAdd(r.name, r.id)
+    await onAdd(selected.name, selected.id)
     setAdding(false)
   }
 
@@ -898,35 +918,48 @@ function AddCollegeModal({ onClose, onAdd, apiUrl, getToken }: AddCollegeModalPr
               {!searching && results.length === 0 && query.length >= 2 && (
                 <p style={{ color: '#9ca3af', fontSize: '0.85rem', textAlign: 'center', padding: 12 }}>No matches found.</p>
               )}
-              {results.map((r, i) => (
-                <button
-                  key={i}
-                  onClick={() => handleSelect(r)}
-                  disabled={adding}
-                  style={{
-                    display: 'block', width: '100%', textAlign: 'left',
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    padding: '10px 12px', borderRadius: 8,
-                    borderBottom: '1px solid #f3f4f6',
-                  }}
-                  onMouseOver={(e) => (e.currentTarget.style.background = '#f8fafc')}
-                  onMouseOut={(e) => (e.currentTarget.style.background = 'none')}
-                >
-                  <p style={{ margin: 0, fontWeight: 600, color: '#1f2937', fontSize: '0.875rem' }}>{r.name}</p>
-                  {(r.city || r.state_code) && (
-                    <p style={{ margin: 0, color: '#9ca3af', fontSize: '0.78rem' }}>
-                      {[r.city, r.state_code].filter(Boolean).join(', ')}
-                    </p>
-                  )}
-                </button>
-              ))}
+              {results.map((r, i) => {
+                const isSelected = selected?.name === r.name
+                return (
+                  <button
+                    key={i}
+                    onClick={() => setSelected(isSelected ? null : r)}
+                    style={{
+                      display: 'block', width: '100%', textAlign: 'left',
+                      background: isSelected ? '#eef2ff' : 'none',
+                      border: isSelected ? '1.5px solid #6366f1' : '1.5px solid transparent',
+                      cursor: 'pointer', padding: '10px 12px', borderRadius: 8, marginBottom: 4,
+                    }}
+                    onMouseOver={(e) => { if (!isSelected) e.currentTarget.style.background = '#f8fafc' }}
+                    onMouseOut={(e) => { if (!isSelected) e.currentTarget.style.background = 'none' }}
+                  >
+                    <p style={{ margin: 0, fontWeight: 600, color: '#1f2937', fontSize: '0.875rem' }}>{r.name}</p>
+                    {(r.city || r.state_code) && (
+                      <p style={{ margin: 0, color: '#9ca3af', fontSize: '0.78rem' }}>
+                        {[r.city, r.state_code].filter(Boolean).join(', ')}
+                      </p>
+                    )}
+                  </button>
+                )
+              })}
             </div>
-            <button
-              onClick={() => setManualMode(true)}
-              style={{ marginTop: 14, color: '#6366f1', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', textDecoration: 'underline' }}
-            >
-              Not in list? Add manually (international schools)
-            </button>
+            <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {selected && (
+                <button
+                  onClick={handleConfirmAdd}
+                  disabled={adding}
+                  style={{ background: '#4f46e5', color: '#fff', border: 'none', borderRadius: 8, padding: '10px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', opacity: adding ? 0.7 : 1 }}
+                >
+                  {adding ? 'Adding…' : `Add "${selected.name}"`}
+                </button>
+              )}
+              <button
+                onClick={() => setManualMode(true)}
+                style={{ color: '#6366f1', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', textDecoration: 'underline' }}
+              >
+                Not in list? Add manually (international schools)
+              </button>
+            </div>
           </>
         ) : (
           <>
