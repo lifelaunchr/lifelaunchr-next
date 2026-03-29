@@ -248,7 +248,7 @@ function formatScholarshipDeadline(entry: ScholarshipEntry): string {
 interface ScholarshipSearchResult {
   id: string
   name: string
-  sponsor_name?: string
+  donor_name?: string
   award_low?: number
   award_high?: number
   deadline_month?: number
@@ -363,7 +363,7 @@ function AddScholarshipModal({ onClose, onAdd, apiUrl, getToken }: AddScholarshi
                   >
                     <p style={{ margin: 0, fontWeight: 600, color: '#1f2937', fontSize: '0.875rem' }}>{r.name}</p>
                     <p style={{ margin: 0, color: '#9ca3af', fontSize: '0.78rem' }}>
-                      {[r.sponsor_name, fmtAward(r)].filter(Boolean).join(' · ')}
+                      {[r.donor_name, fmtAward(r)].filter(Boolean).join(' · ')}
                     </p>
                   </button>
                 )
