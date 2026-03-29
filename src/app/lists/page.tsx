@@ -245,20 +245,69 @@ function formatScholarshipDeadline(entry: ScholarshipEntry): string {
 
 // ─── Add Scholarship Modal ─────────────────────────────────────────────────────
 
-interface AddScholarshipModalProps {
-  onClose: () => void
-  onAdd: (name: string) => Promise<void>
+interface ScholarshipSearchResult {
+  id: string
+  name: string
+  sponsor_name?: string
+  award_low?: number
+  award_high?: number
+  deadline_month?: number
+  deadline_day?: number
 }
 
-function AddScholarshipModal({ onClose, onAdd }: AddScholarshipModalProps) {
-  const [name, setName] = useState('')
-  const [adding, setAdding] = useState(false)
+interface AddScholarshipModalProps {
+  onClose: () => void
+  onAdd: (name: string, scholarshipId?: string) => Promise<void>
+  apiUrl: string
+  getToken: () => Promise<string | null>
+}
 
-  const handleAdd = async () => {
-    if (!name.trim()) return
+function AddScholarshipModal({ onClose, onAdd, apiUrl, getToken }: AddScholarshipModalProps) {
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<ScholarshipSearchResult[]>([])
+  const [searching, setSearching] = useState(false)
+  const [manualMode, setManualMode] = useState(false)
+  const [manualName, setManualName] = useState('')
+  const [adding, setAdding] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const search = useCallback(async (q: string) => {
+    if (q.length < 2) { setResults([]); return }
+    setSearching(true)
+    try {
+      const res = await fetch(`${apiUrl}/scholarship-lookup?name=${encodeURIComponent(q)}`)
+      const data = await res.json()
+      setResults(data.results || [])
+    } catch {
+      setResults([])
+    } finally {
+      setSearching(false)
+    }
+  }, [apiUrl])
+
+  const handleQueryChange = (v: string) => {
+    setQuery(v)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => search(v), 300)
+  }
+
+  const handleSelect = async (r: ScholarshipSearchResult) => {
     setAdding(true)
-    await onAdd(name.trim())
+    await onAdd(r.name, r.id)
     setAdding(false)
+  }
+
+  const handleManualAdd = async () => {
+    if (!manualName.trim()) return
+    setAdding(true)
+    await onAdd(manualName.trim())
+    setAdding(false)
+  }
+
+  const fmtAward = (r: ScholarshipSearchResult) => {
+    if (r.award_high) return `Up to $${r.award_high.toLocaleString()}`
+    if (r.award_low) return `$${r.award_low.toLocaleString()}+`
+    return null
   }
 
   return (
@@ -267,39 +316,87 @@ function AddScholarshipModal({ onClose, onAdd }: AddScholarshipModalProps) {
       display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
     }} onClick={onClose}>
       <div style={{
-        background: '#fff', borderRadius: 14, padding: '28px 28px 24px', width: 440,
-        maxWidth: '95vw', boxShadow: '0 20px 60px rgba(0,0,0,0.18)',
+        background: '#fff', borderRadius: 14, padding: '28px 28px 24px', width: 480,
+        maxWidth: '95vw', maxHeight: '80vh', display: 'flex', flexDirection: 'column',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.18)',
       }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
           <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0c1b33', margin: 0 }}>Add Scholarship</h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#9ca3af' }}>×</button>
         </div>
-        <p style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: 14 }}>
-          Enter the scholarship name exactly as you want it to appear. You can add details after.
-        </p>
-        <input
-          autoFocus
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-          placeholder="Scholarship name…"
-          style={{
-            width: '100%', border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '9px 14px',
-            fontSize: '0.9rem', outline: 'none', marginBottom: 16, boxSizing: 'border-box',
-          }}
-        />
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={onClose} style={{ flex: 1, border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '9px', fontSize: '0.875rem', cursor: 'pointer', background: '#fff', color: '#374151' }}>
-            Cancel
-          </button>
-          <button
-            onClick={handleAdd}
-            disabled={adding || !name.trim()}
-            style={{ flex: 1, background: '#d97706', color: '#fff', border: 'none', borderRadius: 8, padding: '9px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', opacity: adding ? 0.7 : 1 }}
-          >
-            {adding ? 'Adding…' : 'Add Scholarship'}
-          </button>
-        </div>
+
+        {!manualMode ? (
+          <>
+            <input
+              autoFocus
+              value={query}
+              onChange={(e) => handleQueryChange(e.target.value)}
+              placeholder="Search scholarships…"
+              style={{
+                border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '9px 14px',
+                fontSize: '0.9rem', outline: 'none', marginBottom: 12,
+              }}
+            />
+            <div style={{ flex: 1, overflowY: 'auto' }}>
+              {searching && <p style={{ color: '#9ca3af', fontSize: '0.85rem', textAlign: 'center', padding: 12 }}>Searching…</p>}
+              {!searching && results.length === 0 && query.length >= 2 && (
+                <p style={{ color: '#9ca3af', fontSize: '0.85rem', textAlign: 'center', padding: 12 }}>No matches found.</p>
+              )}
+              {results.map((r, i) => (
+                <button
+                  key={i}
+                  onClick={() => handleSelect(r)}
+                  disabled={adding}
+                  style={{
+                    display: 'block', width: '100%', textAlign: 'left',
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    padding: '10px 12px', borderRadius: 8,
+                    borderBottom: '1px solid #f3f4f6',
+                  }}
+                  onMouseOver={(e) => (e.currentTarget.style.background = '#f8fafc')}
+                  onMouseOut={(e) => (e.currentTarget.style.background = 'none')}
+                >
+                  <p style={{ margin: 0, fontWeight: 600, color: '#1f2937', fontSize: '0.875rem' }}>{r.name}</p>
+                  <p style={{ margin: 0, color: '#9ca3af', fontSize: '0.78rem' }}>
+                    {[r.sponsor_name, fmtAward(r)].filter(Boolean).join(' · ')}
+                  </p>
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setManualMode(true)}
+              style={{ marginTop: 14, color: '#6366f1', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', textDecoration: 'underline' }}
+            >
+              Not in list? Add manually (local/community scholarships)
+            </button>
+          </>
+        ) : (
+          <>
+            <p style={{ color: '#6b7280', fontSize: '0.85rem', marginBottom: 12 }}>Enter the scholarship name as you want it to appear. You can add details after.</p>
+            <input
+              autoFocus
+              value={manualName}
+              onChange={(e) => setManualName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleManualAdd()}
+              placeholder="Scholarship name…"
+              style={{
+                border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '9px 14px',
+                fontSize: '0.9rem', outline: 'none', marginBottom: 14,
+              }}
+            />
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => setManualMode(false)}
+                style={{ flex: 1, border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '9px', fontSize: '0.875rem', cursor: 'pointer', background: '#fff', color: '#374151' }}
+              >Back to Search</button>
+              <button
+                onClick={handleManualAdd}
+                disabled={adding || !manualName.trim()}
+                style={{ flex: 1, background: '#d97706', color: '#fff', border: 'none', borderRadius: 8, padding: '9px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', opacity: adding ? 0.7 : 1 }}
+              >Add Scholarship</button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
@@ -2028,13 +2125,13 @@ function ListsContent() {
     setEntries((prev) => prev.filter((e) => e.id !== entryId))
   }
 
-  const addScholarship = async (name: string) => {
+  const addScholarship = async (name: string, scholarshipId?: string) => {
     if (!targetId || !canWrite) return
     const token = await getToken()
     const res = await fetch(`${apiUrl}/lists/${targetId}/scholarships`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ scholarship_name: name }),
+      body: JSON.stringify({ scholarship_name: name, ...(scholarshipId ? { scholarship_id: scholarshipId } : {}) }),
     })
     if (res.ok) {
       const added = await res.json()
@@ -2291,6 +2388,8 @@ function ListsContent() {
         <AddScholarshipModal
           onClose={() => setShowAddScholarshipModal(false)}
           onAdd={addScholarship}
+          apiUrl={apiUrl}
+          getToken={getToken}
         />
       )}
 
