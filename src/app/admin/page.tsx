@@ -10,7 +10,6 @@ interface UserRow {
   full_name: string | null
   account_type: string
   tier: string | null
-  student_plan: string | null
   monthly_message_limit: number | null
   messages_used: number
   messages_reset_date: string | null
@@ -21,6 +20,9 @@ interface UserRow {
   organization: string | null
   is_admin: boolean
   is_super_admin: boolean
+  is_tenant_admin: boolean
+  tenant_id: number | null
+  tenant_name: string | null
   created_at: string
   tier_display_name: string | null
 }
@@ -35,10 +37,18 @@ interface TierRow {
   can_use_plans: boolean
   max_students: number | null
   max_counselors: number | null
-  can_customize_instructions: boolean
-  can_brand: boolean
-  is_b2b: boolean
   sort_order: number
+}
+
+interface TenantRow {
+  id: number
+  name: string
+  subdomain: string
+  plan: string | null
+  user_count: number
+  ai_queries_this_month: number
+  created_at: string
+  session_report_cc_emails: string | null
 }
 
 interface TenantSettings {
@@ -47,72 +57,94 @@ interface TenantSettings {
   session_report_cc_emails: string | null
 }
 
+type TabType = 'users' | 'tiers' | 'tenants' | 'tenant'
+
 export default function AdminPage() {
   const { getToken } = useAuth()
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
   const [users, setUsers] = useState<UserRow[]>([])
   const [tiers, setTiers] = useState<TierRow[]>([])
+  const [tenants, setTenants] = useState<TenantRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [tab, setTab] = useState<'users' | 'tiers' | 'tenant'>('users')
+  const [tab, setTab] = useState<TabType>('users')
   const [search, setSearch] = useState('')
   const [editingUser, setEditingUser] = useState<UserRow | null>(null)
   const [editingTier, setEditingTier] = useState<TierRow | null>(null)
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState('')
+
+  // Role flags
   const [isSuperAdmin, setIsSuperAdmin] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [isTenantAdmin, setIsTenantAdmin] = useState(false)
+
+  // Tenant settings tab
   const [tenantSettings, setTenantSettings] = useState<TenantSettings | null>(null)
   const [tenantCCEmails, setTenantCCEmails] = useState('')
   const [tenantLoading, setTenantLoading] = useState(false)
+
+  // Create tenant
+  const [creatingTenant, setCreatingTenant] = useState(false)
+  const [newTenant, setNewTenant] = useState({ subdomain: '', display_name: '', plan: 'beta' })
+  const [createMsg, setCreateMsg] = useState('')
 
   const load = async () => {
     setLoading(true)
     setError(null)
     try {
       const token = await getToken()
-      // First check usage to determine role
-      const usageRes = await fetch(`${apiUrl}/my-usage`, { headers: { Authorization: `Bearer ${token}` } })
-      let superAdmin = false
-      let tenantAdmin = false
+      const headers = { Authorization: `Bearer ${token}` }
+
+      // Determine role
+      const usageRes = await fetch(`${apiUrl}/my-usage`, { headers })
+      let superAdmin = false, admin = false, tenantAdmin = false
       if (usageRes.ok) {
         const usage = await usageRes.json()
-        superAdmin = Boolean(usage.is_admin)
+        superAdmin  = Boolean(usage.is_super_admin)
+        admin       = Boolean(usage.is_admin)
         tenantAdmin = Boolean(usage.is_tenant_admin)
         setIsSuperAdmin(superAdmin)
+        setIsAdmin(admin)
+        setIsTenantAdmin(tenantAdmin)
       }
 
-      if (superAdmin) {
-        const [usersRes, tiersRes] = await Promise.all([
-          fetch(`${apiUrl}/admin/users-all`, { headers: { Authorization: `Bearer ${token}` } }),
-          fetch(`${apiUrl}/admin/tiers`, { headers: { Authorization: `Bearer ${token}` } }),
-        ])
-        if (usersRes.status === 403 || tiersRes.status === 403) {
-          setError('Access denied.')
-          setLoading(false)
-          return
-        }
-        if (usersRes.ok) setUsers(await usersRes.json())
-        if (tiersRes.ok) setTiers(await tiersRes.json())
-      } else if (!tenantAdmin) {
+      if (!superAdmin && !admin && !tenantAdmin) {
         setError('Access denied. Admin access required.')
         setLoading(false)
         return
       }
 
-      // Load tenant settings for both super-admins and tenant-admins
-      const tenantRes = await fetch(`${apiUrl}/admin/my-tenant`, { headers: { Authorization: `Bearer ${token}` } })
-      if (tenantRes.ok) {
-        const t: TenantSettings = await tenantRes.json()
-        setTenantSettings(t)
-        setTenantCCEmails(t.session_report_cc_emails || '')
+      // Default tab: tenant-only users land on Tenant Settings
+      if (!superAdmin && !admin && tenantAdmin) setTab('tenant')
+
+      const fetches: Promise<void>[] = []
+
+      if (admin || superAdmin) {
+        fetches.push(
+          fetch(`${apiUrl}/admin/users-all`, { headers })
+            .then(r => r.ok ? r.json() : []).then(setUsers),
+          fetch(`${apiUrl}/admin/tiers`, { headers })
+            .then(r => r.ok ? r.json() : []).then(setTiers),
+        )
       }
 
-      // Tenant-admins land on tenant tab by default
-      if (!superAdmin && tenantAdmin) {
-        setTab('tenant')
+      if (superAdmin) {
+        fetches.push(
+          fetch(`${apiUrl}/admin/tenants`, { headers })
+            .then(r => r.ok ? r.json() : []).then(setTenants),
+        )
       }
-    } catch (e) {
+
+      fetches.push(
+        fetch(`${apiUrl}/admin/my-tenant`, { headers })
+          .then(r => r.ok ? r.json() : null)
+          .then(t => { if (t) { setTenantSettings(t); setTenantCCEmails(t.session_report_cc_emails || '') } })
+      )
+
+      await Promise.all(fetches)
+    } catch {
       setError('Failed to load admin data.')
     }
     setLoading(false)
@@ -149,6 +181,20 @@ export default function AdminPage() {
     setTimeout(() => setSaveMsg(''), 3000)
   }
 
+  const toggleFlag = async (userId: number, flag: 'admin' | 'super-admin' | 'tenant-admin', value: boolean) => {
+    const token = await getToken()
+    const bodyKey = flag === 'admin' ? 'is_admin' : flag === 'super-admin' ? 'is_super_admin' : 'is_tenant_admin'
+    const res = await fetch(`${apiUrl}/admin/users/${userId}/${flag}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ [bodyKey]: value }),
+    })
+    if (res.ok) {
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, [bodyKey]: value } : u))
+      if (editingUser?.id === userId) setEditingUser(prev => prev ? { ...prev, [bodyKey]: value } : prev)
+    }
+  }
+
   const saveTier = async () => {
     if (!editingTier) return
     setSaving(true)
@@ -182,7 +228,7 @@ export default function AdminPage() {
 
   const saveTenantSettings = async () => {
     if (!tenantSettings) return
-    setSaving(true)
+    setTenantLoading(true)
     try {
       const token = await getToken()
       const res = await fetch(`${apiUrl}/admin/tenants/${tenantSettings.id}`, {
@@ -197,8 +243,35 @@ export default function AdminPage() {
         setSaveMsg('Error saving tenant settings.')
       }
     } catch { setSaveMsg('Error saving tenant settings.') }
-    setSaving(false)
+    setTenantLoading(false)
     setTimeout(() => setSaveMsg(''), 3000)
+  }
+
+  const createTenant = async () => {
+    if (!newTenant.subdomain || !newTenant.display_name) {
+      setCreateMsg('Subdomain and display name are required.')
+      return
+    }
+    setSaving(true)
+    try {
+      const token = await getToken()
+      const res = await fetch(`${apiUrl}/admin/tenants`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(newTenant),
+      })
+      if (res.ok) {
+        setCreateMsg('Tenant created!')
+        setCreatingTenant(false)
+        setNewTenant({ subdomain: '', display_name: '', plan: 'beta' })
+        load()
+      } else {
+        const err = await res.json()
+        setCreateMsg(err.detail || 'Error creating tenant.')
+      }
+    } catch { setCreateMsg('Error creating tenant.') }
+    setSaving(false)
+    setTimeout(() => setCreateMsg(''), 4000)
   }
 
   const filteredUsers = users.filter(u =>
@@ -223,12 +296,15 @@ export default function AdminPage() {
     </div>
   )
 
+  const roleLabel = isSuperAdmin ? 'Super-admin' : isAdmin ? 'Admin' : 'Tenant admin'
+
   return (
     <div className="min-h-screen bg-slate-50">
+      {/* Header */}
       <div className="bg-[#0c1b33] text-white px-6 py-4 flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold"><span className="text-sky-300">Soar</span> Admin</h1>
-          <p className="text-xs text-slate-400 mt-0.5">{isSuperAdmin ? 'Super-admin panel' : 'Admin panel'}</p>
+          <p className="text-xs text-slate-400 mt-0.5">{roleLabel}</p>
         </div>
         <div className="flex items-center gap-4">
           {saveMsg && <span className="text-sm text-green-400">{saveMsg}</span>}
@@ -239,34 +315,33 @@ export default function AdminPage() {
       <div className="max-w-7xl mx-auto px-6 py-6">
         {/* Tabs */}
         <div className="flex gap-1 mb-6 border-b border-gray-200">
-          {isSuperAdmin && (['users', 'tiers'] as const).map(t => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`px-4 py-2 text-sm font-medium capitalize transition-colors border-b-2 -mb-px ${
-                tab === t
-                  ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {t} ({t === 'users' ? users.length : tiers.length})
+          {(isAdmin || isSuperAdmin) && (
+            <button onClick={() => setTab('users')}
+              className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${tab === 'users' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+              Users ({users.length})
             </button>
-          ))}
+          )}
+          {(isAdmin || isSuperAdmin) && (
+            <button onClick={() => setTab('tiers')}
+              className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${tab === 'tiers' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+              Tiers ({tiers.length})
+            </button>
+          )}
+          {isSuperAdmin && (
+            <button onClick={() => setTab('tenants')}
+              className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${tab === 'tenants' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+              Tenants ({tenants.length})
+            </button>
+          )}
           {tenantSettings && (
-            <button
-              onClick={() => setTab('tenant')}
-              className={`px-4 py-2 text-sm font-medium capitalize transition-colors border-b-2 -mb-px ${
-                tab === 'tenant'
-                  ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
+            <button onClick={() => setTab('tenant')}
+              className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${tab === 'tenant' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
               Tenant Settings
             </button>
           )}
         </div>
 
-        {/* Users tab */}
+        {/* ── Users tab ── */}
         {tab === 'users' && (
           <div>
             <div className="mb-4 flex gap-3 items-center">
@@ -284,7 +359,7 @@ export default function AdminPage() {
                   <tr>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">User</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Tier</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Tier / Role</th>
                     <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Msg limit</th>
                     <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Used</th>
                     <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Overrides</th>
@@ -298,16 +373,21 @@ export default function AdminPage() {
                         <p className="font-medium text-gray-800">{u.full_name || '—'}</p>
                         <p className="text-xs text-gray-400">{u.email}</p>
                         {u.organization && <p className="text-xs text-gray-400">{u.organization}</p>}
+                        {u.tenant_name && <p className="text-xs text-indigo-400">{u.tenant_name}</p>}
                       </td>
                       <td className="px-4 py-3 text-gray-600 capitalize">{u.account_type}</td>
                       <td className="px-4 py-3">
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-700">
-                          {u.tier_display_name || u.tier || u.student_plan || 'free'}
+                          {u.tier_display_name || u.tier || 'free'}
                         </span>
-                        {(u.is_admin || u.is_super_admin) && (
-                          <span className="ml-1 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700">
-                            {u.is_super_admin ? 'super-admin' : 'admin'}
-                          </span>
+                        {u.is_super_admin && (
+                          <span className="ml-1 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-50 text-red-700">super-admin</span>
+                        )}
+                        {!u.is_super_admin && u.is_admin && (
+                          <span className="ml-1 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700">admin</span>
+                        )}
+                        {u.is_tenant_admin && (
+                          <span className="ml-1 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-teal-50 text-teal-700">tenant-admin</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-right text-gray-600">
@@ -338,45 +418,7 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* Tenant Settings tab */}
-        {tab === 'tenant' && (
-          <div className="max-w-xl">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <h2 className="text-base font-semibold text-gray-800 mb-1">
-                {tenantSettings?.name || 'Tenant'} Settings
-              </h2>
-              <p className="text-sm text-gray-400 mb-6">Configure settings for your organization.</p>
-
-              <div className="space-y-5">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Session report CC emails (comma-separated)
-                  </label>
-                  <input
-                    type="text"
-                    value={tenantCCEmails}
-                    onChange={e => setTenantCCEmails(e.target.value)}
-                    placeholder="e.g. swami@lifelaunchr.com, manager@firm.com"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
-                  />
-                  <p className="text-xs text-gray-400 mt-1">
-                    These addresses receive a copy of every session report sent by any coach in this tenant.
-                  </p>
-                </div>
-
-                <button
-                  onClick={saveTenantSettings}
-                  disabled={saving || !tenantSettings}
-                  className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-300 text-white rounded-lg px-5 py-2 text-sm font-medium transition-colors"
-                >
-                  {saving ? 'Saving…' : 'Save settings'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Tiers tab */}
+        {/* ── Tiers tab ── */}
         {tab === 'tiers' && (
           <div>
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
@@ -405,10 +447,8 @@ export default function AdminPage() {
                       <td className="px-4 py-3 text-center">{t.can_use_essays ? '✓' : '—'}</td>
                       <td className="px-4 py-3 text-center">{t.can_use_plans ? '✓' : '—'}</td>
                       <td className="px-4 py-3">
-                        <button
-                          onClick={() => setEditingTier({ ...t })}
-                          className="text-xs text-indigo-500 hover:text-indigo-700 font-medium"
-                        >
+                        <button onClick={() => setEditingTier({ ...t })}
+                          className="text-xs text-indigo-500 hover:text-indigo-700 font-medium">
                           Edit
                         </button>
                       </td>
@@ -419,12 +459,96 @@ export default function AdminPage() {
             </div>
           </div>
         )}
+
+        {/* ── Tenants tab (super-admin only) ── */}
+        {tab === 'tenants' && isSuperAdmin && (
+          <div>
+            <div className="mb-4 flex justify-between items-center">
+              <span className="text-sm text-gray-500">{tenants.length} tenants</span>
+              <button
+                onClick={() => setCreatingTenant(true)}
+                className="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+              >
+                + New Tenant
+              </button>
+            </div>
+            {createMsg && <p className="text-sm text-green-600 mb-3">{createMsg}</p>}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-100">
+                  <tr>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Tenant</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Subdomain</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Plan</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Users</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">AI queries (mo)</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Created</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {tenants.map(t => (
+                    <tr key={t.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 font-medium text-gray-800">{t.name}</td>
+                      <td className="px-4 py-3 text-gray-500 font-mono text-xs">{t.subdomain}</td>
+                      <td className="px-4 py-3">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-700">
+                          {t.plan || '—'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right text-gray-600">{t.user_count}</td>
+                      <td className="px-4 py-3 text-right text-gray-600">{t.ai_queries_this_month}</td>
+                      <td className="px-4 py-3 text-right text-gray-400 text-xs">
+                        {new Date(t.created_at).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ── Tenant Settings tab ── */}
+        {tab === 'tenant' && (
+          <div className="max-w-xl">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <h2 className="text-base font-semibold text-gray-800 mb-1">
+                {tenantSettings?.name || 'Tenant'} Settings
+              </h2>
+              <p className="text-sm text-gray-400 mb-6">Configure settings for your organization.</p>
+              <div className="space-y-5">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Session report CC emails <span className="text-gray-400 font-normal">(comma-separated)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={tenantCCEmails}
+                    onChange={e => setTenantCCEmails(e.target.value)}
+                    placeholder="e.g. swami@lifelaunchr.com, manager@firm.com"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    These addresses receive a copy of every session report sent by any coach in this tenant.
+                  </p>
+                </div>
+                <button
+                  onClick={saveTenantSettings}
+                  disabled={tenantLoading || !tenantSettings}
+                  className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-300 text-white rounded-lg px-5 py-2 text-sm font-medium transition-colors"
+                >
+                  {tenantLoading ? 'Saving…' : 'Save settings'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Edit user modal */}
+      {/* ── Edit user modal ── */}
       {editingUser && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
             <h3 className="text-base font-semibold text-gray-800 mb-1">Edit User</h3>
             <p className="text-sm text-gray-400 mb-5">{editingUser.full_name || editingUser.email}</p>
 
@@ -474,23 +598,68 @@ export default function AdminPage() {
               </div>
 
               <div className="flex gap-4">
-                <label className="flex items-center gap-2 text-sm text-gray-600">
+                <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={editingUser.essays_enabled_override ?? false}
                     onChange={e => setEditingUser({ ...editingUser, essays_enabled_override: e.target.checked })}
                   />
-                  Essays enabled override
+                  Essays override
                 </label>
-                <label className="flex items-center gap-2 text-sm text-gray-600">
+                <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={editingUser.plans_enabled_override ?? false}
                     onChange={e => setEditingUser({ ...editingUser, plans_enabled_override: e.target.checked })}
                   />
-                  Plans enabled override
+                  Plans override
                 </label>
               </div>
+
+              {/* Role flags — super-admin only */}
+              {isSuperAdmin && (
+                <div className="border-t border-gray-100 pt-4">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Role flags</p>
+                  <div className="space-y-2">
+                    <label className="flex items-center justify-between text-sm text-gray-700 cursor-pointer">
+                      <span>
+                        Super-admin
+                        <span className="ml-1 text-xs text-gray-400">(platform owner)</span>
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={editingUser.is_super_admin}
+                        onChange={e => toggleFlag(editingUser.id, 'super-admin', e.target.checked)}
+                        className="w-4 h-4"
+                      />
+                    </label>
+                    <label className="flex items-center justify-between text-sm text-gray-700 cursor-pointer">
+                      <span>
+                        Admin
+                        <span className="ml-1 text-xs text-gray-400">(manage all users)</span>
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={editingUser.is_admin}
+                        onChange={e => toggleFlag(editingUser.id, 'admin', e.target.checked)}
+                        className="w-4 h-4"
+                      />
+                    </label>
+                    <label className="flex items-center justify-between text-sm text-gray-700 cursor-pointer">
+                      <span>
+                        Tenant admin
+                        <span className="ml-1 text-xs text-gray-400">(manage their org)</span>
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={editingUser.is_tenant_admin}
+                        onChange={e => toggleFlag(editingUser.id, 'tenant-admin', e.target.checked)}
+                        className="w-4 h-4"
+                      />
+                    </label>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex gap-3 mt-6">
@@ -512,13 +681,12 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Edit tier modal */}
+      {/* ── Edit tier modal ── */}
       {editingTier && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
             <h3 className="text-base font-semibold text-gray-800 mb-1">Edit Tier: {editingTier.display_name}</h3>
             <p className="text-sm text-gray-400 font-mono mb-5">{editingTier.name}</p>
-
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Display name</label>
@@ -556,37 +724,79 @@ export default function AdminPage() {
                 />
               </div>
               <div className="flex gap-6">
-                <label className="flex items-center gap-2 text-sm text-gray-600">
-                  <input
-                    type="checkbox"
-                    checked={editingTier.can_use_essays}
-                    onChange={e => setEditingTier({ ...editingTier, can_use_essays: e.target.checked })}
-                  />
+                <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                  <input type="checkbox" checked={editingTier.can_use_essays}
+                    onChange={e => setEditingTier({ ...editingTier, can_use_essays: e.target.checked })} />
                   Essays
                 </label>
-                <label className="flex items-center gap-2 text-sm text-gray-600">
-                  <input
-                    type="checkbox"
-                    checked={editingTier.can_use_plans}
-                    onChange={e => setEditingTier({ ...editingTier, can_use_plans: e.target.checked })}
-                  />
+                <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                  <input type="checkbox" checked={editingTier.can_use_plans}
+                    onChange={e => setEditingTier({ ...editingTier, can_use_plans: e.target.checked })} />
                   Plans module
                 </label>
               </div>
             </div>
-
             <div className="flex gap-3 mt-6">
-              <button
-                onClick={saveTier}
-                disabled={saving}
-                className="flex-1 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-300 text-white rounded-lg py-2 text-sm font-medium transition-colors"
-              >
+              <button onClick={saveTier} disabled={saving}
+                className="flex-1 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-300 text-white rounded-lg py-2 text-sm font-medium transition-colors">
                 {saving ? 'Saving…' : 'Save tier'}
               </button>
-              <button
-                onClick={() => setEditingTier(null)}
-                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-medium transition-colors"
-              >
+              <button onClick={() => setEditingTier(null)}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-medium transition-colors">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Create tenant modal ── */}
+      {creatingTenant && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
+            <h3 className="text-base font-semibold text-gray-800 mb-5">New Tenant</h3>
+            {createMsg && <p className="text-sm text-red-500 mb-3">{createMsg}</p>}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Display name</label>
+                <input
+                  value={newTenant.display_name}
+                  onChange={e => setNewTenant({ ...newTenant, display_name: e.target.value })}
+                  placeholder="e.g. Bright Futures Counseling"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Subdomain</label>
+                <input
+                  value={newTenant.subdomain}
+                  onChange={e => setNewTenant({ ...newTenant, subdomain: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
+                  placeholder="e.g. brightfutures"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-indigo-400"
+                />
+                <p className="text-[10px] text-gray-400 mt-1">Lowercase letters, numbers, and hyphens only</p>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Plan</label>
+                <select
+                  value={newTenant.plan}
+                  onChange={e => setNewTenant({ ...newTenant, plan: e.target.value })}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                >
+                  <option value="beta">Beta</option>
+                  <option value="starter">Starter</option>
+                  <option value="pro">Pro</option>
+                  <option value="enterprise">Enterprise</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button onClick={createTenant} disabled={saving}
+                className="flex-1 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-300 text-white rounded-lg py-2 text-sm font-medium transition-colors">
+                {saving ? 'Creating…' : 'Create tenant'}
+              </button>
+              <button onClick={() => { setCreatingTenant(false); setCreateMsg('') }}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-medium transition-colors">
                 Cancel
               </button>
             </div>
