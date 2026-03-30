@@ -27,6 +27,7 @@ interface DashboardStudent {
   archived: boolean
   archived_at?: string
   weekly_digest_enabled: boolean
+  notify_parent_session_reports: boolean
   overall_status?: string
   essay_status?: string
   testing_status?: string
@@ -288,6 +289,28 @@ function EditPanel({
                   className="rounded"
                 />
                 <span className="text-sm text-gray-700">Send weekly deadline digest</span>
+              </label>
+            </Field>
+            <Field label="">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.notify_parent_session_reports !== false}
+                  onChange={async e => {
+                    const enabled = e.target.checked
+                    set('notify_parent_session_reports', enabled)
+                    try {
+                      const token = await getToken()
+                      await fetch(`${apiUrl}/students/${student.id}/notify-parent-session-reports`, {
+                        method: 'PATCH',
+                        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ enabled }),
+                      })
+                    } catch { /* ignore */ }
+                  }}
+                  className="rounded"
+                />
+                <span className="text-sm text-gray-700">Notify parent of session reports</span>
               </label>
             </Field>
             <Field label="Scheduling Link (override)">
