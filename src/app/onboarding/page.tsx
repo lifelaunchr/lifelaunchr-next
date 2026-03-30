@@ -44,7 +44,49 @@ export default function OnboardingPage() {
   const [searching, setSearching] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [migrationLinking, setMigrationLinking] = useState(false)
   const searchRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Migration invite: if a token is in sessionStorage, auto-link this Clerk account
+  // to the legacy user record and skip the role-picker entirely.
+  useEffect(() => {
+    const token = sessionStorage.getItem('migration_invite_token')
+    if (!token || !clerkUser) return
+
+    setMigrationLinking(true)
+    ;(async () => {
+      try {
+        const authToken = await getToken()
+        const email = clerkUser.emailAddresses[0]?.emailAddress || ''
+        const fullName = clerkUser.fullName || clerkUser.firstName || ''
+
+        // Sync Clerk identity — backend will match by email and link the legacy record
+        await fetch(`${apiUrl}/auth/sync`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+          body: JSON.stringify({
+            clerk_user_id: clerkUser.id,
+            email,
+            full_name: fullName,
+            account_type: 'student', // backend ignores this if legacy record has a real type
+          }),
+        })
+
+        // Mark the invite token as accepted
+        await fetch(`${apiUrl}/accept-invite`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, clerk_user_id: clerkUser.id, email }),
+        })
+      } catch {
+        // Non-fatal: the email-match in /auth/sync is what actually links the account.
+        // Failing to mark the token accepted is acceptable.
+      } finally {
+        sessionStorage.removeItem('migration_invite_token')
+        router.replace('/chat')
+      }
+    })()
+  }, [clerkUser, getToken, apiUrl, router])
 
   const isCounselor = ['school_counselor', 'iec', 'admissions_coach'].includes(accountType)
   const isSchoolCounselor = accountType === 'school_counselor'
@@ -116,6 +158,14 @@ export default function OnboardingPage() {
       setError('Something went wrong. Please try again.')
       setSubmitting(false)
     }
+  }
+
+  if (migrationLinking) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-slate-900">
+        <p className="text-slate-400 text-sm">Linking your account…</p>
+      </main>
+    )
   }
 
   return (
