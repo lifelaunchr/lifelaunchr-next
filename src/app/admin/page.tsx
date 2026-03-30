@@ -41,6 +41,12 @@ interface TierRow {
   sort_order: number
 }
 
+interface TenantSettings {
+  id: number
+  name: string
+  session_report_cc_emails: string | null
+}
+
 export default function AdminPage() {
   const { getToken } = useAuth()
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
@@ -49,29 +55,63 @@ export default function AdminPage() {
   const [tiers, setTiers] = useState<TierRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [tab, setTab] = useState<'users' | 'tiers'>('users')
+  const [tab, setTab] = useState<'users' | 'tiers' | 'tenant'>('users')
   const [search, setSearch] = useState('')
   const [editingUser, setEditingUser] = useState<UserRow | null>(null)
   const [editingTier, setEditingTier] = useState<TierRow | null>(null)
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState('')
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false)
+  const [tenantSettings, setTenantSettings] = useState<TenantSettings | null>(null)
+  const [tenantCCEmails, setTenantCCEmails] = useState('')
+  const [tenantLoading, setTenantLoading] = useState(false)
 
   const load = async () => {
     setLoading(true)
     setError(null)
     try {
       const token = await getToken()
-      const [usersRes, tiersRes] = await Promise.all([
-        fetch(`${apiUrl}/admin/users-all`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${apiUrl}/admin/tiers`, { headers: { Authorization: `Bearer ${token}` } }),
-      ])
-      if (usersRes.status === 403 || tiersRes.status === 403) {
-        setError('Access denied. Super-admin required.')
+      // First check usage to determine role
+      const usageRes = await fetch(`${apiUrl}/my-usage`, { headers: { Authorization: `Bearer ${token}` } })
+      let superAdmin = false
+      let tenantAdmin = false
+      if (usageRes.ok) {
+        const usage = await usageRes.json()
+        superAdmin = Boolean(usage.is_admin)
+        tenantAdmin = Boolean(usage.is_tenant_admin)
+        setIsSuperAdmin(superAdmin)
+      }
+
+      if (superAdmin) {
+        const [usersRes, tiersRes] = await Promise.all([
+          fetch(`${apiUrl}/admin/users-all`, { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(`${apiUrl}/admin/tiers`, { headers: { Authorization: `Bearer ${token}` } }),
+        ])
+        if (usersRes.status === 403 || tiersRes.status === 403) {
+          setError('Access denied.')
+          setLoading(false)
+          return
+        }
+        if (usersRes.ok) setUsers(await usersRes.json())
+        if (tiersRes.ok) setTiers(await tiersRes.json())
+      } else if (!tenantAdmin) {
+        setError('Access denied. Admin access required.')
         setLoading(false)
         return
       }
-      if (usersRes.ok) setUsers(await usersRes.json())
-      if (tiersRes.ok) setTiers(await tiersRes.json())
+
+      // Load tenant settings for both super-admins and tenant-admins
+      const tenantRes = await fetch(`${apiUrl}/admin/my-tenant`, { headers: { Authorization: `Bearer ${token}` } })
+      if (tenantRes.ok) {
+        const t: TenantSettings = await tenantRes.json()
+        setTenantSettings(t)
+        setTenantCCEmails(t.session_report_cc_emails || '')
+      }
+
+      // Tenant-admins land on tenant tab by default
+      if (!superAdmin && tenantAdmin) {
+        setTab('tenant')
+      }
     } catch (e) {
       setError('Failed to load admin data.')
     }
@@ -140,6 +180,27 @@ export default function AdminPage() {
     setTimeout(() => setSaveMsg(''), 3000)
   }
 
+  const saveTenantSettings = async () => {
+    if (!tenantSettings) return
+    setSaving(true)
+    try {
+      const token = await getToken()
+      const res = await fetch(`${apiUrl}/admin/tenants/${tenantSettings.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ session_report_cc_emails: tenantCCEmails.trim() || null }),
+      })
+      if (res.ok) {
+        setSaveMsg('Tenant settings saved!')
+        setTenantSettings({ ...tenantSettings, session_report_cc_emails: tenantCCEmails.trim() || null })
+      } else {
+        setSaveMsg('Error saving tenant settings.')
+      }
+    } catch { setSaveMsg('Error saving tenant settings.') }
+    setSaving(false)
+    setTimeout(() => setSaveMsg(''), 3000)
+  }
+
   const filteredUsers = users.filter(u =>
     !search ||
     u.email?.toLowerCase().includes(search.toLowerCase()) ||
@@ -167,7 +228,7 @@ export default function AdminPage() {
       <div className="bg-[#0c1b33] text-white px-6 py-4 flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold"><span className="text-sky-300">Soar</span> Admin</h1>
-          <p className="text-xs text-slate-400 mt-0.5">Super-admin panel</p>
+          <p className="text-xs text-slate-400 mt-0.5">{isSuperAdmin ? 'Super-admin panel' : 'Admin panel'}</p>
         </div>
         <div className="flex items-center gap-4">
           {saveMsg && <span className="text-sm text-green-400">{saveMsg}</span>}
@@ -178,7 +239,7 @@ export default function AdminPage() {
       <div className="max-w-7xl mx-auto px-6 py-6">
         {/* Tabs */}
         <div className="flex gap-1 mb-6 border-b border-gray-200">
-          {(['users', 'tiers'] as const).map(t => (
+          {isSuperAdmin && (['users', 'tiers'] as const).map(t => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -191,6 +252,18 @@ export default function AdminPage() {
               {t} ({t === 'users' ? users.length : tiers.length})
             </button>
           ))}
+          {tenantSettings && (
+            <button
+              onClick={() => setTab('tenant')}
+              className={`px-4 py-2 text-sm font-medium capitalize transition-colors border-b-2 -mb-px ${
+                tab === 'tenant'
+                  ? 'border-indigo-500 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Tenant Settings
+            </button>
+          )}
         </div>
 
         {/* Users tab */}
@@ -261,6 +334,44 @@ export default function AdminPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* Tenant Settings tab */}
+        {tab === 'tenant' && (
+          <div className="max-w-xl">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <h2 className="text-base font-semibold text-gray-800 mb-1">
+                {tenantSettings?.name || 'Tenant'} Settings
+              </h2>
+              <p className="text-sm text-gray-400 mb-6">Configure settings for your organization.</p>
+
+              <div className="space-y-5">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Session report CC emails (comma-separated)
+                  </label>
+                  <input
+                    type="text"
+                    value={tenantCCEmails}
+                    onChange={e => setTenantCCEmails(e.target.value)}
+                    placeholder="e.g. swami@lifelaunchr.com, manager@firm.com"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    These addresses receive a copy of every session report sent by any coach in this tenant.
+                  </p>
+                </div>
+
+                <button
+                  onClick={saveTenantSettings}
+                  disabled={saving || !tenantSettings}
+                  className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-300 text-white rounded-lg px-5 py-2 text-sm font-medium transition-colors"
+                >
+                  {saving ? 'Saving…' : 'Save settings'}
+                </button>
+              </div>
             </div>
           </div>
         )}

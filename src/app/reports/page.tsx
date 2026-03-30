@@ -19,6 +19,7 @@ interface Student {
 interface SessionReport {
   id: number
   coach_id: number
+  coach_name?: string   // present in team-view (joined from users)
   student_id: number
   report_type: 'single' | 'multiple' | 'note'
   appointment_type: string
@@ -117,6 +118,12 @@ function ReportsContent() {
   const [coachName, setCoachName] = useState('')
   const [myUserId, setMyUserId] = useState<number | null>(null)
 
+  // Tenant admin state
+  const [isTenantAdmin, setIsTenantAdmin] = useState(false)
+  const [teamView, setTeamView] = useState(false)
+  const [teamReports, setTeamReports] = useState<SessionReport[]>([])
+  const [teamReportsLoading, setTeamReportsLoading] = useState(false)
+
   // Form state
   const [reportType, setReportType] = useState<'single' | 'multiple' | 'note'>('single')
   const [formStudentId, setFormStudentId] = useState<number | null>(selectedStudentId)
@@ -162,6 +169,7 @@ function ReportsContent() {
         }
         setMyUserId(usage.user_id)
         setCoachName(clerkUser.fullName || clerkUser.firstName || clerkUser.emailAddresses[0]?.emailAddress || '')
+        setIsTenantAdmin(Boolean(usage.is_tenant_admin))
 
         const studRes = await fetch(`${apiUrl}/my-students`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -196,6 +204,31 @@ function ReportsContent() {
   useEffect(() => {
     loadReports(selectedStudentId)
   }, [selectedStudentId, loadReports])
+
+  // ── Load team reports (tenant admin view) ─────────────────────────────────
+
+  const loadTeamReports = useCallback(async () => {
+    setTeamReportsLoading(true)
+    try {
+      const token = await getToken()
+      const res = await fetch(`${apiUrl}/session-reports?all_team=true`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setTeamReports(data.reports || [])
+      }
+    } catch { /* ignore */ } finally {
+      setTeamReportsLoading(false)
+    }
+  }, [getToken])
+
+  useEffect(() => {
+    if (teamView) {
+      loadTeamReports()
+      setSelectedReport(null)
+    }
+  }, [teamView, loadTeamReports])
 
   // ── Populate form when a report is selected ────────────────────────────────
 
@@ -429,6 +462,10 @@ function ReportsContent() {
     )
   }
 
+  // ── Active list & reports for current view mode ───────────────────────────
+
+  const activeReports = teamView ? teamReports : reports
+
   return (
     <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
       {/* Top nav */}
@@ -456,46 +493,87 @@ function ReportsContent() {
           <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid #f3f4f6' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <h1 style={{ fontSize: '1rem', fontWeight: 700, color: '#0c1b33', margin: 0 }}>Session Reports</h1>
-              <button
-                onClick={resetForm}
-                style={{
-                  background: '#4f46e5', color: '#fff', border: 'none',
-                  borderRadius: 8, padding: '6px 12px', fontSize: '0.78rem',
-                  fontWeight: 600, cursor: 'pointer',
-                }}
-              >
-                + New Report
-              </button>
+              {!teamView && (
+                <button
+                  onClick={resetForm}
+                  style={{
+                    background: '#4f46e5', color: '#fff', border: 'none',
+                    borderRadius: 8, padding: '6px 12px', fontSize: '0.78rem',
+                    fontWeight: 600, cursor: 'pointer',
+                  }}
+                >
+                  + New Report
+                </button>
+              )}
             </div>
-            {/* Student filter */}
-            <select
-              value={selectedStudentId ?? ''}
-              onChange={(e) => {
-                const val = e.target.value ? parseInt(e.target.value, 10) : null
-                setSelectedStudentId(val)
-                setFormStudentId(val)
-                setSelectedReport(null)
-                setSentConfirm(null)
-              }}
-              style={{ ...inputSt }}
-            >
-              <option value="">— All students —</option>
-              {students.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.full_name || s.email}
-                </option>
-              ))}
-            </select>
+
+            {/* Tenant admin: My Reports / Team Reports toggle */}
+            {isTenantAdmin && (
+              <div style={{ display: 'flex', gap: 0, marginBottom: 12, border: '1px solid #e5e7eb', borderRadius: 8, overflow: 'hidden' }}>
+                <button
+                  onClick={() => setTeamView(false)}
+                  style={{
+                    flex: 1, padding: '6px 0', fontSize: '0.78rem', fontWeight: 600,
+                    border: 'none', cursor: 'pointer',
+                    background: !teamView ? '#4f46e5' : '#f9fafb',
+                    color: !teamView ? '#fff' : '#6b7280',
+                  }}
+                >
+                  My Reports
+                </button>
+                <button
+                  onClick={() => setTeamView(true)}
+                  style={{
+                    flex: 1, padding: '6px 0', fontSize: '0.78rem', fontWeight: 600,
+                    border: 'none', borderLeft: '1px solid #e5e7eb', cursor: 'pointer',
+                    background: teamView ? '#4f46e5' : '#f9fafb',
+                    color: teamView ? '#fff' : '#6b7280',
+                  }}
+                >
+                  Team Reports
+                </button>
+              </div>
+            )}
+
+            {/* Student filter — only in my-reports mode */}
+            {!teamView && (
+              <select
+                value={selectedStudentId ?? ''}
+                onChange={(e) => {
+                  const val = e.target.value ? parseInt(e.target.value, 10) : null
+                  setSelectedStudentId(val)
+                  setFormStudentId(val)
+                  setSelectedReport(null)
+                  setSentConfirm(null)
+                }}
+                style={{ ...inputSt }}
+              >
+                <option value="">— All students —</option>
+                {students.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.full_name || s.email}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           {/* Report list */}
           <div style={{ flex: 1, overflowY: 'auto' }}>
-            {reports.length === 0 ? (
+            {teamView && teamReportsLoading ? (
               <p style={{ padding: '24px 16px', fontSize: '0.82rem', color: '#9ca3af', textAlign: 'center' }}>
-                {selectedStudentId ? 'No reports yet for this student.' : 'Select a student to view their reports.'}
+                Loading team reports…
+              </p>
+            ) : activeReports.length === 0 ? (
+              <p style={{ padding: '24px 16px', fontSize: '0.82rem', color: '#9ca3af', textAlign: 'center' }}>
+                {teamView
+                  ? 'No team reports found.'
+                  : selectedStudentId
+                    ? 'No reports yet for this student.'
+                    : 'Select a student to view their reports.'}
               </p>
             ) : (
-              reports.map((r) => {
+              activeReports.map((r) => {
                 const student = students.find((s) => s.id === r.student_id)
                 const isSelected = selectedReport?.id === r.id
                 return (
@@ -517,6 +595,12 @@ function ReportsContent() {
                       </span>
                       <span style={badgeStyle(r.report_type)}>{REPORT_TYPE_LABELS[r.report_type]}</span>
                     </div>
+                    {/* Coach name — shown in team view */}
+                    {teamView && r.coach_name && (
+                      <div style={{ fontSize: '0.72rem', color: '#7c3aed', marginBottom: 2, fontWeight: 500 }}>
+                        {r.coach_name}
+                      </div>
+                    )}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <span style={{ fontSize: '0.78rem', color: '#6b7280' }}>{reportLabel(r)}</span>
                       {r.sent_at ? (
@@ -536,18 +620,31 @@ function ReportsContent() {
         <main style={{ flex: 1, overflowY: 'auto', padding: 24 }}>
           <div style={{ maxWidth: 760, margin: '0 auto' }}>
 
+            {/* Team view read-only banner */}
+            {teamView && selectedReport && (
+              <div style={{
+                background: '#f5f3ff', border: '1px solid #c4b5fd',
+                borderRadius: 8, padding: '10px 16px', marginBottom: 16,
+                fontSize: '0.82rem', color: '#6d28d9', display: 'flex', alignItems: 'center', gap: 8,
+              }}>
+                <span style={{ fontWeight: 700 }}>Read-only view</span>
+                {selectedReport.coach_name && <span>— authored by {selectedReport.coach_name}</span>}
+              </div>
+            )}
+
             {/* Report Type */}
             <div style={sectionSt}>
               <label style={labelSt}>Report Type</label>
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                 {(['single', 'multiple', 'note'] as const).map((t) => (
-                  <label key={t} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '0.875rem', color: '#374151' }}>
+                  <label key={t} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: teamView ? 'default' : 'pointer', fontSize: '0.875rem', color: '#374151' }}>
                     <input
                       type="radio"
                       name="report_type"
                       value={t}
                       checked={reportType === t}
-                      onChange={() => setReportType(t)}
+                      onChange={() => { if (!teamView) setReportType(t) }}
+                      disabled={teamView}
                       style={{ accentColor: '#4f46e5' }}
                     />
                     {REPORT_TYPE_LABELS[t]}
@@ -565,7 +662,8 @@ function ReportsContent() {
                   <label style={labelSt}>Student</label>
                   <select
                     value={formStudentId ?? ''}
-                    onChange={(e) => setFormStudentId(e.target.value ? parseInt(e.target.value, 10) : null)}
+                    onChange={(e) => { if (!teamView) setFormStudentId(e.target.value ? parseInt(e.target.value, 10) : null) }}
+                    disabled={teamView}
                     style={inputSt}
                   >
                     <option value="">— Select student —</option>
@@ -581,7 +679,8 @@ function ReportsContent() {
                     <label style={labelSt}>Appointment Type</label>
                     <select
                       value={appointmentType}
-                      onChange={(e) => setAppointmentType(e.target.value)}
+                      onChange={(e) => { if (!teamView) setAppointmentType(e.target.value) }}
+                      disabled={teamView}
                       style={inputSt}
                     >
                       {APPOINTMENT_TYPES.map((t) => (
@@ -596,11 +695,11 @@ function ReportsContent() {
                   <>
                     <div>
                       <label style={labelSt}>Date</label>
-                      <input type="date" value={appointmentDate} onChange={(e) => setAppointmentDate(e.target.value)} style={inputSt} />
+                      <input type="date" value={appointmentDate} onChange={(e) => { if (!teamView) setAppointmentDate(e.target.value) }} readOnly={teamView} style={inputSt} />
                     </div>
                     <div>
                       <label style={labelSt}>Time</label>
-                      <input type="time" value={appointmentTime} onChange={(e) => setAppointmentTime(e.target.value)} style={inputSt} />
+                      <input type="time" value={appointmentTime} onChange={(e) => { if (!teamView) setAppointmentTime(e.target.value) }} readOnly={teamView} style={inputSt} />
                     </div>
                     <div>
                       <label style={labelSt}>Duration (minutes)</label>
@@ -609,13 +708,14 @@ function ReportsContent() {
                           <button
                             key={d}
                             type="button"
-                            onClick={() => setAppointmentDuration(d)}
+                            disabled={teamView}
+                            onClick={() => { if (!teamView) setAppointmentDuration(d) }}
                             style={{
                               padding: '4px 10px', borderRadius: 6, border: '1px solid',
                               borderColor: appointmentDuration === d ? '#4f46e5' : '#e5e7eb',
                               background: appointmentDuration === d ? '#eef2ff' : '#fff',
                               color: appointmentDuration === d ? '#4f46e5' : '#6b7280',
-                              fontSize: '0.78rem', cursor: 'pointer', fontWeight: 600,
+                              fontSize: '0.78rem', cursor: teamView ? 'default' : 'pointer', fontWeight: 600,
                             }}
                           >
                             {d}
@@ -626,13 +726,14 @@ function ReportsContent() {
                         type="number"
                         placeholder="Custom"
                         value={appointmentDuration}
-                        onChange={(e) => setAppointmentDuration(e.target.value ? parseInt(e.target.value, 10) : '')}
+                        onChange={(e) => { if (!teamView) setAppointmentDuration(e.target.value ? parseInt(e.target.value, 10) : '') }}
+                        readOnly={teamView}
                         style={{ ...inputSt, width: 100 }}
                       />
                     </div>
                     <div>
                       <label style={labelSt}>Attended</label>
-                      <select value={attended} onChange={(e) => setAttended(e.target.value)} style={inputSt}>
+                      <select value={attended} onChange={(e) => { if (!teamView) setAttended(e.target.value) }} disabled={teamView} style={inputSt}>
                         {ATTENDED_OPTIONS.map((o) => (
                           <option key={o} value={o}>{o}</option>
                         ))}
@@ -646,18 +747,19 @@ function ReportsContent() {
                   <>
                     <div>
                       <label style={labelSt}>Start Date</label>
-                      <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={inputSt} />
+                      <input type="date" value={startDate} onChange={(e) => { if (!teamView) setStartDate(e.target.value) }} readOnly={teamView} style={inputSt} />
                     </div>
                     <div>
                       <label style={labelSt}>End Date</label>
-                      <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={inputSt} />
+                      <input type="date" value={endDate} onChange={(e) => { if (!teamView) setEndDate(e.target.value) }} readOnly={teamView} style={inputSt} />
                     </div>
                     <div>
                       <label style={labelSt}>Total Time (minutes)</label>
                       <input
                         type="number"
                         value={totalDuration}
-                        onChange={(e) => setTotalDuration(e.target.value ? parseInt(e.target.value, 10) : '')}
+                        onChange={(e) => { if (!teamView) setTotalDuration(e.target.value ? parseInt(e.target.value, 10) : '') }}
+                        readOnly={teamView}
                         style={{ ...inputSt, width: 120 }}
                       />
                     </div>
@@ -670,7 +772,8 @@ function ReportsContent() {
                   <input
                     type="text"
                     value={additionalEmails}
-                    onChange={(e) => setAdditionalEmails(e.target.value)}
+                    onChange={(e) => { if (!teamView) setAdditionalEmails(e.target.value) }}
+                    readOnly={teamView}
                     placeholder="parent@example.com, other@example.com"
                     style={inputSt}
                   />
@@ -685,38 +788,41 @@ function ReportsContent() {
                 <label style={labelSt}>Session notes (internal — not shared)</label>
                 <textarea
                   value={rawNotes}
-                  onChange={(e) => setRawNotes(e.target.value)}
+                  onChange={(e) => { if (!teamView) setRawNotes(e.target.value) }}
+                  readOnly={teamView}
                   rows={6}
                   placeholder="Type notes during the meeting…"
                   style={{ ...inputSt, resize: 'vertical', fontFamily: 'inherit' }}
                 />
               </div>
 
-              {/* Otter transcript collapsible */}
-              <div style={{ marginBottom: 16 }}>
-                <button
-                  type="button"
-                  onClick={() => setShowOtter((v) => !v)}
-                  style={{
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    fontSize: '0.82rem', color: '#6b7280', padding: 0, fontWeight: 600,
-                  }}
-                >
-                  {showOtter ? '▾ Hide Otter transcript' : '▸ Paste Otter transcript to draft with AI'}
-                </button>
-                {showOtter && (
-                  <textarea
-                    value={otterTranscript}
-                    onChange={(e) => setOtterTranscript(e.target.value)}
-                    rows={8}
-                    placeholder="Paste meeting transcript here…"
-                    style={{ ...inputSt, marginTop: 8, resize: 'vertical', fontFamily: 'monospace', fontSize: '0.78rem' }}
-                  />
-                )}
-              </div>
+              {/* Otter transcript collapsible — hidden in team view */}
+              {!teamView && (
+                <div style={{ marginBottom: 16 }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowOtter((v) => !v)}
+                    style={{
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      fontSize: '0.82rem', color: '#6b7280', padding: 0, fontWeight: 600,
+                    }}
+                  >
+                    {showOtter ? '▾ Hide Otter transcript' : '▸ Paste Otter transcript to draft with AI'}
+                  </button>
+                  {showOtter && (
+                    <textarea
+                      value={otterTranscript}
+                      onChange={(e) => setOtterTranscript(e.target.value)}
+                      rows={8}
+                      placeholder="Paste meeting transcript here…"
+                      style={{ ...inputSt, marginTop: 8, resize: 'vertical', fontFamily: 'monospace', fontSize: '0.78rem' }}
+                    />
+                  )}
+                </div>
+              )}
 
-              {/* AI Draft button */}
-              {(rawNotes || otterTranscript) && (
+              {/* AI Draft button — hidden in team view */}
+              {!teamView && (rawNotes || otterTranscript) && (
                 <button
                   type="button"
                   onClick={handleDraft}
@@ -743,7 +849,8 @@ function ReportsContent() {
                 <label style={labelSt}>Shared notes (sent to student &amp; parent)</label>
                 <textarea
                   value={sharedNotes}
-                  onChange={(e) => setSharedNotes(e.target.value)}
+                  onChange={(e) => { if (!teamView) setSharedNotes(e.target.value) }}
+                  readOnly={teamView}
                   rows={10}
                   placeholder="Notes that will be emailed to the student (and parent if enabled)…"
                   style={{ ...inputSt, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.6 }}
@@ -755,7 +862,8 @@ function ReportsContent() {
                 <label style={labelSt}>Internal notes (coach &amp; team only)</label>
                 <textarea
                   value={internalNotes}
-                  onChange={(e) => setInternalNotes(e.target.value)}
+                  onChange={(e) => { if (!teamView) setInternalNotes(e.target.value) }}
+                  readOnly={teamView}
                   rows={5}
                   placeholder="Private notes for the coach and team lead — never shared…"
                   style={{ ...inputSt, resize: 'vertical', fontFamily: 'inherit' }}
@@ -763,57 +871,59 @@ function ReportsContent() {
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 24 }}>
-              <button
-                type="button"
-                onClick={() => saveDraft()}
-                disabled={saving}
-                style={{
-                  background: '#fff', color: '#374151', border: '1px solid #d1d5db',
-                  borderRadius: 8, padding: '9px 18px', fontSize: '0.875rem',
-                  fontWeight: 600, cursor: saving ? 'wait' : 'pointer',
-                }}
-              >
-                {saving ? 'Saving…' : 'Save Draft'}
-              </button>
-
-              <button
-                type="button"
-                onClick={handleSend}
-                disabled={saving || sending}
-                style={{
-                  background: (saving || sending) ? '#d97706' : '#b45309',
-                  color: '#fff', border: 'none',
-                  borderRadius: 8, padding: '9px 18px', fontSize: '0.875rem',
-                  fontWeight: 600, cursor: (saving || sending) ? 'wait' : 'pointer',
-                }}
-              >
-                {sending ? 'Sending…' : 'Save & Send'}
-              </button>
-
-              {selectedReport && (
+            {/* Action Buttons — hidden in team view */}
+            {!teamView && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 24 }}>
                 <button
                   type="button"
-                  onClick={handleDelete}
+                  onClick={() => saveDraft()}
+                  disabled={saving}
                   style={{
-                    background: '#fff', color: '#dc2626', border: '1px solid #fca5a5',
+                    background: '#fff', color: '#374151', border: '1px solid #d1d5db',
                     borderRadius: 8, padding: '9px 18px', fontSize: '0.875rem',
-                    fontWeight: 600, cursor: 'pointer', marginLeft: 'auto',
+                    fontWeight: 600, cursor: saving ? 'wait' : 'pointer',
                   }}
                 >
-                  Delete
+                  {saving ? 'Saving…' : 'Save Draft'}
                 </button>
-              )}
-            </div>
+
+                <button
+                  type="button"
+                  onClick={handleSend}
+                  disabled={saving || sending}
+                  style={{
+                    background: (saving || sending) ? '#d97706' : '#b45309',
+                    color: '#fff', border: 'none',
+                    borderRadius: 8, padding: '9px 18px', fontSize: '0.875rem',
+                    fontWeight: 600, cursor: (saving || sending) ? 'wait' : 'pointer',
+                  }}
+                >
+                  {sending ? 'Sending…' : 'Save & Send'}
+                </button>
+
+                {selectedReport && (
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    style={{
+                      background: '#fff', color: '#dc2626', border: '1px solid #fca5a5',
+                      borderRadius: 8, padding: '9px 18px', fontSize: '0.875rem',
+                      fontWeight: 600, cursor: 'pointer', marginLeft: 'auto',
+                    }}
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Feedback messages */}
-            {saveMsg && (
+            {!teamView && saveMsg && (
               <p style={{ fontSize: '0.875rem', color: saveMsg.includes('fail') || saveMsg.includes('error') ? '#dc2626' : '#059669', marginBottom: 12 }}>
                 {saveMsg}
               </p>
             )}
-            {sentConfirm && (
+            {!teamView && sentConfirm && (
               <div style={{
                 background: sentConfirm.startsWith('Sent') ? '#f0fdf4' : '#fef2f2',
                 border: `1px solid ${sentConfirm.startsWith('Sent') ? '#bbf7d0' : '#fecaca'}`,
