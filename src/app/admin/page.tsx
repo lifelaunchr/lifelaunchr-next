@@ -119,32 +119,36 @@ export default function AdminPage() {
       // Default tab: tenant-only users land on Tenant Settings
       if (!superAdmin && !admin && tenantAdmin) setTab('tenant')
 
-      const fetches: Promise<void>[] = []
+      const wrap = (label: string, p: Promise<unknown>) =>
+        p.catch(e => { console.error(`[admin] ${label} failed:`, e); throw e })
+
+      const fetches: Promise<unknown>[] = []
 
       if (admin || superAdmin) {
         fetches.push(
-          fetch(`${apiUrl}/admin/users-all`, { headers })
-            .then(r => r.ok ? r.json() : []).then(setUsers),
-          fetch(`${apiUrl}/admin/tiers`, { headers })
-            .then(r => r.ok ? r.json() : []).then(setTiers),
+          wrap('users-all', fetch(`${apiUrl}/admin/users-all`, { headers })
+            .then(r => { console.log('[admin] users-all status', r.status); return r.ok ? r.json() : [] }).then(setUsers)),
+          wrap('tiers', fetch(`${apiUrl}/admin/tiers`, { headers })
+            .then(r => { console.log('[admin] tiers status', r.status); return r.ok ? r.json() : [] }).then(setTiers)),
         )
       }
 
       if (superAdmin) {
         fetches.push(
-          fetch(`${apiUrl}/admin/tenants`, { headers })
-            .then(r => r.ok ? r.json() : []).then(setTenants),
+          wrap('tenants', fetch(`${apiUrl}/admin/tenants`, { headers })
+            .then(r => { console.log('[admin] tenants status', r.status); return r.ok ? r.json() : [] }).then(setTenants)),
         )
       }
 
       fetches.push(
-        fetch(`${apiUrl}/admin/my-tenant`, { headers })
-          .then(r => r.ok ? r.json() : null)
-          .then(t => { if (t) { setTenantSettings(t); setTenantCCEmails(t.session_report_cc_emails || '') } })
+        wrap('my-tenant', fetch(`${apiUrl}/admin/my-tenant`, { headers })
+          .then(r => { console.log('[admin] my-tenant status', r.status); return r.ok ? r.json() : null })
+          .then(t => { if (t) { setTenantSettings(t); setTenantCCEmails(t.session_report_cc_emails || '') } }))
       )
 
       await Promise.all(fetches)
-    } catch {
+    } catch (e) {
+      console.error('[admin] load failed:', e)
       setError('Failed to load admin data.')
     }
     setLoading(false)
