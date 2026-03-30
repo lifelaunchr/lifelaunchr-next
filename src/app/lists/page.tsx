@@ -1744,7 +1744,7 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
         })
         if (res.ok) {
           const data = await res.json()
-          setDeadlines(data.deadlines || [])
+          setDeadlines(Array.isArray(data) ? data : (data.deadlines || []))
         }
       } catch { /* ignore */ }
     }
