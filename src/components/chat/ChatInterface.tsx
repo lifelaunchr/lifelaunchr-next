@@ -843,17 +843,13 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                   </Link>
                   <Link
                     href={`/lists?for=${forStudentId}`}
-                    className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                    className="flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
                   >
-                    <span className="text-base leading-none">🎓</span>
-                    <span>College Lists</span>
-                  </Link>
-                  <Link
-                    href={`/lists?for=${forStudentId}&tab=scholarships`}
-                    className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
-                  >
-                    <span className="text-base leading-none">🏅</span>
-                    <span>Scholarships</span>
+                    <span className="text-base leading-none flex-shrink-0">📋</span>
+                    <span className="flex flex-col min-w-0">
+                      <span className="text-sm leading-tight">Lists</span>
+                      <span className="text-[10px] text-slate-500 leading-tight truncate">colleges · scholarships · programs</span>
+                    </span>
                   </Link>
                 </>
               )}
@@ -885,7 +881,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                 </div>
               )}
 
-              {/* Activities + College Lists + Scholarships — students only */}
+              {/* Activities + My Lists — students only */}
               {!isCounselor && !isParent && (
                 <>
                   <Link
@@ -897,17 +893,13 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                   </Link>
                   <Link
                     href="/lists"
-                    className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                    className="flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
                   >
-                    <span className="text-base leading-none">🎓</span>
-                    <span>My College Lists</span>
-                  </Link>
-                  <Link
-                    href="/lists?tab=scholarships"
-                    className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
-                  >
-                    <span className="text-base leading-none">🏅</span>
-                    <span>My Scholarships</span>
+                    <span className="text-base leading-none flex-shrink-0">📋</span>
+                    <span className="flex flex-col min-w-0">
+                      <span className="text-sm leading-tight">My Lists</span>
+                      <span className="text-[10px] text-slate-500 leading-tight truncate">colleges · scholarships · programs</span>
+                    </span>
                   </Link>
                 </>
               )}
