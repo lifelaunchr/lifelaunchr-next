@@ -142,11 +142,18 @@ function ReportsContent() {
   const [internalNotes, setInternalNotes] = useState('')
   const [showOtter, setShowOtter] = useState(false)
 
+  // Sent read-only / edit-resend state
+  const [editResendMode, setEditResendMode] = useState(false)
+  const [resending, setResending] = useState(false)
+  const [resendConfirm, setResendConfirm] = useState<string | null>(null)
+  const [saveResending, setSaveResending] = useState(false)
+
   // UI state
   const [drafting, setDrafting] = useState(false)
   const [saving, setSaving] = useState(false)
   const [sending, setSending] = useState(false)
-  const [sentConfirm, setSentConfirm] = useState<string | null>(null)
+  const [sentBanner, setSentBanner] = useState<string | null>(null)   // top green banner after send
+  const [sentConfirm, setSentConfirm] = useState<string | null>(null) // error feedback only now
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
   const [mobileShowList, setMobileShowList] = useState(true)
 
@@ -251,12 +258,14 @@ function ReportsContent() {
     setShowOtter(false)
     setSentConfirm(null)
     setSaveMsg(null)
+    setEditResendMode(false)
+    setResendConfirm(null)
   }
 
   const resetForm = () => {
     setReportType('single')
     setFormStudentId(selectedStudentId)
-    setAppointmentType('College Admissions Coaching')
+    // Keep appointmentType (coaches run same type back-to-back)
     setAppointmentDate('')
     setAppointmentTime('')
     setAppointmentDuration('')
@@ -273,6 +282,8 @@ function ReportsContent() {
     setSelectedReport(null)
     setSentConfirm(null)
     setSaveMsg(null)
+    setEditResendMode(false)
+    setResendConfirm(null)
   }
 
   // ── AI Draft ───────────────────────────────────────────────────────────────
@@ -356,7 +367,7 @@ function ReportsContent() {
         const saved: SessionReport = await res.json()
         setSelectedReport(saved)
         setSaveMsg('Draft saved.')
-        setTimeout(() => setSaveMsg(null), 2500)
+        setTimeout(() => setSaveMsg(null), 2000)
         await loadReports(selectedStudentId)
         return saved
       } else {
@@ -385,15 +396,16 @@ function ReportsContent() {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (res.ok) {
-        const data = await res.json()
-        const recipStr = (data.recipients as string[]).join(', ')
-        setSentConfirm(`Sent to ${recipStr}`)
+        // Show green banner with student name
+        const student = students.find((s) => s.id === formStudentId)
+        const studentName = student?.preferred_name || student?.full_name || 'student'
+        setSentBanner(`Report sent to ${studentName}`)
+        setTimeout(() => setSentBanner(null), 3000)
         await loadReports(selectedStudentId)
-        // Reload the report to get sent_at
-        const fresh = await fetch(`${apiUrl}/session-reports/${saved.id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        if (fresh.ok) setSelectedReport(await fresh.json())
+        // Reset form but keep student selected
+        const keptAppointmentType = appointmentType
+        resetForm()
+        setAppointmentType(keptAppointmentType)
       } else {
         const err = await res.json().catch(() => ({}))
         setSentConfirm(`Send failed: ${err.detail || res.statusText}`)
@@ -402,6 +414,76 @@ function ReportsContent() {
       setSentConfirm('Network error during send.')
     } finally {
       setSending(false)
+    }
+  }
+
+  // ── Resend (sent report — no edits) ───────────────────────────────────────
+
+  const handleResend = async () => {
+    if (!selectedReport) return
+    setResending(true)
+    setResendConfirm(null)
+    try {
+      const token = await getToken()
+      const res = await fetch(`${apiUrl}/session-reports/${selectedReport.id}/send`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        setResendConfirm('Resent')
+        setTimeout(() => setResendConfirm(null), 2500)
+      } else {
+        const err = await res.json().catch(() => ({}))
+        setResendConfirm(`Resend failed: ${err.detail || res.statusText}`)
+      }
+    } catch {
+      setResendConfirm('Network error.')
+    } finally {
+      setResending(false)
+    }
+  }
+
+  // ── Save & Resend (edit-resend mode) ──────────────────────────────────────
+
+  const handleSaveResend = async () => {
+    if (!selectedReport) return
+    setSaveResending(true)
+    setSentConfirm(null)
+    try {
+      const token = await getToken()
+      // PATCH first
+      const patchRes = await fetch(`${apiUrl}/session-reports/${selectedReport.id}`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(buildPayload()),
+      })
+      if (!patchRes.ok) {
+        const err = await patchRes.json().catch(() => ({}))
+        setSentConfirm(`Save failed: ${err.detail || patchRes.statusText}`)
+        return
+      }
+      // Then send
+      const sendRes = await fetch(`${apiUrl}/session-reports/${selectedReport.id}/send`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (sendRes.ok) {
+        const student = students.find((s) => s.id === formStudentId)
+        const studentName = student?.preferred_name || student?.full_name || 'student'
+        setSentBanner(`Report sent to ${studentName}`)
+        setTimeout(() => setSentBanner(null), 3000)
+        await loadReports(selectedStudentId)
+        const keptAppointmentType = appointmentType
+        resetForm()
+        setAppointmentType(keptAppointmentType)
+      } else {
+        const err = await sendRes.json().catch(() => ({}))
+        setSentConfirm(`Send failed: ${err.detail || sendRes.statusText}`)
+      }
+    } catch {
+      setSentConfirm('Network error.')
+    } finally {
+      setSaveResending(false)
     }
   }
 
@@ -421,12 +503,21 @@ function ReportsContent() {
     } catch { /* ignore */ }
   }
 
+  // ── Derived view flags ──────────────────────────────────────────────────────
+
+  const isSentReport = !teamView && Boolean(selectedReport?.sent_at)
+  const isReadOnly = teamView || (isSentReport && !editResendMode)
+
   // ── Styles ─────────────────────────────────────────────────────────────────
 
   const inputSt: React.CSSProperties = {
     width: '100%', border: '1px solid #e5e7eb', borderRadius: 8,
     padding: '7px 11px', fontSize: '0.875rem', outline: 'none',
     boxSizing: 'border-box', background: '#fff', color: '#111827',
+  }
+  const inputDisabledSt: React.CSSProperties = {
+    ...inputSt,
+    background: '#f9fafb', color: '#6b7280', cursor: 'not-allowed',
   }
   const labelSt: React.CSSProperties = {
     display: 'block', fontSize: '0.75rem', fontWeight: 600,
@@ -576,6 +667,7 @@ function ReportsContent() {
               activeReports.map((r) => {
                 const student = students.find((s) => s.id === r.student_id)
                 const isSelected = selectedReport?.id === r.id
+                const isSent = Boolean(r.sent_at)
                 return (
                   <button
                     key={r.id}
@@ -583,17 +675,16 @@ function ReportsContent() {
                     style={{
                       display: 'block', width: '100%', textAlign: 'left',
                       padding: '12px 16px', border: 'none', borderBottom: '1px solid #f3f4f6',
+                      borderLeft: isSelected ? '3px solid #4f46e5' : '3px solid transparent',
                       background: isSelected ? '#eef2ff' : 'transparent', cursor: 'pointer',
                       transition: 'background 0.1s',
                     }}
                     onMouseOver={(e) => { if (!isSelected) e.currentTarget.style.background = '#f9fafb' }}
                     onMouseOut={(e) => { if (!isSelected) e.currentTarget.style.background = 'transparent' }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
-                      <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#111827', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {student?.full_name || student?.email || `Student #${r.student_id}`}
-                      </span>
-                      <span style={badgeStyle(r.report_type)}>{REPORT_TYPE_LABELS[r.report_type]}</span>
+                    {/* Student name */}
+                    <div style={{ fontWeight: 700, fontSize: '0.875rem', color: '#111827', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {student?.full_name || student?.email || `Student #${r.student_id}`}
                     </div>
                     {/* Coach name — shown in team view */}
                     {teamView && r.coach_name && (
@@ -601,12 +692,32 @@ function ReportsContent() {
                         {r.coach_name}
                       </div>
                     )}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: '0.78rem', color: '#6b7280' }}>{reportLabel(r)}</span>
-                      {r.sent_at ? (
-                        <span style={{ fontSize: '0.7rem', color: '#059669', fontWeight: 600 }}>✓ Sent</span>
+                    {/* Date */}
+                    <div style={{ fontSize: '0.78rem', color: '#6b7280', marginBottom: 4 }}>
+                      {reportLabel(r)}
+                    </div>
+                    {/* Type + status row */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                      <span style={{ fontSize: '0.7rem', color: '#6b7280' }}>
+                        {REPORT_TYPE_LABELS[r.report_type]}
+                        {r.appointment_type ? ` · ${r.appointment_type}` : ''}
+                      </span>
+                      {isSent ? (
+                        <span style={{
+                          fontSize: '0.68rem', fontWeight: 700, color: '#15803d',
+                          background: '#dcfce7', borderRadius: 20, padding: '2px 8px',
+                          flexShrink: 0,
+                        }}>
+                          Sent
+                        </span>
                       ) : (
-                        <span style={{ fontSize: '0.7rem', color: '#d97706' }}>Draft</span>
+                        <span style={{
+                          fontSize: '0.68rem', fontWeight: 600, color: '#6b7280',
+                          background: '#f3f4f6', borderRadius: 20, padding: '2px 8px',
+                          flexShrink: 0,
+                        }}>
+                          Draft
+                        </span>
                       )}
                     </div>
                   </button>
@@ -620,6 +731,18 @@ function ReportsContent() {
         <main style={{ flex: 1, overflowY: 'auto', padding: 24 }}>
           <div style={{ maxWidth: 760, margin: '0 auto' }}>
 
+            {/* Post-send green banner */}
+            {sentBanner && (
+              <div style={{
+                background: '#f0fdf4', border: '1px solid #bbf7d0',
+                borderRadius: 8, padding: '12px 16px', marginBottom: 16,
+                fontSize: '0.875rem', color: '#15803d', fontWeight: 600,
+                display: 'flex', alignItems: 'center', gap: 8,
+              }}>
+                ✓ {sentBanner}
+              </div>
+            )}
+
             {/* Team view read-only banner */}
             {teamView && selectedReport && (
               <div style={{
@@ -632,19 +755,48 @@ function ReportsContent() {
               </div>
             )}
 
+            {/* Sent read-only banner (own sent report) */}
+            {isSentReport && !editResendMode && (
+              <div style={{
+                background: '#f9fafb', border: '1px solid #d1d5db',
+                borderRadius: 8, padding: '10px 16px', marginBottom: 16,
+                fontSize: '0.82rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: 8,
+              }}>
+                <span style={{
+                  background: '#e5e7eb', color: '#374151', borderRadius: 4,
+                  padding: '2px 10px', fontWeight: 700, fontSize: '0.78rem',
+                }}>
+                  Sent on {fmtDate(selectedReport?.sent_at?.slice(0, 10))}
+                </span>
+                <span>This report has been sent and is read-only.</span>
+              </div>
+            )}
+
+            {/* Edit-resend mode banner */}
+            {isSentReport && editResendMode && (
+              <div style={{
+                background: '#fffbeb', border: '1px solid #fcd34d',
+                borderRadius: 8, padding: '10px 16px', marginBottom: 16,
+                fontSize: '0.82rem', color: '#92400e', fontWeight: 600,
+                display: 'flex', alignItems: 'center', gap: 8,
+              }}>
+                Editing sent report — click Save &amp; Resend when done.
+              </div>
+            )}
+
             {/* Report Type */}
             <div style={sectionSt}>
               <label style={labelSt}>Report Type</label>
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                 {(['single', 'multiple', 'note'] as const).map((t) => (
-                  <label key={t} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: teamView ? 'default' : 'pointer', fontSize: '0.875rem', color: '#374151' }}>
+                  <label key={t} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: isReadOnly ? 'default' : 'pointer', fontSize: '0.875rem', color: '#374151' }}>
                     <input
                       type="radio"
                       name="report_type"
                       value={t}
                       checked={reportType === t}
-                      onChange={() => { if (!teamView) setReportType(t) }}
-                      disabled={teamView}
+                      onChange={() => { if (!isReadOnly) setReportType(t) }}
+                      disabled={isReadOnly}
                       style={{ accentColor: '#4f46e5' }}
                     />
                     {REPORT_TYPE_LABELS[t]}
@@ -662,9 +814,9 @@ function ReportsContent() {
                   <label style={labelSt}>Student</label>
                   <select
                     value={formStudentId ?? ''}
-                    onChange={(e) => { if (!teamView) setFormStudentId(e.target.value ? parseInt(e.target.value, 10) : null) }}
-                    disabled={teamView}
-                    style={inputSt}
+                    onChange={(e) => { if (!isReadOnly) setFormStudentId(e.target.value ? parseInt(e.target.value, 10) : null) }}
+                    disabled={isReadOnly}
+                    style={isReadOnly ? inputDisabledSt : inputSt}
                   >
                     <option value="">— Select student —</option>
                     {students.map((s) => (
@@ -679,9 +831,9 @@ function ReportsContent() {
                     <label style={labelSt}>Appointment Type</label>
                     <select
                       value={appointmentType}
-                      onChange={(e) => { if (!teamView) setAppointmentType(e.target.value) }}
-                      disabled={teamView}
-                      style={inputSt}
+                      onChange={(e) => { if (!isReadOnly) setAppointmentType(e.target.value) }}
+                      disabled={isReadOnly}
+                      style={isReadOnly ? inputDisabledSt : inputSt}
                     >
                       {APPOINTMENT_TYPES.map((t) => (
                         <option key={t} value={t}>{t}</option>
@@ -695,11 +847,12 @@ function ReportsContent() {
                   <>
                     <div>
                       <label style={labelSt}>Date</label>
-                      <input type="date" value={appointmentDate} onChange={(e) => { if (!teamView) setAppointmentDate(e.target.value) }} readOnly={teamView} style={inputSt} />
+                      <input type="date" value={appointmentDate} onChange={(e) => { if (!isReadOnly) setAppointmentDate(e.target.value) }} readOnly={isReadOnly} style={isReadOnly ? inputDisabledSt : inputSt} />
                     </div>
+
                     <div>
                       <label style={labelSt}>Time</label>
-                      <input type="time" value={appointmentTime} onChange={(e) => { if (!teamView) setAppointmentTime(e.target.value) }} readOnly={teamView} style={inputSt} />
+                      <input type="time" value={appointmentTime} onChange={(e) => { if (!isReadOnly) setAppointmentTime(e.target.value) }} readOnly={isReadOnly} style={isReadOnly ? inputDisabledSt : inputSt} />
                     </div>
                     <div>
                       <label style={labelSt}>Duration (minutes)</label>
@@ -708,14 +861,14 @@ function ReportsContent() {
                           <button
                             key={d}
                             type="button"
-                            disabled={teamView}
-                            onClick={() => { if (!teamView) setAppointmentDuration(d) }}
+                            disabled={isReadOnly}
+                            onClick={() => { if (!isReadOnly) setAppointmentDuration(d) }}
                             style={{
                               padding: '4px 10px', borderRadius: 6, border: '1px solid',
                               borderColor: appointmentDuration === d ? '#4f46e5' : '#e5e7eb',
                               background: appointmentDuration === d ? '#eef2ff' : '#fff',
                               color: appointmentDuration === d ? '#4f46e5' : '#6b7280',
-                              fontSize: '0.78rem', cursor: teamView ? 'default' : 'pointer', fontWeight: 600,
+                              fontSize: '0.78rem', cursor: isReadOnly ? 'default' : 'pointer', fontWeight: 600,
                             }}
                           >
                             {d}
@@ -726,14 +879,14 @@ function ReportsContent() {
                         type="number"
                         placeholder="Custom"
                         value={appointmentDuration}
-                        onChange={(e) => { if (!teamView) setAppointmentDuration(e.target.value ? parseInt(e.target.value, 10) : '') }}
-                        readOnly={teamView}
-                        style={{ ...inputSt, width: 100 }}
+                        onChange={(e) => { if (!isReadOnly) setAppointmentDuration(e.target.value ? parseInt(e.target.value, 10) : '') }}
+                        readOnly={isReadOnly}
+                        style={{ ...(isReadOnly ? inputDisabledSt : inputSt), width: 100 }}
                       />
                     </div>
                     <div>
                       <label style={labelSt}>Attended</label>
-                      <select value={attended} onChange={(e) => { if (!teamView) setAttended(e.target.value) }} disabled={teamView} style={inputSt}>
+                      <select value={attended} onChange={(e) => { if (!isReadOnly) setAttended(e.target.value) }} disabled={isReadOnly} style={isReadOnly ? inputDisabledSt : inputSt}>
                         {ATTENDED_OPTIONS.map((o) => (
                           <option key={o} value={o}>{o}</option>
                         ))}
@@ -747,20 +900,20 @@ function ReportsContent() {
                   <>
                     <div>
                       <label style={labelSt}>Start Date</label>
-                      <input type="date" value={startDate} onChange={(e) => { if (!teamView) setStartDate(e.target.value) }} readOnly={teamView} style={inputSt} />
+                      <input type="date" value={startDate} onChange={(e) => { if (!isReadOnly) setStartDate(e.target.value) }} readOnly={isReadOnly} style={isReadOnly ? inputDisabledSt : inputSt} />
                     </div>
                     <div>
                       <label style={labelSt}>End Date</label>
-                      <input type="date" value={endDate} onChange={(e) => { if (!teamView) setEndDate(e.target.value) }} readOnly={teamView} style={inputSt} />
+                      <input type="date" value={endDate} onChange={(e) => { if (!isReadOnly) setEndDate(e.target.value) }} readOnly={isReadOnly} style={isReadOnly ? inputDisabledSt : inputSt} />
                     </div>
                     <div>
                       <label style={labelSt}>Total Time (minutes)</label>
                       <input
                         type="number"
                         value={totalDuration}
-                        onChange={(e) => { if (!teamView) setTotalDuration(e.target.value ? parseInt(e.target.value, 10) : '') }}
-                        readOnly={teamView}
-                        style={{ ...inputSt, width: 120 }}
+                        onChange={(e) => { if (!isReadOnly) setTotalDuration(e.target.value ? parseInt(e.target.value, 10) : '') }}
+                        readOnly={isReadOnly}
+                        style={{ ...(isReadOnly ? inputDisabledSt : inputSt), width: 120 }}
                       />
                     </div>
                   </>
@@ -772,10 +925,10 @@ function ReportsContent() {
                   <input
                     type="text"
                     value={additionalEmails}
-                    onChange={(e) => { if (!teamView) setAdditionalEmails(e.target.value) }}
-                    readOnly={teamView}
+                    onChange={(e) => { if (!isReadOnly) setAdditionalEmails(e.target.value) }}
+                    readOnly={isReadOnly}
                     placeholder="parent@example.com, other@example.com"
-                    style={inputSt}
+                    style={isReadOnly ? inputDisabledSt : inputSt}
                   />
                 </div>
               </div>
@@ -788,16 +941,16 @@ function ReportsContent() {
                 <label style={labelSt}>Session notes (internal — not shared)</label>
                 <textarea
                   value={rawNotes}
-                  onChange={(e) => { if (!teamView) setRawNotes(e.target.value) }}
-                  readOnly={teamView}
+                  onChange={(e) => { if (!isReadOnly) setRawNotes(e.target.value) }}
+                  readOnly={isReadOnly}
                   rows={6}
                   placeholder="Type notes during the meeting…"
-                  style={{ ...inputSt, resize: 'vertical', fontFamily: 'inherit' }}
+                  style={{ ...(isReadOnly ? inputDisabledSt : inputSt), resize: 'vertical', fontFamily: 'inherit' }}
                 />
               </div>
 
-              {/* Otter transcript collapsible — hidden in team view */}
-              {!teamView && (
+              {/* Otter transcript collapsible — hidden in team view and sent read-only */}
+              {!isReadOnly && (
                 <div style={{ marginBottom: 16 }}>
                   <button
                     type="button"
@@ -821,8 +974,8 @@ function ReportsContent() {
                 </div>
               )}
 
-              {/* AI Draft button — hidden in team view */}
-              {!teamView && (rawNotes || otterTranscript) && (
+              {/* AI Draft button — hidden in read-only */}
+              {!isReadOnly && (rawNotes || otterTranscript) && (
                 <button
                   type="button"
                   onClick={handleDraft}
@@ -849,11 +1002,11 @@ function ReportsContent() {
                 <label style={labelSt}>Shared notes (sent to student &amp; parent)</label>
                 <textarea
                   value={sharedNotes}
-                  onChange={(e) => { if (!teamView) setSharedNotes(e.target.value) }}
-                  readOnly={teamView}
+                  onChange={(e) => { if (!isReadOnly) setSharedNotes(e.target.value) }}
+                  readOnly={isReadOnly}
                   rows={10}
                   placeholder="Notes that will be emailed to the student (and parent if enabled)…"
-                  style={{ ...inputSt, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.6 }}
+                  style={{ ...(isReadOnly ? inputDisabledSt : inputSt), resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.6 }}
                 />
               </div>
 
@@ -862,17 +1015,90 @@ function ReportsContent() {
                 <label style={labelSt}>Internal notes (coach &amp; team only)</label>
                 <textarea
                   value={internalNotes}
-                  onChange={(e) => { if (!teamView) setInternalNotes(e.target.value) }}
-                  readOnly={teamView}
+                  onChange={(e) => { if (!isReadOnly) setInternalNotes(e.target.value) }}
+                  readOnly={isReadOnly}
                   rows={5}
                   placeholder="Private notes for the coach and team lead — never shared…"
-                  style={{ ...inputSt, resize: 'vertical', fontFamily: 'inherit' }}
+                  style={{ ...(isReadOnly ? inputDisabledSt : inputSt), resize: 'vertical', fontFamily: 'inherit' }}
                 />
               </div>
             </div>
 
-            {/* Action Buttons — hidden in team view */}
-            {!teamView && (
+            {/* Action Buttons */}
+
+            {/* Case 1: Sent report — read-only, show Resend + Edit & Resend */}
+            {isSentReport && !editResendMode && !teamView && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 24 }}>
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={resending}
+                  style={{
+                    background: '#fff', color: '#374151',
+                    border: '1px solid #d1d5db', borderRadius: 8,
+                    padding: '9px 18px', fontSize: '0.875rem',
+                    fontWeight: 600, cursor: resending ? 'wait' : 'pointer',
+                  }}
+                >
+                  {resending ? 'Resending…' : 'Resend'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditResendMode(true)}
+                  style={{
+                    background: '#4f46e5', color: '#fff',
+                    border: 'none', borderRadius: 8,
+                    padding: '9px 18px', fontSize: '0.875rem',
+                    fontWeight: 600, cursor: 'pointer',
+                  }}
+                >
+                  Edit &amp; Resend
+                </button>
+                {resendConfirm && (
+                  <span style={{
+                    fontSize: '0.875rem',
+                    color: resendConfirm.startsWith('Resent') ? '#15803d' : '#dc2626',
+                    fontWeight: 600,
+                  }}>
+                    {resendConfirm.startsWith('Resent') ? '✓ ' : '✗ '}{resendConfirm}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Case 2: Edit-resend mode — show Save & Resend */}
+            {isSentReport && editResendMode && !teamView && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 24 }}>
+                <button
+                  type="button"
+                  onClick={handleSaveResend}
+                  disabled={saveResending}
+                  style={{
+                    background: saveResending ? '#d97706' : '#b45309',
+                    color: '#fff', border: 'none',
+                    borderRadius: 8, padding: '9px 18px', fontSize: '0.875rem',
+                    fontWeight: 600, cursor: saveResending ? 'wait' : 'pointer',
+                  }}
+                >
+                  {saveResending ? 'Saving & Sending…' : 'Save & Resend'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditResendMode(false)}
+                  style={{
+                    background: '#fff', color: '#6b7280',
+                    border: '1px solid #d1d5db', borderRadius: 8,
+                    padding: '9px 18px', fontSize: '0.875rem',
+                    fontWeight: 600, cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+
+            {/* Case 3: Draft / new report — show Save Draft + Save & Send */}
+            {!isSentReport && !teamView && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 24 }}>
                 <button
                   type="button"
@@ -914,23 +1140,28 @@ function ReportsContent() {
                     Delete
                   </button>
                 )}
+
+                {/* Save Draft inline feedback */}
+                {saveMsg && (
+                  <span style={{
+                    fontSize: '0.875rem',
+                    color: saveMsg.includes('fail') || saveMsg.includes('error') || saveMsg.includes('Select') ? '#dc2626' : '#6b7280',
+                  }}>
+                    {saveMsg}
+                  </span>
+                )}
               </div>
             )}
 
-            {/* Feedback messages */}
-            {!teamView && saveMsg && (
-              <p style={{ fontSize: '0.875rem', color: saveMsg.includes('fail') || saveMsg.includes('error') ? '#dc2626' : '#059669', marginBottom: 12 }}>
-                {saveMsg}
-              </p>
-            )}
+            {/* Send error feedback */}
             {!teamView && sentConfirm && (
               <div style={{
-                background: sentConfirm.startsWith('Sent') ? '#f0fdf4' : '#fef2f2',
-                border: `1px solid ${sentConfirm.startsWith('Sent') ? '#bbf7d0' : '#fecaca'}`,
+                background: '#fef2f2',
+                border: '1px solid #fecaca',
                 borderRadius: 8, padding: '12px 16px', fontSize: '0.875rem',
-                color: sentConfirm.startsWith('Sent') ? '#15803d' : '#dc2626', marginBottom: 16,
+                color: '#dc2626', marginBottom: 16,
               }}>
-                {sentConfirm.startsWith('Sent') ? '✓ ' : '✗ '}{sentConfirm}
+                ✗ {sentConfirm}
               </div>
             )}
 
