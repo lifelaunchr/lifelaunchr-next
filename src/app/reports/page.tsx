@@ -686,8 +686,8 @@ function ReportsContent() {
                     <div style={{ fontWeight: 700, fontSize: '0.875rem', color: '#111827', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {student?.full_name || student?.email || `Student #${r.student_id}`}
                     </div>
-                    {/* Coach name — shown in team view */}
-                    {teamView && r.coach_name && (
+                    {/* Coach name */}
+                    {r.coach_name && (
                       <div style={{ fontSize: '0.72rem', color: '#7c3aed', marginBottom: 2, fontWeight: 500 }}>
                         {r.coach_name}
                       </div>
