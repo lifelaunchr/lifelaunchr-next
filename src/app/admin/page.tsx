@@ -146,7 +146,11 @@ export default function AdminPage() {
           .then(t => { if (t) { setTenantSettings(t); setTenantCCEmails(t.session_report_cc_emails || '') } }))
       )
 
-      await Promise.all(fetches)
+      const results = await Promise.allSettled(fetches)
+      const anyFailed = results.some(r => r.status === 'rejected')
+      if (anyFailed) {
+        console.warn('[admin] some fetches failed — page may be partially loaded')
+      }
     } catch (e) {
       console.error('[admin] load failed:', e)
       setError('Failed to load admin data.')
