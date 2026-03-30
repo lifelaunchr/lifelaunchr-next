@@ -53,7 +53,7 @@ interface TenantRow {
 
 interface TenantSettings {
   id: number
-  name: string
+  display_name: string
   session_report_cc_emails: string | null
 }
 
@@ -521,7 +521,7 @@ export default function AdminPage() {
           <div className="max-w-xl">
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <h2 className="text-base font-semibold text-gray-800 mb-1">
-                {tenantSettings?.name || 'Tenant'} Settings
+                {tenantSettings?.display_name || 'Tenant'} Settings
               </h2>
               <p className="text-sm text-gray-400 mb-6">Configure settings for your organization.</p>
               <div className="space-y-5">
