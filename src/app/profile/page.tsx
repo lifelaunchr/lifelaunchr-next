@@ -8,6 +8,7 @@ import Link from 'next/link'
 interface Profile {
   gpa_weighted?: number
   gpa_unweighted?: number
+  gpa_scale?: number
   sat_total?: number
   sat_math?: number
   sat_reading?: number
@@ -599,6 +600,7 @@ function ProfileContent() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12 }}>
               {field('GPA (Weighted)', 'gpa_weighted', 'number', '4.0')}
               {field('GPA (Unweighted)', 'gpa_unweighted', 'number', '3.8')}
+              {field('GPA Scale', 'gpa_scale', 'number', '4.0')}
               {field('Class Rank', 'class_rank', 'number', '12')}
               {field('Class Size', 'class_size', 'number', '350')}
             </div>
