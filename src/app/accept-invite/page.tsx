@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 
-export default function AcceptInvitePage() {
+function AcceptInviteInner() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { isSignedIn, isLoaded } = useAuth()
@@ -30,5 +30,19 @@ export default function AcceptInvitePage() {
     <main className="min-h-screen flex items-center justify-center bg-slate-900">
       <p className="text-slate-400 text-sm">Setting up your account…</p>
     </main>
+  )
+}
+
+export default function AcceptInvitePage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen flex items-center justify-center bg-slate-900">
+          <p className="text-slate-400 text-sm">Setting up your account…</p>
+        </main>
+      }
+    >
+      <AcceptInviteInner />
+    </Suspense>
   )
 }
