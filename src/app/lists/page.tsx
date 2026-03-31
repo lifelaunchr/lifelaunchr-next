@@ -46,6 +46,13 @@ interface CollegeEntry {
   score_submission_policy?: string | null
   srar_required?: string | null
   score_self_report?: string | null
+  // College DB fields (joined from colleges table)
+  sc_npc_url?: string | null
+  factors_very_important?: string | null
+  factors_important?: string | null
+  factors_considered?: string | null
+  factors_not_considered?: string | null
+  website?: string | null
 }
 
 interface CollegeSearchResult {
@@ -2058,7 +2065,7 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
                     <div key={label} style={{ marginBottom: 6 }}>
                       <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#374151' }}>{label}: </span>
                       <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                        {(value as string).split('|').map((f: string) =>
+                        {String(value).split('|').map((f: string) =>
                           f.charAt(0).toUpperCase() + f.slice(1)
                         ).join(', ')}
                       </span>
