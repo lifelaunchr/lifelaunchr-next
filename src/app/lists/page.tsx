@@ -2030,6 +2030,28 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
                   />
                 )}
               </div>
+
+              {/* Admissions factors */}
+              {(form.factors_very_important || form.factors_important || form.factors_considered || form.factors_not_considered) && (
+                <div style={{ ...fieldStyle, marginTop: 16 }}>
+                  <label style={{ ...labelStyle, marginBottom: 8 }}>Admissions Factors</label>
+                  {[
+                    { label: 'Very Important', value: form.factors_very_important },
+                    { label: 'Important',      value: form.factors_important },
+                    { label: 'Considered',     value: form.factors_considered },
+                    { label: 'Not Considered', value: form.factors_not_considered },
+                  ].filter(f => f.value).map(({ label, value }) => (
+                    <div key={label} style={{ marginBottom: 6 }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#374151' }}>{label}: </span>
+                      <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                        {(value as string).split('|').map((f: string) =>
+                          f.charAt(0).toUpperCase() + f.slice(1)
+                        ).join(', ')}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </>
           )}
 
@@ -2253,6 +2275,17 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
                     style={{ marginRight: 6 }}
                   />
                   Completed Net Price Calculator
+                  {form.sc_npc_url && (
+                    <a
+                      href={form.sc_npc_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ marginLeft: 8, fontSize: '0.8rem', color: '#4f46e5' }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      (Link ↗)
+                    </a>
+                  )}
                 </label>
               </div>
 
