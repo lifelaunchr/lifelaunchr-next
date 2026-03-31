@@ -2008,6 +2008,20 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
                 </>
               )}
 
+              {/* College website */}
+              {form.website && (
+                <div style={{ ...fieldStyle, marginTop: 6 }}>
+                  <a
+                    href={form.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ fontSize: '0.8rem', color: '#4f46e5' }}
+                  >
+                    {form.website} ↗
+                  </a>
+                </div>
+              )}
+
               {/* Campus visit — belongs in overview context */}
               <div style={{ ...fieldStyle, marginTop: 6 }}>
                 <label style={labelStyle}>
