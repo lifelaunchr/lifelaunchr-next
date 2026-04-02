@@ -39,7 +39,7 @@ interface College {
 }
 
 interface Tenant {
-  id: number
+  id: number | null   // null = new practice to be created on submit
   display_name: string
 }
 
@@ -254,7 +254,11 @@ export default function OnboardingPage() {
         email: clerkUser.emailAddresses[0]?.emailAddress || '',
         full_name: clerkUser.fullName || clerkUser.firstName || '',
         account_type: backendAccountType,
-        ...(selectedTenant ? { tenant_id: selectedTenant.id, organization: selectedTenant.display_name } : {}),
+        ...(selectedTenant?.id != null
+        ? { tenant_id: selectedTenant.id, organization: selectedTenant.display_name }
+        : selectedTenant?.id === null
+        ? { organization: selectedTenant.display_name }   // new practice — backend will create tenant
+        : {}),
       }
       if (counselorType) body.counselor_type = counselorType
       if (selectedSchool) {
@@ -459,6 +463,9 @@ export default function OnboardingPage() {
                   <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2">
                     <div className="flex-1">
                       <p className="text-sm font-medium text-indigo-800">{selectedTenant.display_name}</p>
+                      {selectedTenant.id === null && (
+                        <p className="text-xs text-indigo-400">New practice — will be created on sign-up</p>
+                      )}
                     </div>
                     <button onClick={() => { setSelectedTenant(null); setTenantQuery(''); setTenantResults([]) }} className="text-xs text-indigo-400 hover:text-indigo-600">Change</button>
                   </div>
@@ -471,7 +478,7 @@ export default function OnboardingPage() {
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
                     />
                     {searchingTenant && <p className="text-xs text-gray-400 mt-1">Searching…</p>}
-                    {tenantResults.length > 0 && (
+                    {(tenantResults.length > 0 || tenantQuery.length >= 2) && (
                       <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-52 overflow-y-auto">
                         {tenantResults.map((t) => (
                           <button
@@ -482,6 +489,14 @@ export default function OnboardingPage() {
                             <p className="text-sm font-medium text-gray-800">{t.display_name}</p>
                           </button>
                         ))}
+                        {!searchingTenant && tenantQuery.length >= 2 && (
+                          <button
+                            onClick={() => { setSelectedTenant({ id: null, display_name: tenantQuery.trim() }); setTenantResults([]); setTenantQuery('') }}
+                            className="w-full text-left px-3 py-2.5 hover:bg-indigo-50 text-indigo-600"
+                          >
+                            <p className="text-sm font-medium">➕ Add &ldquo;{tenantQuery.trim()}&rdquo; as a new practice</p>
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
