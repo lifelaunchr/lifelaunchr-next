@@ -45,6 +45,11 @@ export default function OnboardingPage() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [migrationLinking, setMigrationLinking] = useState(false)
+  const [tenantQuery, setTenantQuery] = useState('')
+  const [tenantResults, setTenantResults] = useState<{id: number, display_name: string}[]>([])
+  const [selectedTenant, setSelectedTenant] = useState<{id: number, display_name: string} | null>(null)
+  const [searchingTenant, setSearchingTenant] = useState(false)
+  const tenantSearchRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const searchRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Migration invite: if a token is in sessionStorage, auto-link this Clerk account
@@ -83,7 +88,7 @@ export default function OnboardingPage() {
         // Failing to mark the token accepted is acceptable.
       } finally {
         sessionStorage.removeItem('migration_invite_token')
-        router.replace('/chat')
+        router.replace('/onboarding')
       }
     })()
   }, [clerkUser, getToken, apiUrl, router])
@@ -91,6 +96,20 @@ export default function OnboardingPage() {
   const isCounselor = ['school_counselor', 'iec', 'admissions_coach'].includes(accountType)
   const isSchoolCounselor = accountType === 'school_counselor'
   const needsOrg = accountType === 'iec' || accountType === 'admissions_coach'
+
+  // Debounced tenant autocomplete for IEC / admissions_coach
+  useEffect(() => {
+    if (!needsOrg || tenantQuery.length < 2 || selectedTenant) return
+    if (tenantSearchRef.current) clearTimeout(tenantSearchRef.current)
+    tenantSearchRef.current = setTimeout(async () => {
+      setSearchingTenant(true)
+      try {
+        const res = await fetch(`${apiUrl}/tenants/search?q=${encodeURIComponent(tenantQuery)}`)
+        if (res.ok) setTenantResults(await res.json())
+      } catch { /* ignore */ } finally { setSearchingTenant(false) }
+    }, 300)
+    return () => { if (tenantSearchRef.current) clearTimeout(tenantSearchRef.current) }
+  }, [tenantQuery, needsOrg, selectedTenant, apiUrl])
 
   // Debounced school autocomplete
   useEffect(() => {
@@ -113,8 +132,8 @@ export default function OnboardingPage() {
     if (isSchoolCounselor && !selectedSchool && !freeTextSchool.trim()) {
       setError('Please select or enter your school name.'); return
     }
-    if (needsOrg && !orgName.trim()) {
-      setError('Please enter your practice or company name.'); return
+    if (needsOrg && !selectedTenant) {
+      setError('Please select your practice from the list.'); return
     }
 
     setSubmitting(true)
@@ -135,6 +154,7 @@ export default function OnboardingPage() {
         email: clerkUser.emailAddresses[0]?.emailAddress || '',
         full_name: clerkUser.fullName || clerkUser.firstName || '',
         account_type: backendAccountType,
+        ...(selectedTenant ? { tenant_id: selectedTenant.id, organization: selectedTenant.display_name } : {}),
       }
       if (counselorType) body.counselor_type = counselorType
       if (selectedSchool) {
@@ -143,9 +163,7 @@ export default function OnboardingPage() {
       } else if (freeTextSchool.trim()) {
         body.organization = freeTextSchool.trim()
       }
-      if (needsOrg && orgName.trim()) {
-        body.organization = orgName.trim()
-      }
+      // organization is set from selectedTenant above for IEC/admissions_coach
 
       await fetch(`${apiUrl}/auth/sync`, {
         method: 'POST',
@@ -290,16 +308,41 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* IEC / coach: practice name */}
+          {/* IEC / coach: practice name autocomplete */}
           {needsOrg && (
             <div className="mb-6 border-t border-gray-100 pt-5">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Practice or company name</label>
-              <input
-                value={orgName}
-                onChange={(e) => setOrgName(e.target.value)}
-                placeholder="e.g. Smith College Consulting"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
-              />
+              <p className="text-sm font-semibold text-gray-700 mb-3">Your practice</p>
+              {selectedTenant ? (
+                <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-indigo-800">{selectedTenant.display_name}</p>
+                  </div>
+                  <button onClick={() => { setSelectedTenant(null); setTenantQuery(''); setTenantResults([]) }} className="text-xs text-indigo-400 hover:text-indigo-600">Change</button>
+                </div>
+              ) : (
+                <div className="relative">
+                  <input
+                    value={tenantQuery}
+                    onChange={(e) => { setTenantQuery(e.target.value); setTenantResults([]) }}
+                    placeholder="Search for your practice…"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                  />
+                  {searchingTenant && <p className="text-xs text-gray-400 mt-1">Searching…</p>}
+                  {tenantResults.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-52 overflow-y-auto">
+                      {tenantResults.map((t) => (
+                        <button
+                          key={t.id}
+                          onClick={() => { setSelectedTenant(t); setTenantResults([]); setTenantQuery('') }}
+                          className="w-full text-left px-3 py-2.5 hover:bg-indigo-50 border-b border-gray-100 last:border-0"
+                        >
+                          <p className="text-sm font-medium text-gray-800">{t.display_name}</p>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
