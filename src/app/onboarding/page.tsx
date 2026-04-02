@@ -125,7 +125,7 @@ export default function OnboardingPage() {
         const email = clerkUser.emailAddresses[0]?.emailAddress || ''
         const fullName = clerkUser.fullName || clerkUser.firstName || ''
 
-        await fetch(`${apiUrl}/auth/sync`, {
+        const syncRes = await fetch(`${apiUrl}/auth/sync`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
           body: JSON.stringify({
@@ -141,6 +141,22 @@ export default function OnboardingPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token, clerk_user_id: clerkUser.id, email }),
         })
+
+        // Use the returned account_type to route migrated users appropriately
+        if (syncRes.ok) {
+          const syncData = await syncRes.json()
+          const migratedType = syncData.account_type
+          if (migratedType === 'student') {
+            // Skip role picker — go straight to profile step
+            setAccountType('student')
+            setStep(2)
+            return
+          } else {
+            // Counselors and parents already have their data — skip onboarding
+            router.push('/chat')
+            return
+          }
+        }
       } catch {
         // Non-fatal — email-match in /auth/sync is what actually links the account
       } finally {
