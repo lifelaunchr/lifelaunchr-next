@@ -20,7 +20,7 @@ const US_STATES = [
 ]
 
 const CURRENT_YEAR = new Date().getFullYear()
-const GRAD_YEARS = Array.from({ length: 8 }, (_, i) => CURRENT_YEAR - 1 + i)
+const GRAD_YEARS = Array.from({ length: 13 }, (_, i) => CURRENT_YEAR - 5 + i)
 
 interface School {
   ncessch: string
@@ -203,7 +203,8 @@ export default function OnboardingPage() {
       try {
         const res = await fetch(`${apiUrl}/college-lookup?name=${encodeURIComponent(collegeQuery)}`)
         if (res.ok) {
-          const data: College[] = await res.json()
+          const json = await res.json()
+          const data: College[] = json.results ?? json
           setCollegeResults(data.filter((c) => !selectedColleges.find((s) => s.id === c.id)))
         }
       } catch { /* ignore */ } finally { setSearchingCollege(false) }
