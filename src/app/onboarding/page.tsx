@@ -145,7 +145,7 @@ export default function OnboardingPage() {
         // Non-fatal — email-match in /auth/sync is what actually links the account
       } finally {
         sessionStorage.removeItem('migration_invite_token')
-        router.replace('/onboarding')
+        setMigrationLinking(false)
       }
     })()
   }, [clerkUser, getToken, apiUrl, router])
