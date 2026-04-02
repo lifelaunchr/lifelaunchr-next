@@ -142,20 +142,15 @@ export default function OnboardingPage() {
           body: JSON.stringify({ token, clerk_user_id: clerkUser.id, email }),
         })
 
-        // Use the returned account_type to route migrated users appropriately
+        // Students already have a known role — skip role picker and go to profile step
         if (syncRes.ok) {
           const syncData = await syncRes.json()
-          const migratedType = syncData.account_type
-          if (migratedType === 'student') {
-            // Skip role picker — go straight to profile step
+          if (syncData.account_type === 'student') {
             setAccountType('student')
             setStep(2)
             return
-          } else {
-            // Counselors and parents already have their data — skip onboarding
-            router.push('/chat')
-            return
           }
+          // Counselors and parents: fall through to show step 1 normally
         }
       } catch {
         // Non-fatal — email-match in /auth/sync is what actually links the account
