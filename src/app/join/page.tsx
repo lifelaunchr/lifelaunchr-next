@@ -224,7 +224,9 @@ function JoinContent() {
                 href={clerkUser?.createdAt && (Date.now() - clerkUser.createdAt.getTime()) < 10 * 60 * 1000 ? '/onboarding' : '/chat'}
                 className="block w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl transition-colors text-sm"
               >
-                Start using Soar →
+                {clerkUser?.createdAt && (Date.now() - clerkUser.createdAt.getTime()) < 10 * 60 * 1000
+                  ? 'Start using Soar →'
+                  : 'Go to Soar →'}
               </Link>
             </>
           )}
