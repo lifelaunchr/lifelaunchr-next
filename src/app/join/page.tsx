@@ -221,7 +221,7 @@ function JoinContent() {
                 In the meantime, you have full access to Soar and can start researching colleges right now.
               </p>
               <Link
-                href={clerkUser && (Date.now() - new Date(clerkUser.createdAt).getTime()) < 10 * 60 * 1000 ? '/onboarding' : '/chat'}
+                href={clerkUser?.createdAt && (Date.now() - clerkUser.createdAt.getTime()) < 10 * 60 * 1000 ? '/onboarding' : '/chat'}
                 className="block w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl transition-colors text-sm"
               >
                 Start using Soar →
