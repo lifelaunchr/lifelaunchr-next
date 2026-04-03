@@ -14,7 +14,7 @@ function JoinContent() {
 
   const code = searchParams.get('code')
 
-  const [step, setStep] = useState<'loading' | 'confirm' | 'done' | 'no_link' | 'self_link' | 'counselor_limit' | 'error'>('loading')
+  const [step, setStep] = useState<'loading' | 'confirm' | 'done' | 'already_linked' | 'no_link' | 'self_link' | 'counselor_limit' | 'error'>('loading')
   const [inviterName, setInviterName] = useState('')
   const [inviterType, setInviterType] = useState('')
   const [confirming, setConfirming] = useState(false)
@@ -57,6 +57,12 @@ function JoinContent() {
         const data = await res.json()
         if (data.status === 'self') {
           setStep('self_link')
+          return
+        }
+        if (data.status === 'already_linked') {
+          setInviterName(data.inviter_name || 'your contact')
+          setInviterType(data.inviter_type || '')
+          setStep('already_linked')
           return
         }
         if (!data.relationship_proposed) {
@@ -182,6 +188,20 @@ function JoinContent() {
               <p className="text-gray-500 text-sm">
                 You&apos;re now linked with your {roleLabel}. Redirecting to Soar…
               </p>
+            </>
+          )}
+
+          {/* Already connected */}
+          {step === 'already_linked' && (
+            <>
+              <div className="text-4xl mb-4">✅</div>
+              <h1 className="text-xl font-bold text-gray-800 mb-2">You&apos;re already connected!</h1>
+              <p className="text-gray-500 text-sm mb-6">
+                You&apos;re already linked with {inviterName}. No action needed.
+              </p>
+              <Link href="/chat" className="block w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl transition-colors text-sm">
+                Go to Soar
+              </Link>
             </>
           )}
 
