@@ -312,7 +312,14 @@ export default function OnboardingPage() {
         }
       }
 
-      router.push('/chat')
+      // If the user arrived via an invite link before signing up, process it now
+      const pendingInviteCode = sessionStorage.getItem('pending_invite_code')
+      if (pendingInviteCode) {
+        sessionStorage.removeItem('pending_invite_code')
+        router.push(`/join?code=${pendingInviteCode}`)
+      } else {
+        router.push('/chat')
+      }
     } catch {
       setError('Something went wrong. Please try again.')
       setSubmitting(false)

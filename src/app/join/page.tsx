@@ -132,12 +132,15 @@ function JoinContent() {
               >
                 Sign in
               </Link>
-              <Link
-                href={`/sign-up?redirect_url=${encodeURIComponent(`/join?code=${code}`)}`}
+              <button
+                onClick={() => {
+                  if (code) sessionStorage.setItem('pending_invite_code', code)
+                  router.push(`/sign-up?redirect_url=${encodeURIComponent('/onboarding')}`)
+                }}
                 className="block w-full border border-gray-200 text-gray-600 font-medium py-3 rounded-xl hover:bg-gray-50 transition-colors text-sm"
               >
                 Create an account
-              </Link>
+              </button>
             </>
           )}
 
