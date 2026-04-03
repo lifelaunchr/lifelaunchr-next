@@ -209,12 +209,16 @@ function JoinContent() {
           {step === 'no_link' && (
             <>
               <div className="text-4xl mb-4">👋</div>
-              <h1 className="text-xl font-bold text-gray-800 mb-2">You&apos;re in Soar!</h1>
+              <h1 className="text-xl font-bold text-gray-800 mb-2">
+                {clerkUser?.createdAt && (Date.now() - clerkUser.createdAt.getTime()) < 10 * 60 * 1000
+                  ? 'Welcome to Soar!'
+                  : 'Welcome back to Soar!'}
+              </h1>
               <p className="text-gray-500 text-sm mb-6">
-                Your account is ready to go.{inviterName ? ` No automatic connection was created between you and ${inviterName} — your account types don't link directly.` : ''}
+                You can use Soar with full access, but a connection won&apos;t be created between you{inviterName ? ` and ${inviterName}` : ''}. Connections are between counselors and students, or parents and students. But your Soar account is live!
               </p>
               <Link href="/chat" className="block w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl transition-colors text-sm">
-                Go to Soar
+                Go to Soar →
               </Link>
             </>
           )}
