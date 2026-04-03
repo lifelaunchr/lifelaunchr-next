@@ -14,7 +14,7 @@ function JoinContent() {
 
   const code = searchParams.get('code')
 
-  const [step, setStep] = useState<'loading' | 'confirm' | 'done' | 'no_link' | 'self_link' | 'error'>('loading')
+  const [step, setStep] = useState<'loading' | 'confirm' | 'done' | 'no_link' | 'self_link' | 'counselor_limit' | 'error'>('loading')
   const [inviterName, setInviterName] = useState('')
   const [inviterType, setInviterType] = useState('')
   const [confirming, setConfirming] = useState(false)
@@ -85,6 +85,10 @@ function JoinContent() {
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
+        if (body.detail === 'COUNSELOR_AT_CAPACITY') {
+          setStep('counselor_limit')
+          return
+        }
         setErrorMsg(body.detail || 'Something went wrong confirming. Please try again.')
         setStep('error')
         return
@@ -202,6 +206,22 @@ function JoinContent() {
               </p>
               <Link href="/chat" className="block w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl transition-colors text-sm">
                 Go to Soar
+              </Link>
+            </>
+          )}
+
+          {/* Counselor at capacity */}
+          {step === 'counselor_limit' && (
+            <>
+              <div className="text-4xl mb-4">📋</div>
+              <h1 className="text-xl font-bold text-gray-800 mb-2">Your counselor&apos;s account is full</h1>
+              <p className="text-gray-500 text-sm mb-6">
+                They&apos;ve reached the student limit on their current plan. Ask them to upgrade to connect with you.
+                <br /><br />
+                In the meantime, you have full access to Soar and can start researching colleges right now.
+              </p>
+              <Link href="/chat" className="block w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl transition-colors text-sm">
+                Start using Soar →
               </Link>
             </>
           )}
