@@ -19,8 +19,13 @@ function JoinContent() {
   const [inviterType, setInviterType] = useState('')
   const [confirming, setConfirming] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
-  // Track whether the user was already signed in when they arrived (vs. just signed up)
-  const [arrivedSignedIn] = useState(() => typeof window !== 'undefined' && !sessionStorage.getItem('pending_invite_code'))
+  // Track whether the user was already signed in when they arrived (vs. just signed up via this invite)
+  const [arrivedSignedIn] = useState(() => {
+    if (typeof window === 'undefined') return true
+    const isNew = sessionStorage.getItem('invite_new_user') === 'true'
+    if (isNew) sessionStorage.removeItem('invite_new_user')
+    return !isNew
+  })
 
   useEffect(() => {
     if (!isLoaded) return
@@ -144,6 +149,7 @@ function JoinContent() {
               <button
                 onClick={() => {
                   if (code) sessionStorage.setItem('pending_invite_code', code)
+                  sessionStorage.setItem('invite_new_user', 'true')
                   router.push(`/sign-up?redirect_url=${encodeURIComponent('/onboarding')}`)
                 }}
                 className="block w-full border border-gray-200 text-gray-600 font-medium py-3 rounded-xl hover:bg-gray-50 transition-colors text-sm"
