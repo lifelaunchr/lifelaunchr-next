@@ -19,6 +19,8 @@ function JoinContent() {
   const [inviterType, setInviterType] = useState('')
   const [confirming, setConfirming] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
+  // Track whether the user was already signed in when they arrived (vs. just signed up)
+  const [arrivedSignedIn] = useState(() => typeof window !== 'undefined' && !sessionStorage.getItem('pending_invite_code'))
 
   useEffect(() => {
     if (!isLoaded) return
@@ -66,6 +68,7 @@ function JoinContent() {
           return
         }
         if (!data.relationship_proposed) {
+          setInviterName(data.inviter_name || '')
           setStep('no_link')
           return
         }
@@ -210,9 +213,7 @@ function JoinContent() {
             <>
               <div className="text-4xl mb-4">👋</div>
               <h1 className="text-xl font-bold text-gray-800 mb-2">
-                {clerkUser?.createdAt && (Date.now() - clerkUser.createdAt.getTime()) < 10 * 60 * 1000
-                  ? 'Welcome to Soar!'
-                  : 'Welcome back to Soar!'}
+                {arrivedSignedIn ? 'Welcome back to Soar!' : 'Welcome to Soar!'}
               </h1>
               <p className="text-gray-500 text-sm mb-6">
                 You can use Soar with full access, but a connection won&apos;t be created between you{inviterName ? ` and ${inviterName}` : ''}. Connections are between counselors and students, or parents and students. But your Soar account is live!
@@ -248,12 +249,10 @@ function JoinContent() {
                 In the meantime, you have full access to Soar and can start researching colleges right now.
               </p>
               <Link
-                href={clerkUser?.createdAt && (Date.now() - clerkUser.createdAt.getTime()) < 10 * 60 * 1000 ? '/onboarding' : '/chat'}
+                href={arrivedSignedIn ? '/chat' : '/onboarding'}
                 className="block w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl transition-colors text-sm"
               >
-                {clerkUser?.createdAt && (Date.now() - clerkUser.createdAt.getTime()) < 10 * 60 * 1000
-                  ? 'Start using Soar →'
-                  : 'Go to Soar →'}
+                {arrivedSignedIn ? 'Go to Soar →' : 'Start using Soar →'}
               </Link>
             </>
           )}
