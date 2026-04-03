@@ -79,10 +79,16 @@ function JoinContent() {
     setConfirming(true)
     try {
       const token = await getToken()
-      await fetch(`${apiUrl}/invites/confirm/${code}`, {
+      const res = await fetch(`${apiUrl}/invites/confirm/${code}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        setErrorMsg(body.detail || 'Something went wrong confirming. Please try again.')
+        setStep('error')
+        return
+      }
       setStep('done')
       setTimeout(() => router.push('/chat'), 2500)
     } catch {
