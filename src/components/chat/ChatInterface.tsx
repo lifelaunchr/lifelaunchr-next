@@ -265,6 +265,15 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
     fetchConnections()
   }, [userId, getToken, apiUrl])
 
+  // Auto-select the student when a parent has exactly one connected student
+  useEffect(() => {
+    if (isParent && myStudents.length === 1 && forStudentId === null) {
+      const s = myStudents[0]
+      setForStudentId(s.id)
+      localStorage.setItem('ll_for_student_id', String(s.id))
+    }
+  }, [isParent, myStudents, forStudentId])
+
   // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -941,7 +950,16 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
           })()}
           {/* Messages area */}
           <div className="flex-1 overflow-y-auto px-4 py-6 flex flex-col gap-4">
-            {messages.length === 0 ? (
+            {/* Parent with multiple students — block until one is selected */}
+            {isParent && myStudents.length > 1 && !forStudentId ? (
+              <div className="flex flex-col items-center justify-center flex-1 h-full text-center px-6 py-16">
+                <div className="text-4xl mb-4">👪</div>
+                <h2 className="text-lg font-semibold text-gray-800 mb-2">Select a student to get started</h2>
+                <p className="text-sm text-gray-500 max-w-xs">
+                  You&apos;re connected to multiple students. Choose who you&apos;d like to research for using the selector in the sidebar.
+                </p>
+              </div>
+            ) : messages.length === 0 ? (
               <WelcomeCard
                 onSendMessage={sendMessage}
                 accountType={isCounselor ? 'counselor' : isParent ? 'parent' : 'student'}
@@ -977,15 +995,15 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                   value={input}
                   onChange={handleInputChange}
                   onKeyDown={handleKeyDown}
-                  placeholder="Ask Soar about colleges, majors, costs, fit..."
-                  disabled={isStreaming}
+                  placeholder={isParent && myStudents.length > 1 && !forStudentId ? 'Select a student first…' : 'Ask Soar about colleges, majors, costs, fit...'}
+                  disabled={isStreaming || (isParent && myStudents.length > 1 && !forStudentId)}
                   rows={1}
                   className="flex-1 border border-gray-300 rounded-xl px-4 py-3 text-sm font-sans resize-none outline-none leading-relaxed focus:border-indigo-500 transition-colors disabled:opacity-60 max-h-40 overflow-y-auto"
                   style={{ minHeight: '44px' }}
                 />
                 <button
                   onClick={() => sendMessage(input)}
-                  disabled={isStreaming || !input.trim()}
+                  disabled={isStreaming || !input.trim() || (isParent && myStudents.length > 1 && !forStudentId)}
                   className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-300 text-white rounded-xl px-5 h-11 flex items-center justify-center flex-shrink-0 transition-colors cursor-pointer disabled:cursor-not-allowed"
                   aria-label="Send message"
                 >
