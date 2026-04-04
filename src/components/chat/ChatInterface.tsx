@@ -942,23 +942,39 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
           {(isCounselor || isParent) && forStudentId && myStudents.length > 0 && (() => {
             const s = myStudents.find((s) => s.id === forStudentId)
             return s ? (
-              <div className="flex items-center justify-between bg-indigo-50 border-b border-indigo-100 px-4 py-1.5 flex-shrink-0">
-                <span className="text-xs text-indigo-700 font-medium">
-                  🎓 Researching for: <strong>{s.has_safety_flag ? `🚩 ${s.full_name || s.email}` : (s.full_name || s.email)}</strong>
-                </span>
-                {(!isParent || myStudents.length > 1) && (
-                  <button
-                    onClick={() => {
-                      setForStudentId(null)
-                      localStorage.removeItem('ll_for_student_id')
-                    }}
-                    className="text-xs text-indigo-400 hover:text-indigo-700 transition-colors ml-4"
-                    title="Clear student selection"
-                  >
-                    ✕ Clear
-                  </button>
+              <>
+                <div className="flex items-center justify-between bg-indigo-50 border-b border-indigo-100 px-4 py-1.5 flex-shrink-0">
+                  <span className="text-xs text-indigo-700 font-medium">
+                    🎓 Researching for: <strong>{s.full_name || s.email}</strong>
+                  </span>
+                  {(!isParent || myStudents.length > 1) && (
+                    <button
+                      onClick={() => {
+                        setForStudentId(null)
+                        localStorage.removeItem('ll_for_student_id')
+                      }}
+                      className="text-xs text-indigo-400 hover:text-indigo-700 transition-colors ml-4"
+                      title="Clear student selection"
+                    >
+                      ✕ Clear
+                    </button>
+                  )}
+                </div>
+                {/* Safety alert banner */}
+                {s.has_safety_flag && (
+                  <div className="flex items-center justify-between bg-red-50 border-b border-red-200 px-4 py-2 flex-shrink-0">
+                    <span className="text-xs text-red-700 font-medium flex items-center gap-1.5">
+                      🚩 Unacknowledged safety event for {s.full_name || s.email}
+                    </span>
+                    <a
+                      href="/dashboard"
+                      className="text-xs font-medium text-red-600 hover:text-red-800 underline underline-offset-2 ml-4 whitespace-nowrap"
+                    >
+                      Review on dashboard →
+                    </a>
+                  </div>
                 )}
-              </div>
+              </>
             ) : null
           })()}
           {/* Messages area */}
