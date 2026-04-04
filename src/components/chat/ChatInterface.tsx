@@ -265,12 +265,22 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
     fetchConnections()
   }, [userId, getToken, apiUrl])
 
-  // Auto-select the student when a parent has exactly one connected student
+  // Auto-select the student when a parent has exactly one connected student.
+  // Also clears a stale forStudentId if the saved student is no longer connected.
   useEffect(() => {
-    if (isParent && myStudents.length === 1 && forStudentId === null) {
-      const s = myStudents[0]
-      setForStudentId(s.id)
-      localStorage.setItem('ll_for_student_id', String(s.id))
+    if (!isParent || myStudents.length === 0) return
+    const savedIsValid = forStudentId !== null && myStudents.some(s => s.id === forStudentId)
+    if (!savedIsValid) {
+      if (myStudents.length === 1) {
+        // Auto-select the only student
+        const s = myStudents[0]
+        setForStudentId(s.id)
+        localStorage.setItem('ll_for_student_id', String(s.id))
+      } else {
+        // Multiple students and no valid selection — clear the stale value
+        setForStudentId(null)
+        localStorage.removeItem('ll_for_student_id')
+      }
     }
   }, [isParent, myStudents, forStudentId])
 
