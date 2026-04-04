@@ -8,6 +8,7 @@ import { ChatMessage } from './ChatMessage'
 import { ModuleChips } from './ModuleChips'
 import { WelcomeCard } from './WelcomeCard'
 import { LimitModal } from './LimitModal'
+import SafetyEventModal, { SafetyStudent } from '@/components/safety/SafetyEventModal'
 
 export interface MessageDownload {
   filename: string
@@ -100,6 +101,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
   const [isParent, setIsParent] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
   const [myStudents, setMyStudents] = useState<Array<{ id: number; full_name: string; email: string; has_safety_flag?: boolean }>>([])
+  const [safetyStudent, setSafetyStudent] = useState<SafetyStudent | null>(null)
   const [inviteUrl, setInviteUrl] = useState<string | null>(null)
   const [inviteCopied, setInviteCopied] = useState(false)
   const [schedulingLink, setSchedulingLink] = useState<string | null>(null)
@@ -966,12 +968,12 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                     <span className="text-xs text-red-700 font-medium flex items-center gap-1.5">
                       🚩 Unacknowledged safety event for {s.full_name || s.email}
                     </span>
-                    <a
-                      href="/dashboard"
+                    <button
+                      onClick={() => setSafetyStudent({ id: s.id, full_name: s.full_name || s.email })}
                       className="text-xs font-medium text-red-600 hover:text-red-800 underline underline-offset-2 ml-4 whitespace-nowrap"
                     >
-                      Review on dashboard →
-                    </a>
+                      Review and acknowledge →
+                    </button>
                   </div>
                 )}
               </>
@@ -1086,6 +1088,19 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
           limit={limitModalData.effective_limit}
           resetDate={limitModalData.reset_date}
           onClose={() => setLimitModalData(null)}
+        />
+      )}
+
+      {/* Safety event modal */}
+      {safetyStudent && (
+        <SafetyEventModal
+          student={safetyStudent}
+          onClose={() => setSafetyStudent(null)}
+          onAllAcknowledged={(studentId) => {
+            setMyStudents(prev => prev.map(s => s.id === studentId ? { ...s, has_safety_flag: false } : s))
+            setSafetyStudent(null)
+          }}
+          getToken={async () => await getToken()}
         />
       )}
     </div>
