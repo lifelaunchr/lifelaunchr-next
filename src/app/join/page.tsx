@@ -248,12 +248,27 @@ function JoinContent() {
           {step === 'counselor_limit' && (
             <>
               <div className="text-4xl mb-4">📋</div>
-              <h1 className="text-xl font-bold text-gray-800 mb-2">Your counselor&apos;s account is full</h1>
-              <p className="text-gray-500 text-sm mb-6">
-                They&apos;ve reached the student limit on their current plan. Ask them to upgrade to connect with you.
-                <br /><br />
-                In the meantime, you have full access to Soar and can start researching colleges right now.
-              </p>
+              {inviterType === 'student' ? (
+                <>
+                  <h1 className="text-xl font-bold text-gray-800 mb-2">You&apos;ve reached your student limit</h1>
+                  <p className="text-gray-500 text-sm mb-6">
+                    You can&apos;t add more students on your current plan. Please contact us at{' '}
+                    <a href="mailto:help@lifelaunchr.com" className="text-indigo-600 hover:underline">help@lifelaunchr.com</a>{' '}
+                    to upgrade.
+                    <br /><br />
+                    In the meantime, your Soar account is fully active.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h1 className="text-xl font-bold text-gray-800 mb-2">Your counselor&apos;s account is full</h1>
+                  <p className="text-gray-500 text-sm mb-6">
+                    They&apos;ve reached the student limit on their current plan. Ask them to upgrade to connect with you.
+                    <br /><br />
+                    In the meantime, you have full access to Soar and can start researching colleges right now.
+                  </p>
+                </>
+              )}
               <Link
                 href={arrivedSignedIn ? '/chat' : '/onboarding'}
                 className="block w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl transition-colors text-sm"
