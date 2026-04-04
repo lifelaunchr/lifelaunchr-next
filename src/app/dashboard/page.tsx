@@ -836,9 +836,9 @@ export default function DashboardPage() {
                         <div className="font-medium text-gray-900 flex items-center gap-1.5">
                           {s.has_safety_flag && (
                             <button
-                              onClick={() => setSafetyStudent(s)}
+                              onClick={(e) => { e.stopPropagation(); setSafetyStudent(s) }}
                               title="View unacknowledged safety event"
-                              className="text-base leading-none flex-shrink-0 hover:scale-110 transition-transform"
+                              className="text-base leading-none flex-shrink-0 hover:scale-110 transition-transform px-1 py-0.5 rounded hover:bg-red-50"
                             >🚩</button>
                           )}
                           {s.full_name}
