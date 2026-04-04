@@ -772,7 +772,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                     }}
                     className="w-full bg-white/5 border border-white/10 text-slate-300 text-xs rounded-lg px-3 py-2 focus:outline-none"
                   >
-                    {myStudents.length > 1 && <option value="">— Select student —</option>}
+                    {(!isParent || myStudents.length > 1) && <option value="">— Select student —</option>}
                     {myStudents.map((s) => (
                       <option key={s.id} value={s.id}>{s.full_name || s.email}</option>
                     ))}
@@ -945,7 +945,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                 <span className="text-xs text-indigo-700 font-medium">
                   🎓 Researching for: <strong>{s.full_name || s.email}</strong>
                 </span>
-                {myStudents.length > 1 && (
+                {(!isParent || myStudents.length > 1) && (
                   <button
                     onClick={() => {
                       setForStudentId(null)
