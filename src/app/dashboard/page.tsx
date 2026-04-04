@@ -40,6 +40,7 @@ interface DashboardStudent {
   deadline_status?: string
   college_list_count: number
   last_login?: string
+  has_safety_flag?: boolean
 }
 
 // ── Label maps ────────────────────────────────────────────────────────────────
@@ -664,7 +665,10 @@ export default function DashboardPage() {
                         />
                       </td>
                       <td className="px-4 py-3">
-                        <div className="font-medium text-gray-900">
+                        <div className="font-medium text-gray-900 flex items-center gap-1.5">
+                          {s.has_safety_flag && (
+                            <span title="Unacknowledged safety event" className="text-base leading-none flex-shrink-0">🚩</span>
+                          )}
                           {s.full_name}
                           {s.preferred_name && s.preferred_name !== s.full_name.split(' ')[0] && (
                             <span className="text-gray-400 font-normal"> ({s.preferred_name})</span>

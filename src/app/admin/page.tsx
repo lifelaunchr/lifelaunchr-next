@@ -116,9 +116,6 @@ export default function AdminPage() {
         return
       }
 
-      // Default tab: tenant-only users land on Tenant Settings
-      if (!superAdmin && !admin && tenantAdmin) setTab('tenant')
-
       const wrap = (label: string, p: Promise<unknown>) =>
         p.catch(e => { console.error(`[admin] ${label} failed:`, e); throw e })
 
@@ -128,13 +125,19 @@ export default function AdminPage() {
         fetches.push(
           wrap('users-all', fetch(`${apiUrl}/admin/users-all`, { headers })
             .then(r => { console.log('[admin] users-all status', r.status); return r.ok ? r.json() : [] }).then(setUsers)),
-          wrap('tiers', fetch(`${apiUrl}/admin/tiers`, { headers })
-            .then(r => { console.log('[admin] tiers status', r.status); return r.ok ? r.json() : [] }).then(setTiers)),
+        )
+      } else if (tenantAdmin) {
+        // Tenant admins get a junction-table scoped view of their practice
+        fetches.push(
+          wrap('my-users', fetch(`${apiUrl}/admin/my-users`, { headers })
+            .then(r => { console.log('[admin] my-users status', r.status); return r.ok ? r.json() : [] }).then(setUsers)),
         )
       }
 
       if (superAdmin) {
         fetches.push(
+          wrap('tiers', fetch(`${apiUrl}/admin/tiers`, { headers })
+            .then(r => { console.log('[admin] tiers status', r.status); return r.ok ? r.json() : [] }).then(setTiers)),
           wrap('tenants', fetch(`${apiUrl}/admin/tenants`, { headers })
             .then(r => { console.log('[admin] tenants status', r.status); return r.ok ? r.json() : [] }).then(setTenants)),
         )
@@ -343,28 +346,32 @@ export default function AdminPage() {
       <div className="max-w-7xl mx-auto px-6 py-6">
         {/* Tabs */}
         <div className="flex gap-1 mb-6 border-b border-gray-200">
-          {(isAdmin || isSuperAdmin) && (
+          {/* Users: all three admin roles */}
+          {(isAdmin || isSuperAdmin || isTenantAdmin) && (
             <button onClick={() => setTab('users')}
               className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${tab === 'users' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
               Users ({users.length})
             </button>
           )}
-          {(isAdmin || isSuperAdmin) && (
+          {/* Tiers: super-admin only */}
+          {isSuperAdmin && (
             <button onClick={() => setTab('tiers')}
               className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${tab === 'tiers' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
               Tiers ({tiers.length})
             </button>
           )}
+          {/* Tenants: super-admin only */}
           {isSuperAdmin && (
             <button onClick={() => setTab('tenants')}
               className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${tab === 'tenants' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
               Tenants ({tenants.length})
             </button>
           )}
+          {/* Tenant Settings / My Practice: all three roles */}
           {tenantSettings && (
             <button onClick={() => setTab('tenant')}
               className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${tab === 'tenant' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-              Tenant Settings
+              {isTenantAdmin && !isAdmin && !isSuperAdmin ? 'My Practice' : 'Tenant Settings'}
             </button>
           )}
         </div>
@@ -372,6 +379,12 @@ export default function AdminPage() {
         {/* ── Users tab ── */}
         {tab === 'users' && (
           <div>
+            {isTenantAdmin && !isAdmin && !isSuperAdmin && (
+              <p className="text-sm text-gray-500 mb-4">
+                To change a user&apos;s plan or limits, contact{' '}
+                <a href="mailto:help@lifelaunchr.com" className="text-indigo-500 hover:underline">help@lifelaunchr.com</a>.
+              </p>
+            )}
             <div className="mb-4 flex gap-3 items-center">
               <input
                 value={search}
@@ -431,12 +444,16 @@ export default function AdminPage() {
                         ].filter(Boolean).join(', ') || '—'}
                       </td>
                       <td className="px-4 py-3">
-                        <button
-                          onClick={() => setEditingUser({ ...u })}
-                          className="text-xs text-indigo-500 hover:text-indigo-700 font-medium"
-                        >
-                          Edit
-                        </button>
+                        {(isAdmin || isSuperAdmin) ? (
+                          <button
+                            onClick={() => setEditingUser({ ...u })}
+                            className="text-xs text-indigo-500 hover:text-indigo-700 font-medium"
+                          >
+                            Edit
+                          </button>
+                        ) : (
+                          <span className="text-xs text-gray-300">—</span>
+                        )}
                       </td>
                     </tr>
                   ))}

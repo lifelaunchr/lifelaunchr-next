@@ -43,6 +43,7 @@ interface UsageData {
   active_students?: number | null
   student_limit?: number | null
   is_admin?: boolean
+  is_tenant_admin?: boolean
   scheduling_link?: string | null
 }
 
@@ -98,7 +99,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
   const [isCounselor, setIsCounselor] = useState(false)
   const [isParent, setIsParent] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
-  const [myStudents, setMyStudents] = useState<Array<{ id: number; full_name: string; email: string }>>([])
+  const [myStudents, setMyStudents] = useState<Array<{ id: number; full_name: string; email: string; has_safety_flag?: boolean }>>([])
   const [inviteUrl, setInviteUrl] = useState<string | null>(null)
   const [inviteCopied, setInviteCopied] = useState(false)
   const [schedulingLink, setSchedulingLink] = useState<string | null>(null)
@@ -171,7 +172,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
           if (studentsRes.ok) {
             const students = await studentsRes.json()
             console.log('[fetchUsage] students returned:', students.length)
-            setMyStudents(students.map((s: { id: number; full_name: string; email: string }) => ({ id: s.id, full_name: s.full_name, email: s.email })))
+            setMyStudents(students.map((s: { id: number; full_name: string; email: string; has_safety_flag?: boolean }) => ({ id: s.id, full_name: s.full_name, email: s.email, has_safety_flag: s.has_safety_flag })))
           }
         }
       }
@@ -774,7 +775,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                   >
                     {(!isParent || myStudents.length > 1) && <option value="">— Select student —</option>}
                     {myStudents.map((s) => (
-                      <option key={s.id} value={s.id}>{s.full_name || s.email}</option>
+                      <option key={s.id} value={s.id}>{s.has_safety_flag ? `🚩 ${s.full_name || s.email}` : (s.full_name || s.email)}</option>
                     ))}
                   </select>
                 </div>
@@ -840,8 +841,8 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                 </Link>
               )}
 
-              {/* Admin dashboard link */}
-              {isAdmin && (
+              {/* Admin dashboard link — admins and tenant admins */}
+              {(isAdmin || (usageData?.is_tenant_admin)) && (
                 <Link
                   href="/admin"
                   className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
@@ -943,7 +944,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
             return s ? (
               <div className="flex items-center justify-between bg-indigo-50 border-b border-indigo-100 px-4 py-1.5 flex-shrink-0">
                 <span className="text-xs text-indigo-700 font-medium">
-                  🎓 Researching for: <strong>{s.full_name || s.email}</strong>
+                  🎓 Researching for: <strong>{s.has_safety_flag ? `🚩 ${s.full_name || s.email}` : (s.full_name || s.email)}</strong>
                 </span>
                 {(!isParent || myStudents.length > 1) && (
                   <button
