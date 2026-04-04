@@ -772,7 +772,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                     }}
                     className="w-full bg-white/5 border border-white/10 text-slate-300 text-xs rounded-lg px-3 py-2 focus:outline-none"
                   >
-                    <option value="">— Select student —</option>
+                    {myStudents.length > 1 && <option value="">— Select student —</option>}
                     {myStudents.map((s) => (
                       <option key={s.id} value={s.id}>{s.full_name || s.email}</option>
                     ))}
@@ -945,16 +945,18 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                 <span className="text-xs text-indigo-700 font-medium">
                   🎓 Researching for: <strong>{s.full_name || s.email}</strong>
                 </span>
-                <button
-                  onClick={() => {
-                    setForStudentId(null)
-                    localStorage.removeItem('ll_for_student_id')
-                  }}
-                  className="text-xs text-indigo-400 hover:text-indigo-700 transition-colors ml-4"
-                  title="Clear student selection"
-                >
-                  ✕ Clear
-                </button>
+                {myStudents.length > 1 && (
+                  <button
+                    onClick={() => {
+                      setForStudentId(null)
+                      localStorage.removeItem('ll_for_student_id')
+                    }}
+                    className="text-xs text-indigo-400 hover:text-indigo-700 transition-colors ml-4"
+                    title="Clear student selection"
+                  >
+                    ✕ Clear
+                  </button>
+                )}
               </div>
             ) : null
           })()}
