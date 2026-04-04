@@ -5,6 +5,8 @@ import { useAuth } from '@clerk/nextjs'
 import Link from 'next/link'
 import SafetyEventModal from '@/components/safety/SafetyEventModal'
 
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+
 interface DashboardStudent {
   id: number
   full_name: string
