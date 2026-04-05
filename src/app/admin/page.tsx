@@ -413,6 +413,23 @@ export default function AdminPage() {
     setSaving(false)
   }
 
+  const openDeleteTenant = async (t: TenantRow) => {
+    setDeleteConfirmInput('')
+    // Fetch fresh tenant list so user_count is current, not cached
+    try {
+      const token = await getToken()
+      const res = await fetch(`${apiUrl}/admin/tenants`, { headers: { Authorization: `Bearer ${token}` } })
+      if (res.ok) {
+        const fresh: TenantRow[] = await res.json()
+        setTenants(fresh)
+        const freshTenant = fresh.find(r => r.id === t.id)
+        setDeletingTenant(freshTenant ?? t)
+        return
+      }
+    } catch { /* fall through to cached value */ }
+    setDeletingTenant(t)
+  }
+
   const confirmDeleteTenant = async () => {
     if (!deletingTenant) return
     if (deleteConfirmInput.trim().toLowerCase() !== deletingTenant.display_name.toLowerCase()) return
@@ -763,7 +780,7 @@ export default function AdminPage() {
                             Edit
                           </button>
                           <button
-                            onClick={() => { setDeletingTenant(t); setDeleteConfirmInput('') }}
+                            onClick={() => openDeleteTenant(t)}
                             className="text-xs text-red-400 hover:text-red-600 font-medium"
                           >
                             Delete
