@@ -160,14 +160,19 @@ function ReportsContent() {
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
   const [mobileShowList, setMobileShowList] = useState(true)
   const [isMobile, setIsMobile] = useState(false)
+  const [panelHeight, setPanelHeight] = useState(0)
 
-  // ── Detect mobile ──────────────────────────────────────────────────────────
+  // ── Detect mobile + compute panel height from JS (avoids all CSS viewport quirks) ──
 
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768)
-    check()
-    window.addEventListener('resize', check)
-    return () => window.removeEventListener('resize', check)
+    const update = () => {
+      setIsMobile(window.innerWidth < 768)
+      const headerEl = document.getElementById('reports-header')
+      setPanelHeight(window.innerHeight - (headerEl?.offsetHeight ?? 49))
+    }
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
   }, [])
 
   // ── Load students + usage ──────────────────────────────────────────────────
@@ -587,13 +592,14 @@ function ReportsContent() {
         </Link>
       </header>
 
-      {/* Two-panel: takes all remaining height after header */}
-      <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+      {/* Two-panel: absolute-positioned children fill all remaining space */}
+      <div style={{ position: 'relative', flex: 1, minHeight: 0, overflow: 'hidden', ...(panelHeight > 0 ? { height: panelHeight } : {}) }}>
 
         {/* Left Panel — Report List */}
         <aside style={{
+          position: 'absolute', top: 0, bottom: 0, left: 0,
           display: (isMobile && mobileShowDetail) ? 'none' : 'flex',
-          flexDirection: 'column', overflow: 'hidden', flexShrink: 0,
+          flexDirection: 'column', overflow: 'hidden',
           width: isMobile ? '100%' : 320,
           background: '#fff', borderRight: '1px solid #e5e7eb',
         }}>
@@ -785,8 +791,10 @@ function ReportsContent() {
 
         {/* Right Panel — Report Form */}
         <main style={{
+          position: 'absolute', top: 0, bottom: 0, right: 0,
+          left: isMobile ? 0 : 320,
           display: (!isMobile || mobileShowDetail) ? 'flex' : 'none',
-          flexDirection: 'column', flex: 1, overflowY: 'auto', padding: 24,
+          flexDirection: 'column', overflowY: 'auto', padding: 24,
         }}>
           {/* Mobile back button — show whenever mobileShowDetail is true */}
           {mobileShowDetail && (
