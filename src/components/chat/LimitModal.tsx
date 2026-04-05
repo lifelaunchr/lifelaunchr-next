@@ -4,10 +4,11 @@ interface LimitModalProps {
   messagesUsed: number
   limit: number
   resetDate?: string
+  supportEmail?: string
   onClose: () => void
 }
 
-export function LimitModal({ messagesUsed, limit, resetDate, onClose }: LimitModalProps) {
+export function LimitModal({ messagesUsed, limit, resetDate, supportEmail = 'help@lifelaunchr.com', onClose }: LimitModalProps) {
   const resetLabel = resetDate
     ? new Date(resetDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
     : 'next month'
@@ -61,7 +62,7 @@ export function LimitModal({ messagesUsed, limit, resetDate, onClose }: LimitMod
         <p className="text-xs text-gray-400 text-center mt-4">
           Questions?{' '}
           <a
-            href="mailto:support@lifelaunchr.com"
+            href={`mailto:${supportEmail}`}
             className="underline hover:text-gray-600"
           >
             Email support

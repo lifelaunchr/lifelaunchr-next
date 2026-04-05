@@ -102,10 +102,11 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
   const [isAdmin, setIsAdmin] = useState(false)
   const [myStudents, setMyStudents] = useState<Array<{ id: number; full_name: string; email: string; has_safety_flag?: boolean }>>([])
   const [safetyStudent, setSafetyStudent] = useState<SafetyStudent | null>(null)
-  const [tenantBranding, setTenantBranding] = useState<{ botName: string; tagline: string; logoUrl: string | null }>({
+  const [tenantBranding, setTenantBranding] = useState<{ botName: string; tagline: string; logoUrl: string | null; supportEmail: string }>({
     botName: 'Soar',
     tagline: 'Your AI-powered college advisor',
     logoUrl: null,
+    supportEmail: 'help@lifelaunchr.com',
   })
   const [inviteUrl, setInviteUrl] = useState<string | null>(null)
   const [inviteCopied, setInviteCopied] = useState(false)
@@ -138,6 +139,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
             botName: data.bot_name || 'Soar',
             tagline: data.tagline || 'Your AI-powered college advisor',
             logoUrl: data.header_logo_url || null,
+            supportEmail: data.support_email || 'help@lifelaunchr.com',
           })
         }
       })
@@ -1112,6 +1114,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
           messagesUsed={limitModalData.messages_used}
           limit={limitModalData.effective_limit}
           resetDate={limitModalData.reset_date}
+          supportEmail={tenantBranding.supportEmail}
           onClose={() => setLimitModalData(null)}
         />
       )}
