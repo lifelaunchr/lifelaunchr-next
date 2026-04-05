@@ -573,7 +573,7 @@ function ReportsContent() {
   const pagedReports = activeReports.slice(listPage * LIST_PAGE_SIZE, (listPage + 1) * LIST_PAGE_SIZE)
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#f9fafb' }}>
+    <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, left: 0, display: 'flex', flexDirection: 'column', background: '#f9fafb' }}>
       {/* Top nav */}
       <header
         id="reports-header"
