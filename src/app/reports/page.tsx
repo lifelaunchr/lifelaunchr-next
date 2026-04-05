@@ -563,7 +563,7 @@ function ReportsContent() {
   const pagedReports = activeReports.slice(listPage * LIST_PAGE_SIZE, (listPage + 1) * LIST_PAGE_SIZE)
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', minHeight: '100vh', background: '#f9fafb' }}>
       {/* Top nav */}
       <header style={{ background: '#0c1b33', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} className="px-4 sm:px-6 py-3">
         <Link href="/" style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>
@@ -574,12 +574,15 @@ function ReportsContent() {
         </Link>
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0 }}>
 
         {/* Left Panel — Report List */}
-        <aside className={`${mobileShowDetail ? 'hidden md:flex' : 'flex'} flex-col overflow-hidden flex-shrink-0 bg-white border-r border-gray-200`} style={{
+        <aside style={{
+          display: mobileShowDetail ? 'none' : 'flex',
+          flexDirection: 'column', overflow: 'hidden', flexShrink: 0,
           width: '100%', maxWidth: 320,
-        }}>
+          background: '#fff', borderRight: '1px solid #e5e7eb',
+        }} className="md:flex">
           {/* Panel header */}
           <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid #f3f4f6' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -767,7 +770,10 @@ function ReportsContent() {
         </aside>
 
         {/* Right Panel — Report Form */}
-        <main className={`${mobileShowDetail ? 'flex' : 'hidden md:flex'} flex-col flex-1 overflow-y-auto p-4 sm:p-6`}>
+        <main style={{
+          display: mobileShowDetail ? 'flex' : 'none',
+          flexDirection: 'column', flex: 1, overflowY: 'auto', padding: 24, minHeight: 0,
+        }} className="md:flex md:flex-col md:flex-1 md:overflow-y-auto">
           {/* Mobile back button */}
           <button
             onClick={() => setMobileShowDetail(false)}
