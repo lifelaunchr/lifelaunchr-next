@@ -3,6 +3,40 @@
 import Link from 'next/link'
 import { UserButton } from '@clerk/nextjs'
 
+function SoarLogo() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 168 24"
+      className="h-7 w-auto"
+      aria-label="Soar by LifeLaunchr"
+    >
+      {/* Graduation cap — diamond board */}
+      <polygon points="11,1 22,7 11,13 0,7" fill="#7dd3fc" />
+      {/* Cap brim */}
+      <rect x="1" y="7" width="20" height="3.5" rx="1" fill="#38bdf8" />
+      {/* Tassel cord */}
+      <line x1="22" y1="7" x2="22" y2="19" stroke="#fb923c" strokeWidth="1.5" strokeLinecap="round" />
+      {/* Tassel ball */}
+      <circle cx="22" cy="21.5" r="2.5" fill="#fb923c" />
+
+      {/* Wordmark */}
+      <text
+        x="30" y="18"
+        fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+        fontSize="17" fontWeight="700"
+        fill="white" letterSpacing="-0.4"
+      >Soar</text>
+      <text
+        x="76" y="18"
+        fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+        fontSize="11" fontWeight="400"
+        fill="rgba(255,255,255,0.55)"
+      >by LifeLaunchr</text>
+    </svg>
+  )
+}
+
 interface ChatHeaderProps {
   userId: string | null
   onNewConversation: () => void
@@ -56,6 +90,8 @@ export function ChatHeader({
               alt={botName}
               className="h-7 w-auto object-contain object-left"
             />
+          ) : botName === 'Soar' ? (
+            <SoarLogo />
           ) : (
             <h1 className="text-base font-semibold tracking-tight leading-none">
               <span className="text-sky-300">{botName}</span> by LifeLaunchr
