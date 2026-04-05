@@ -159,8 +159,12 @@ function ReportsContent() {
   const [sentConfirm, setSentConfirm] = useState<string | null>(null) // error feedback only now
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
   const [mobileShowList, setMobileShowList] = useState(true)
-  const [isMobile, setIsMobile] = useState(false)
-  const [panelHeight, setPanelHeight] = useState(0)
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth < 768 : false
+  )
+  const [panelHeight, setPanelHeight] = useState(() =>
+    typeof window !== 'undefined' ? window.innerHeight - 49 : 600
+  )
 
   // ── Detect mobile + compute panel height from JS (avoids all CSS viewport quirks) ──
 
