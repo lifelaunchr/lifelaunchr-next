@@ -114,6 +114,8 @@ function ReportsContent() {
   )
   const [selectedReport, setSelectedReport] = useState<SessionReport | null>(null)
   const [mobileShowDetail, setMobileShowDetail] = useState(false)
+  const [listPage, setListPage] = useState(0)
+  const LIST_PAGE_SIZE = 20
   const [loading, setLoading] = useState(true)
   const [accessDenied, setAccessDenied] = useState(false)
   const [coachName, setCoachName] = useState('')
@@ -557,6 +559,8 @@ function ReportsContent() {
   // ── Active list & reports for current view mode ───────────────────────────
 
   const activeReports = teamView ? teamReports : reports
+  const totalPages = Math.ceil(activeReports.length / LIST_PAGE_SIZE)
+  const pagedReports = activeReports.slice(listPage * LIST_PAGE_SIZE, (listPage + 1) * LIST_PAGE_SIZE)
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">
@@ -598,7 +602,7 @@ function ReportsContent() {
             {isTenantAdmin && (
               <div style={{ display: 'flex', gap: 0, marginBottom: 12, border: '1px solid #e5e7eb', borderRadius: 8, overflow: 'hidden' }}>
                 <button
-                  onClick={() => setTeamView(false)}
+                  onClick={() => { setTeamView(false); setListPage(0) }}
                   style={{
                     flex: 1, padding: '6px 0', fontSize: '0.78rem', fontWeight: 600,
                     border: 'none', cursor: 'pointer',
@@ -609,7 +613,7 @@ function ReportsContent() {
                   My Reports
                 </button>
                 <button
-                  onClick={() => setTeamView(true)}
+                  onClick={() => { setTeamView(true); setListPage(0) }}
                   style={{
                     flex: 1, padding: '6px 0', fontSize: '0.78rem', fontWeight: 600,
                     border: 'none', borderLeft: '1px solid #e5e7eb', cursor: 'pointer',
@@ -632,6 +636,7 @@ function ReportsContent() {
                   setFormStudentId(val)
                   setSelectedReport(null)
                   setSentConfirm(null)
+                  setListPage(0)
                 }}
                 style={{ ...inputSt }}
               >
@@ -660,7 +665,7 @@ function ReportsContent() {
                     : 'Select a student to view their reports.'}
               </p>
             ) : (
-              activeReports.map((r) => {
+              pagedReports.map((r) => {
                 const student = students.find((s) => s.id === r.student_id)
                 const isSelected = selectedReport?.id === r.id
                 const isSent = Boolean(r.sent_at)
@@ -721,6 +726,44 @@ function ReportsContent() {
               })
             )}
           </div>
+
+          {/* Pagination controls */}
+          {totalPages > 1 && (
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '10px 16px', borderTop: '1px solid #f3f4f6', flexShrink: 0,
+              background: '#fff',
+            }}>
+              <button
+                onClick={() => setListPage(p => Math.max(0, p - 1))}
+                disabled={listPage === 0}
+                style={{
+                  padding: '4px 12px', fontSize: '0.78rem', border: '1px solid #e5e7eb',
+                  borderRadius: 6, background: listPage === 0 ? '#f9fafb' : '#fff',
+                  color: listPage === 0 ? '#d1d5db' : '#374151', cursor: listPage === 0 ? 'default' : 'pointer',
+                }}
+              >
+                ← Prev
+              </button>
+              <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                {listPage + 1} / {totalPages}
+                <span style={{ color: '#9ca3af', marginLeft: 4 }}>({activeReports.length} total)</span>
+              </span>
+              <button
+                onClick={() => setListPage(p => Math.min(totalPages - 1, p + 1))}
+                disabled={listPage >= totalPages - 1}
+                style={{
+                  padding: '4px 12px', fontSize: '0.78rem', border: '1px solid #e5e7eb',
+                  borderRadius: 6,
+                  background: listPage >= totalPages - 1 ? '#f9fafb' : '#fff',
+                  color: listPage >= totalPages - 1 ? '#d1d5db' : '#374151',
+                  cursor: listPage >= totalPages - 1 ? 'default' : 'pointer',
+                }}
+              >
+                Next →
+              </button>
+            </div>
+          )}
         </aside>
 
         {/* Right Panel — Report Form */}
