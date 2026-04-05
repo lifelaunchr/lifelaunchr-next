@@ -559,7 +559,7 @@ function ReportsContent() {
   const activeReports = teamView ? teamReports : reports
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
+    <div className="flex flex-col h-screen bg-gray-50">
       {/* Top nav */}
       <header style={{ background: '#0c1b33', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} className="px-4 sm:px-6 py-3">
         <Link href="/" style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>
@@ -570,15 +570,11 @@ function ReportsContent() {
         </Link>
       </header>
 
-      {/* Mobile toggle */}
-      <div style={{ display: 'none' }} className="mobile-toggle-bar" />
-
-      <div className="flex h-[calc(100vh-49px)] overflow-hidden">
+      <div className="flex flex-1 overflow-hidden">
 
         {/* Left Panel — Report List */}
-        <aside className={`${mobileShowDetail ? 'hidden md:flex' : 'flex'} flex-col overflow-hidden`} style={{
-          width: 320, minWidth: 280, flexShrink: 0,
-          background: '#fff', borderRight: '1px solid #e5e7eb',
+        <aside className={`${mobileShowDetail ? 'hidden md:flex' : 'flex'} flex-col overflow-hidden flex-shrink-0 bg-white border-r border-gray-200`} style={{
+          width: '100%', maxWidth: 320,
         }}>
           {/* Panel header */}
           <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid #f3f4f6' }}>
@@ -728,7 +724,7 @@ function ReportsContent() {
         </aside>
 
         {/* Right Panel — Report Form */}
-        <main className={`${mobileShowDetail ? 'flex' : 'hidden md:flex'} flex-col flex-1 overflow-y-auto`} style={{ padding: 24 }}>
+        <main className={`${mobileShowDetail ? 'flex' : 'hidden md:flex'} flex-col flex-1 overflow-y-auto p-4 sm:p-6`}>
           {/* Mobile back button */}
           <button
             onClick={() => setMobileShowDetail(false)}
