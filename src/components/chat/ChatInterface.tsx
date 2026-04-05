@@ -313,9 +313,11 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
     }
   }, [isParent, myStudents, forStudentId])
 
-  // Auto-scroll to bottom
+  // Auto-scroll to bottom (only when there are messages — don't scroll the welcome card)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (messages.length > 0) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
   }, [messages])
 
   // Auto-resize textarea
@@ -668,7 +670,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
             fixed md:relative inset-y-0 left-0 z-30
             bg-[#1a1a2e] text-slate-300 flex flex-col flex-shrink-0
             border-r border-white/10 transition-all duration-200 overflow-hidden
-            ${sidebarOpen ? 'w-full md:w-[260px]' : 'w-0'}
+            ${sidebarOpen ? 'w-[85vw] max-w-[280px] md:w-[260px] md:max-w-none' : 'w-0'}
           `}
         >
           {/* New conversation button */}
