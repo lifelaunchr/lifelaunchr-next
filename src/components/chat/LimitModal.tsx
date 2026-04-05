@@ -39,7 +39,7 @@ export function LimitModal({ messagesUsed, limit, resetDate, onClose }: LimitMod
         </h3>
 
         <p className="text-sm text-gray-500 text-center mb-5 leading-relaxed">
-          You&apos;ve used {messagesUsed} of {limit} free messages this month. Your limit resets on{' '}
+          You&apos;ve used {messagesUsed} of {limit} included messages this month. Your limit resets on{' '}
           <strong className="text-gray-700">{resetLabel}</strong>.
         </p>
 
