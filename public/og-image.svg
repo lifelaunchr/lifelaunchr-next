@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <!-- Dark navy background -->
+  <rect width="1200" height="630" fill="#0c1b33"/>
+
+  <!-- Subtle gradient overlay for depth -->
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f2244;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0c1b33;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bgGrad)"/>
+
+  <!-- Left accent line -->
+  <rect x="60" y="60" width="4" height="510" rx="2" fill="#38bdf8" opacity="0.3"/>
+
+  <!-- === Graduation Cap Icon (left side, centered vertically ~315) === -->
+  <!-- Scale: original 512x512 -> ~200px, centered at x=200, y=315 -->
+  <!-- Transform: translate(100, 215) scale(0.39) to fit ~200px -->
+  <g transform="translate(100,215) scale(0.39)">
+    <!-- Diamond/rhombus cap top -->
+    <polygon points="256,130 330,190 256,250 182,190" fill="#7dd3fc"/>
+    <!-- Cap brim -->
+    <rect x="152" y="210" width="208" height="28" rx="4" fill="#38bdf8"/>
+    <!-- Vertical pole -->
+    <rect x="322" y="190" width="8" height="100" fill="#38bdf8"/>
+    <!-- Tassel line -->
+    <line x1="326" y1="290" x2="326" y2="320" stroke="#fb923c" stroke-width="10" stroke-linecap="round"/>
+    <!-- Tassel circle -->
+    <circle cx="326" cy="336" r="20" fill="#fb923c"/>
+  </g>
+
+  <!-- Divider line between icon and text -->
+  <rect x="290" y="100" width="2" height="430" rx="1" fill="#38bdf8" opacity="0.2"/>
+
+  <!-- === Text content (right of divider) === -->
+
+  <!-- "Soar" main title -->
+  <text x="340" y="240" font-family="'Helvetica Neue', Arial, sans-serif" font-size="130" font-weight="800" fill="#ffffff" letter-spacing="-3">Soar</text>
+
+  <!-- "by LifeLaunchr" subtitle -->
+  <text x="344" y="300" font-family="'Helvetica Neue', Arial, sans-serif" font-size="36" font-weight="400" fill="#7dd3fc" letter-spacing="1">by LifeLaunchr</text>
+
+  <!-- Divider line under subtitle -->
+  <rect x="340" y="330" width="500" height="2" rx="1" fill="#38bdf8" opacity="0.3"/>
+
+  <!-- Tagline -->
+  <text x="340" y="390" font-family="'Helvetica Neue', Arial, sans-serif" font-size="32" font-weight="400" fill="#93c5fd" letter-spacing="0.5">Built by a counselor. Powered by AI.</text>
+
+  <!-- URL bottom -->
+  <text x="340" y="540" font-family="'Helvetica Neue', Arial, sans-serif" font-size="22" font-weight="400" fill="#38bdf8" opacity="0.6" letter-spacing="1">soar.lifelaunchr.com</text>
+
+  <!-- Small decorative dots -->
+  <circle cx="920" cy="200" r="3" fill="#38bdf8" opacity="0.2"/>
+  <circle cx="950" cy="240" r="2" fill="#7dd3fc" opacity="0.15"/>
+  <circle cx="1050" cy="180" r="4" fill="#38bdf8" opacity="0.1"/>
+  <circle cx="1100" cy="380" r="3" fill="#fb923c" opacity="0.2"/>
+  <circle cx="980" cy="420" r="2" fill="#7dd3fc" opacity="0.15"/>
+</svg>

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Dark navy background with rounded corners -->
+  <rect width="512" height="512" rx="80" fill="#0c1b33"/>
+
+  <!-- Graduation cap diamond/rhombus top (centered around 256,190) -->
+  <!-- Diamond shape: top 256,130 right 330,190 bottom 256,250 left 182,190 -->
+  <polygon points="256,130 330,190 256,250 182,190" fill="#7dd3fc"/>
+
+  <!-- Cap brim: horizontal rect below the diamond center line -->
+  <rect x="152" y="210" width="208" height="28" rx="4" fill="#38bdf8"/>
+
+  <!-- Vertical pole going down from right corner of diamond to tassel -->
+  <rect x="322" y="190" width="8" height="100" fill="#38bdf8"/>
+
+  <!-- Tassel horizontal line from pole bottom -->
+  <line x1="326" y1="290" x2="326" y2="320" stroke="#fb923c" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- Tassel circle at bottom -->
+  <circle cx="326" cy="330" r="10" fill="#fb923c"/>
+</svg>
