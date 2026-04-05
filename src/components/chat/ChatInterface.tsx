@@ -102,6 +102,11 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
   const [isAdmin, setIsAdmin] = useState(false)
   const [myStudents, setMyStudents] = useState<Array<{ id: number; full_name: string; email: string; has_safety_flag?: boolean }>>([])
   const [safetyStudent, setSafetyStudent] = useState<SafetyStudent | null>(null)
+  const [tenantBranding, setTenantBranding] = useState<{ botName: string; tagline: string; logoUrl: string | null }>({
+    botName: 'Soar',
+    tagline: 'Your AI-powered college advisor',
+    logoUrl: null,
+  })
   const [inviteUrl, setInviteUrl] = useState<string | null>(null)
   const [inviteCopied, setInviteCopied] = useState(false)
   const [schedulingLink, setSchedulingLink] = useState<string | null>(null)
@@ -122,6 +127,23 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
+
+  // Fetch tenant branding on mount (public endpoint, no auth required)
+  useEffect(() => {
+    fetch(`${apiUrl}/tenant-config`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data) {
+          setTenantBranding({
+            botName: data.bot_name || 'Soar',
+            tagline: data.tagline || 'Your AI-powered college advisor',
+            logoUrl: data.header_logo_url || null,
+          })
+        }
+      })
+      .catch(() => {/* keep defaults */})
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Guest token initialization
   useEffect(() => {
@@ -622,6 +644,9 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
         onToggleSidebar={() => setSidebarOpen((v) => !v)}
         messagesUsed={usageData?.messages_used}
         effectiveLimit={usageData?.effective_limit ?? null}
+        botName={tenantBranding.botName}
+        tagline={tenantBranding.tagline}
+        logoUrl={tenantBranding.logoUrl}
       />
 
       <div className="flex flex-1 overflow-hidden">
@@ -1026,7 +1051,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                   value={input}
                   onChange={handleInputChange}
                   onKeyDown={handleKeyDown}
-                  placeholder={isParent && myStudents.length > 1 && !forStudentId ? 'Select a student first…' : 'Ask Soar about colleges, majors, costs, fit...'}
+                  placeholder={isParent && myStudents.length > 1 && !forStudentId ? 'Select a student first…' : `Ask ${tenantBranding.botName} about colleges, majors, costs, fit...`}
                   disabled={isStreaming || (isParent && myStudents.length > 1 && !forStudentId)}
                   rows={1}
                   className="flex-1 border border-gray-300 rounded-xl px-4 py-3 text-sm font-sans resize-none outline-none leading-relaxed focus:border-indigo-500 transition-colors disabled:opacity-60 max-h-40 overflow-y-auto"
@@ -1062,7 +1087,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
 
               {/* Safety + upgrade links */}
               <p className="text-center text-xs mt-1 text-gray-400">
-                <a href="/upgrade" className="hover:text-indigo-500 transition-colors">Upgrade Soar</a>
+                <a href="/upgrade" className="hover:text-indigo-500 transition-colors">Upgrade {tenantBranding.botName}</a>
                 <span className="mx-1.5">·</span>
                 <a href="/safety" className="hover:text-white transition-colors">How we help keep teens safe →</a>
               </p>

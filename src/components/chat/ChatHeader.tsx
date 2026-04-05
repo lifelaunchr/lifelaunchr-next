@@ -9,6 +9,9 @@ interface ChatHeaderProps {
   onToggleSidebar: () => void
   messagesUsed?: number
   effectiveLimit?: number | null
+  botName?: string
+  tagline?: string
+  logoUrl?: string | null
 }
 
 export function ChatHeader({
@@ -17,6 +20,9 @@ export function ChatHeader({
   onToggleSidebar,
   messagesUsed,
   effectiveLimit,
+  botName = 'Soar',
+  tagline = 'Your AI-powered college advisor',
+  logoUrl,
 }: ChatHeaderProps) {
   return (
     <header className="bg-[#1a1a2e] text-white px-4 py-3 flex items-center justify-between gap-3 flex-shrink-0 border-b border-white/10">
@@ -44,11 +50,19 @@ export function ChatHeader({
 
         {/* Brand */}
         <div className="flex flex-col leading-tight min-w-0">
-          <h1 className="text-base font-semibold tracking-tight leading-none">
-            <span className="text-sky-300">Soar</span> by LifeLaunchr
-          </h1>
+          {logoUrl ? (
+            <img
+              src={logoUrl}
+              alt={botName}
+              className="h-7 w-auto object-contain object-left"
+            />
+          ) : (
+            <h1 className="text-base font-semibold tracking-tight leading-none">
+              <span className="text-sky-300">{botName}</span> by LifeLaunchr
+            </h1>
+          )}
           <span className="text-xs text-white/45 whitespace-nowrap">
-            Your AI-powered college advisor
+            {tagline}
           </span>
         </div>
       </div>
