@@ -159,6 +159,16 @@ function ReportsContent() {
   const [sentConfirm, setSentConfirm] = useState<string | null>(null) // error feedback only now
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
   const [mobileShowList, setMobileShowList] = useState(true)
+  const [isMobile, setIsMobile] = useState(false)
+
+  // ── Detect mobile ──────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   // ── Load students + usage ──────────────────────────────────────────────────
 
@@ -563,11 +573,11 @@ function ReportsContent() {
   const pagedReports = activeReports.slice(listPage * LIST_PAGE_SIZE, (listPage + 1) * LIST_PAGE_SIZE)
 
   return (
-    <div style={{ background: '#f9fafb' }}>
-      {/* Top nav — fixed so we can anchor panels below it */}
+    <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
+      {/* Top nav */}
       <header
         id="reports-header"
-        style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 20, background: '#0c1b33', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}
+        style={{ background: '#0c1b33', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}
       >
         <Link href="/" style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>
           <span style={{ color: '#7dd3fc' }}>Soar</span> by LifeLaunchr
@@ -577,13 +587,14 @@ function ReportsContent() {
         </Link>
       </header>
 
-      {/* Two-panel: fixed below header, fills rest of screen */}
-      <div style={{ position: 'fixed', top: 49, left: 0, right: 0, bottom: 0, display: 'flex', overflow: 'hidden' }}>
+      {/* Two-panel: fills remaining viewport height */}
+      <div style={{ display: 'flex', height: 'calc(100vh - 49px)', overflow: 'hidden' }}>
 
         {/* Left Panel — Report List */}
-        <aside className={mobileShowDetail ? 'hidden md:flex' : 'flex'} style={{
+        <aside style={{
+          display: (isMobile && mobileShowDetail) ? 'none' : 'flex',
           flexDirection: 'column', overflow: 'hidden', flexShrink: 0,
-          width: '100%', maxWidth: 320,
+          width: isMobile ? '100%' : 320,
           background: '#fff', borderRight: '1px solid #e5e7eb',
         }}>
           {/* Panel header */}
@@ -773,13 +784,14 @@ function ReportsContent() {
         </aside>
 
         {/* Right Panel — Report Form */}
-        <main className={mobileShowDetail ? 'flex' : 'hidden md:flex'} style={{
+        <main style={{
+          display: (!isMobile || mobileShowDetail) ? 'flex' : 'none',
           flexDirection: 'column', flex: 1, overflowY: 'auto', padding: 24,
         }}>
           {/* Mobile back button */}
           <button
             onClick={() => setMobileShowDetail(false)}
-            className="md:hidden flex items-center gap-1.5 text-sm text-indigo-600 mb-4 -ml-1 font-medium"
+            style={{ display: isMobile ? 'flex' : 'none', alignItems: 'center', gap: 6, fontSize: '0.875rem', color: '#4f46e5', marginBottom: 16, marginLeft: -4, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}
           >
             ← Back to list
           </button>
