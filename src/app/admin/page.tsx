@@ -451,16 +451,13 @@ export default function AdminPage() {
     u.account_type === 'counselor' && u.tenant_id === tenantSettings?.id
   )
 
-  // Counselor-relevant tiers for the plan dropdown (dynamic if loaded, fallback hardcoded)
+  // Counselor/practice tiers for the tenant plan dropdown.
+  // These are the B2B tiers (is_b2b = true in DB). Pulled dynamically from loaded tiers if
+  // available; hardcoded slugs as fallback so the form always renders.
+  const B2B_TIER_SLUGS = ['counselor_starter', 'solo', 'practice', 'school', 'enterprise']
   const counselorTierOptions: Array<{ name: string; display_name: string }> = tiers.length > 0
-    ? tiers.filter(t => t.name.startsWith('counselor') || ['solo', 'beta', 'enterprise'].includes(t.name))
-    : [
-        { name: 'beta', display_name: 'Beta' },
-        { name: 'counselor_starter', display_name: 'Counselor Starter' },
-        { name: 'counselor_pro', display_name: 'Counselor Pro' },
-        { name: 'solo', display_name: 'Solo' },
-        { name: 'enterprise', display_name: 'Enterprise' },
-      ]
+    ? tiers.filter(t => B2B_TIER_SLUGS.includes(t.name))
+    : B2B_TIER_SLUGS.map(s => ({ name: s, display_name: s }))
 
   if (loading) return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -823,7 +820,7 @@ export default function AdminPage() {
                 <input
                   value={editingUser.tier || ''}
                   onChange={e => setEditingUser({ ...editingUser, tier: e.target.value || null })}
-                  placeholder="e.g. student_plus, solo, practice"
+                  placeholder="e.g. student_plus, solo, practice, school"
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
                 />
                 <p className="text-[10px] text-gray-400 mt-1">Leave blank to use default for account type</p>
