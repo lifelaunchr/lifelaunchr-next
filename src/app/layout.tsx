@@ -20,9 +20,9 @@ export const metadata: Metadata = {
   },
   description:
     'Built by a counselor. Powered by AI. The college planning advisor that knows your student, remembers everything, and gets smarter over time.',
-  metadataBase: new URL('https://soar.lifelaunchr.com'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'https://lifelaunchr-next.vercel.app'),
   alternates: {
-    canonical: 'https://soar.lifelaunchr.com',
+    canonical: process.env.NEXT_PUBLIC_APP_URL ?? 'https://lifelaunchr-next.vercel.app',
   },
   keywords: [
     'college planning',
@@ -36,11 +36,11 @@ export const metadata: Metadata = {
     title: 'Soar by LifeLaunchr',
     description:
       'Built by a counselor. Powered by AI. The college planning advisor that knows your student, remembers everything, and gets smarter over time.',
-    url: 'https://soar.lifelaunchr.com',
+    url: process.env.NEXT_PUBLIC_APP_URL ?? 'https://lifelaunchr-next.vercel.app',
     siteName: 'Soar by LifeLaunchr',
     images: [
       {
-        url: '/og-image.svg',
+        url: '/og-image.png',
         width: 1200,
         height: 630,
         alt: 'Soar by LifeLaunchr',
@@ -53,7 +53,7 @@ export const metadata: Metadata = {
     title: 'Soar by LifeLaunchr',
     description:
       'Built by a counselor. Powered by AI. The college planning advisor that knows your student, remembers everything, and gets smarter over time.',
-    images: ['/og-image.svg'],
+    images: ['/og-image.png'],
   },
   icons: {
     icon: [
