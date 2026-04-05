@@ -42,9 +42,17 @@ interface TierRow {
 
 interface TenantRow {
   id: number
-  name: string
+  display_name: string
   subdomain: string
   plan: string | null
+  bot_name: string | null
+  tagline: string | null
+  header_logo_url: string | null
+  primary_color: string | null
+  header_color: string | null
+  accent_color: string | null
+  custom_instructions: string | null
+  is_active: boolean
   user_count: number
   ai_queries_this_month: number
   created_at: string
@@ -57,7 +65,60 @@ interface TenantSettings {
   session_report_cc_emails: string | null
 }
 
+interface TenantFormData {
+  subdomain: string
+  display_name: string
+  plan: string
+  bot_name: string
+  tagline: string
+  header_logo_url: string
+  primary_color: string
+  header_color: string
+  accent_color: string
+  custom_instructions: string
+  is_active: boolean
+}
+
+const BLANK_TENANT: TenantFormData = {
+  subdomain: '',
+  display_name: '',
+  plan: 'beta',
+  bot_name: 'Soar',
+  tagline: 'Your AI-powered college and career planning assistant.',
+  header_logo_url: '',
+  primary_color: '#0369a1',
+  header_color: '#0c1b33',
+  accent_color: '#c2410c',
+  custom_instructions: '',
+  is_active: true,
+}
+
+const STARTER_PROMPT = `I run a college counseling practice called [PRACTICE NAME]. Help me write a 2–3 paragraph context description for an AI college and career planning assistant that will work with my students. It should capture: our counseling philosophy, the types of students we work with, any geographic or school-type focus, and anything that makes our practice distinctive. Keep it concise and written in second person addressed to the AI ("You are a college research assistant for…"). Ask me questions first to help create it.`
+
 type TabType = 'users' | 'tiers' | 'tenants' | 'tenant'
+
+const PAGE_SIZE = 25
+
+/** Normalise a hex color input to #rrggbb. Accepts with/without #, 6 or 8 chars. */
+function normalizeColor(raw: string): string {
+  const s = raw.trim().replace(/^#/, '')
+  if (/^[0-9a-fA-F]{8}$/.test(s)) return '#' + s.slice(0, 6) // strip alpha
+  if (/^[0-9a-fA-F]{6}$/.test(s)) return '#' + s
+  return raw.trim() // return as-is; invalid values ignored by backend
+}
+
+/** Tiny inline color swatch — only renders if value is valid hex */
+function ColorSwatch({ value }: { value: string }) {
+  const n = normalizeColor(value)
+  if (!/^#[0-9a-fA-F]{6}$/.test(n)) return null
+  return (
+    <span
+      className="inline-block w-5 h-5 rounded border border-gray-200 flex-shrink-0"
+      style={{ backgroundColor: n }}
+      title={n}
+    />
+  )
+}
 
 export default function AdminPage() {
   const { getToken } = useAuth()
@@ -70,6 +131,7 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<TabType>('users')
   const [search, setSearch] = useState('')
+  const [userPage, setUserPage] = useState(1)
   const [editingUser, setEditingUser] = useState<UserRow | null>(null)
   const [editingTier, setEditingTier] = useState<TierRow | null>(null)
   const [saving, setSaving] = useState(false)
@@ -85,10 +147,24 @@ export default function AdminPage() {
   const [tenantCCEmails, setTenantCCEmails] = useState('')
   const [tenantLoading, setTenantLoading] = useState(false)
 
-  // Create tenant
-  const [creatingTenant, setCreatingTenant] = useState(false)
-  const [newTenant, setNewTenant] = useState({ subdomain: '', display_name: '', plan: 'beta' })
-  const [createMsg, setCreateMsg] = useState('')
+  // Create / Edit tenant modal
+  const [tenantModalOpen, setTenantModalOpen] = useState(false)
+  const [editingTenantId, setEditingTenantId] = useState<number | null>(null)
+  const [tenantForm, setTenantForm] = useState<TenantFormData>(BLANK_TENANT)
+  const [tenantFormMsg, setTenantFormMsg] = useState('')
+
+  // Delete tenant
+  const [deletingTenant, setDeletingTenant] = useState<TenantRow | null>(null)
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState('')
+
+  // Pending role change waiting for confirmation
+  const [pendingFlag, setPendingFlag] = useState<{
+    userId: number
+    email: string
+    flag: 'admin' | 'super-admin' | 'tenant-admin'
+    value: boolean
+    confirmInput: string
+  } | null>(null)
 
   const load = async () => {
     setLoading(true)
@@ -127,7 +203,6 @@ export default function AdminPage() {
             .then(r => { console.log('[admin] users-all status', r.status); return r.ok ? r.json() : [] }).then(setUsers)),
         )
       } else if (tenantAdmin) {
-        // Tenant admins get a junction-table scoped view of their practice
         fetches.push(
           wrap('my-users', fetch(`${apiUrl}/admin/my-users`, { headers })
             .then(r => { console.log('[admin] my-users status', r.status); return r.ok ? r.json() : [] }).then(setUsers)),
@@ -163,6 +238,9 @@ export default function AdminPage() {
 
   useEffect(() => { load() }, [])
 
+  // Reset to page 1 when search changes
+  useEffect(() => { setUserPage(1) }, [search])
+
   const saveUser = async () => {
     if (!editingUser) return
     setSaving(true)
@@ -192,15 +270,6 @@ export default function AdminPage() {
     setTimeout(() => setSaveMsg(''), 3000)
   }
 
-  // Pending role change waiting for confirmation
-  const [pendingFlag, setPendingFlag] = useState<{
-    userId: number
-    email: string
-    flag: 'admin' | 'super-admin' | 'tenant-admin'
-    value: boolean
-    confirmInput: string
-  } | null>(null)
-
   const requestToggleFlag = (userId: number, email: string, flag: 'admin' | 'super-admin' | 'tenant-admin', value: boolean) => {
     setPendingFlag({ userId, email, flag, value, confirmInput: '' })
   }
@@ -208,7 +277,6 @@ export default function AdminPage() {
   const confirmToggleFlag = async () => {
     if (!pendingFlag) return
     const { userId, email, flag, value } = pendingFlag
-    // For super-admin grants, require typing the email
     if (flag === 'super-admin' && value && pendingFlag.confirmInput.trim().toLowerCase() !== email.toLowerCase()) {
       return
     }
@@ -278,31 +346,94 @@ export default function AdminPage() {
     setTimeout(() => setSaveMsg(''), 3000)
   }
 
-  const createTenant = async () => {
-    if (!newTenant.subdomain || !newTenant.display_name) {
-      setCreateMsg('Subdomain and display name are required.')
+  const openCreateTenant = () => {
+    setTenantForm(BLANK_TENANT)
+    setEditingTenantId(null)
+    setTenantFormMsg('')
+    setTenantModalOpen(true)
+  }
+
+  const openEditTenant = (t: TenantRow) => {
+    setTenantForm({
+      subdomain: t.subdomain,
+      display_name: t.display_name,
+      plan: t.plan || 'beta',
+      bot_name: t.bot_name || 'Soar',
+      tagline: t.tagline || '',
+      header_logo_url: t.header_logo_url || '',
+      primary_color: t.primary_color || '#0369a1',
+      header_color: t.header_color || '#0c1b33',
+      accent_color: t.accent_color || '#c2410c',
+      custom_instructions: t.custom_instructions || '',
+      is_active: t.is_active,
+    })
+    setEditingTenantId(t.id)
+    setTenantFormMsg('')
+    setTenantModalOpen(true)
+  }
+
+  const saveTenantForm = async () => {
+    if (!tenantForm.subdomain || !tenantForm.display_name) {
+      setTenantFormMsg('Subdomain and display name are required.')
       return
     }
     setSaving(true)
     try {
       const token = await getToken()
-      const res = await fetch(`${apiUrl}/admin/tenants`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(newTenant),
-      })
+      const payload = {
+        ...tenantForm,
+        primary_color: normalizeColor(tenantForm.primary_color),
+        header_color: normalizeColor(tenantForm.header_color),
+        accent_color: normalizeColor(tenantForm.accent_color),
+        header_logo_url: tenantForm.header_logo_url.trim() || null,
+        custom_instructions: tenantForm.custom_instructions.trim() || null,
+      }
+      const isEdit = editingTenantId !== null
+      const res = await fetch(
+        isEdit ? `${apiUrl}/admin/tenants/${editingTenantId}` : `${apiUrl}/admin/tenants`,
+        {
+          method: isEdit ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify(payload),
+        }
+      )
       if (res.ok) {
-        setCreateMsg('Tenant created!')
-        setCreatingTenant(false)
-        setNewTenant({ subdomain: '', display_name: '', plan: 'beta' })
+        setTenantModalOpen(false)
+        setSaveMsg(isEdit ? 'Tenant updated!' : 'Tenant created!')
+        setTimeout(() => setSaveMsg(''), 3000)
         load()
       } else {
         const err = await res.json()
-        setCreateMsg(err.detail || 'Error creating tenant.')
+        setTenantFormMsg(err.detail || 'Error saving tenant.')
       }
-    } catch { setCreateMsg('Error creating tenant.') }
+    } catch { setTenantFormMsg('Error saving tenant.') }
     setSaving(false)
-    setTimeout(() => setCreateMsg(''), 4000)
+  }
+
+  const confirmDeleteTenant = async () => {
+    if (!deletingTenant) return
+    if (deleteConfirmInput.trim().toLowerCase() !== deletingTenant.display_name.toLowerCase()) return
+    setSaving(true)
+    try {
+      const token = await getToken()
+      const res = await fetch(`${apiUrl}/admin/tenants/${deletingTenant.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        setTenants(prev => prev.filter(t => t.id !== deletingTenant.id))
+        setDeletingTenant(null)
+        setDeleteConfirmInput('')
+        setSaveMsg('Tenant deleted.')
+        setTimeout(() => setSaveMsg(''), 3000)
+      } else {
+        const err = await res.json()
+        setSaveMsg(err.detail || 'Error deleting tenant.')
+        setTimeout(() => setSaveMsg(''), 5000)
+        setDeletingTenant(null)
+      }
+    } catch { setSaveMsg('Error deleting tenant.') }
+    setSaving(false)
   }
 
   const filteredUsers = users.filter(u =>
@@ -311,6 +442,25 @@ export default function AdminPage() {
     u.full_name?.toLowerCase().includes(search.toLowerCase()) ||
     u.organization?.toLowerCase().includes(search.toLowerCase())
   )
+
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE))
+  const pagedUsers = filteredUsers.slice((userPage - 1) * PAGE_SIZE, userPage * PAGE_SIZE)
+
+  // Counselors in this tenant for the My Practice / Tenant Settings tab
+  const tenantCounselors = users.filter(u =>
+    u.account_type === 'counselor' && u.tenant_id === tenantSettings?.id
+  )
+
+  // Counselor-relevant tiers for the plan dropdown (dynamic if loaded, fallback hardcoded)
+  const counselorTierOptions: Array<{ name: string; display_name: string }> = tiers.length > 0
+    ? tiers.filter(t => t.name.startsWith('counselor') || ['solo', 'beta', 'enterprise'].includes(t.name))
+    : [
+        { name: 'beta', display_name: 'Beta' },
+        { name: 'counselor_starter', display_name: 'Counselor Starter' },
+        { name: 'counselor_pro', display_name: 'Counselor Pro' },
+        { name: 'solo', display_name: 'Solo' },
+        { name: 'enterprise', display_name: 'Enterprise' },
+      ]
 
   if (loading) return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -346,28 +496,24 @@ export default function AdminPage() {
       <div className="max-w-7xl mx-auto px-6 py-6">
         {/* Tabs */}
         <div className="flex gap-1 mb-6 border-b border-gray-200">
-          {/* Users: all three admin roles */}
           {(isAdmin || isSuperAdmin || isTenantAdmin) && (
             <button onClick={() => setTab('users')}
               className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${tab === 'users' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
               Users ({users.length})
             </button>
           )}
-          {/* Tiers: super-admin only */}
           {isSuperAdmin && (
             <button onClick={() => setTab('tiers')}
               className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${tab === 'tiers' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
               Tiers ({tiers.length})
             </button>
           )}
-          {/* Tenants: super-admin only */}
           {isSuperAdmin && (
             <button onClick={() => setTab('tenants')}
               className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${tab === 'tenants' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
               Tenants ({tenants.length})
             </button>
           )}
-          {/* Tenant Settings / My Practice: all three roles */}
           {tenantSettings && (
             <button onClick={() => setTab('tenant')}
               className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${tab === 'tenant' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
@@ -408,7 +554,7 @@ export default function AdminPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {filteredUsers.map(u => (
+                  {pagedUsers.map(u => (
                     <tr key={u.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3">
                         <p className="font-medium text-gray-800">{u.full_name || '—'}</p>
@@ -460,6 +606,30 @@ export default function AdminPage() {
                 </tbody>
               </table>
             </div>
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4">
+                <span className="text-sm text-gray-400">
+                  Page {userPage} of {totalPages} · {filteredUsers.length} users
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setUserPage(p => Math.max(1, p - 1))}
+                    disabled={userPage === 1}
+                    className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    ← Prev
+                  </button>
+                  <button
+                    onClick={() => setUserPage(p => Math.min(totalPages, p + 1))}
+                    disabled={userPage === totalPages}
+                    className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Next →
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -511,13 +681,12 @@ export default function AdminPage() {
             <div className="mb-4 flex justify-between items-center">
               <span className="text-sm text-gray-500">{tenants.length} tenants</span>
               <button
-                onClick={() => setCreatingTenant(true)}
+                onClick={openCreateTenant}
                 className="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
               >
                 + New Tenant
               </button>
             </div>
-            {createMsg && <p className="text-sm text-green-600 mb-3">{createMsg}</p>}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-100">
@@ -528,12 +697,16 @@ export default function AdminPage() {
                     <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Users</th>
                     <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">AI queries (mo)</th>
                     <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Created</th>
+                    <th className="px-4 py-3"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {tenants.map(t => (
                     <tr key={t.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 font-medium text-gray-800">{t.name}</td>
+                      <td className="px-4 py-3">
+                        <p className="font-medium text-gray-800">{t.display_name}</p>
+                        {!t.is_active && <span className="text-xs text-gray-400">inactive</span>}
+                      </td>
                       <td className="px-4 py-3 text-gray-500 font-mono text-xs">{t.subdomain}</td>
                       <td className="px-4 py-3">
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-700">
@@ -545,6 +718,22 @@ export default function AdminPage() {
                       <td className="px-4 py-3 text-right text-gray-400 text-xs">
                         {new Date(t.created_at).toLocaleDateString()}
                       </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-3">
+                          <button
+                            onClick={() => openEditTenant(t)}
+                            className="text-xs text-indigo-500 hover:text-indigo-700 font-medium"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => { setDeletingTenant(t); setDeleteConfirmInput('') }}
+                            className="text-xs text-red-400 hover:text-red-600 font-medium"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -553,9 +742,10 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* ── Tenant Settings tab ── */}
+        {/* ── Tenant Settings / My Practice tab ── */}
         {tab === 'tenant' && (
-          <div className="max-w-xl">
+          <div className="max-w-xl space-y-6">
+            {/* CC emails card */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <h2 className="text-base font-semibold text-gray-800 mb-1">
                 {tenantSettings?.display_name || 'Tenant'} Settings
@@ -585,6 +775,36 @@ export default function AdminPage() {
                   {tenantLoading ? 'Saving…' : 'Save settings'}
                 </button>
               </div>
+            </div>
+
+            {/* Counselors card */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <h2 className="text-base font-semibold text-gray-800 mb-1">Counselors</h2>
+              <p className="text-sm text-gray-400 mb-4">Coaches in your organization.</p>
+              {tenantCounselors.length === 0 ? (
+                <p className="text-sm text-gray-400">No counselors found.</p>
+              ) : (
+                <div className="divide-y divide-gray-50">
+                  {tenantCounselors.map(u => (
+                    <div key={u.id} className="py-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-800">{u.full_name || '—'}</p>
+                        <p className="text-xs text-gray-400">{u.email}</p>
+                        {u.organization && <p className="text-xs text-gray-400">{u.organization}</p>}
+                      </div>
+                      <div className="text-right">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-700">
+                          {u.tier_display_name || u.tier || 'free'}
+                        </span>
+                        {u.is_tenant_admin && (
+                          <span className="ml-1 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-teal-50 text-teal-700">admin</span>
+                        )}
+                        <p className="text-xs text-gray-400 mt-0.5">{u.messages_used} msgs used</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -666,7 +886,6 @@ export default function AdminPage() {
                 <div className="border-t border-gray-100 pt-4">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Role flags</p>
                   <div className="space-y-3">
-                    {/* Super-admin: only super-admins can see/change */}
                     {isSuperAdmin && (
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-gray-700">
@@ -685,7 +904,6 @@ export default function AdminPage() {
                         </button>
                       </div>
                     )}
-                    {/* Admin: only super-admins can see/change */}
                     {isSuperAdmin && (
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-gray-700">
@@ -704,7 +922,6 @@ export default function AdminPage() {
                         </button>
                       </div>
                     )}
-                    {/* Tenant admin: super-admins and admins can see/change */}
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-700">
                         Tenant admin
@@ -850,7 +1067,7 @@ export default function AdminPage() {
                   {needsEmailConfirm && (
                     <div className="mb-4">
                       <label className="block text-xs font-medium text-gray-600 mb-1">
-                        Type the user's email to confirm
+                        Type the user&apos;s email to confirm
                       </label>
                       <input
                         autoFocus
@@ -885,56 +1102,220 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* ── Create tenant modal ── */}
-      {creatingTenant && (
+      {/* ── Create / Edit tenant modal ── */}
+      {tenantModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
-            <h3 className="text-base font-semibold text-gray-800 mb-5">New Tenant</h3>
-            {createMsg && <p className="text-sm text-red-500 mb-3">{createMsg}</p>}
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <h3 className="text-base font-semibold text-gray-800 mb-5">
+              {editingTenantId !== null ? 'Edit Tenant' : 'New Tenant'}
+            </h3>
+            {tenantFormMsg && (
+              <p className={`text-sm mb-3 ${tenantFormMsg.toLowerCase().includes('error') || tenantFormMsg.includes('required') ? 'text-red-500' : 'text-green-600'}`}>
+                {tenantFormMsg}
+              </p>
+            )}
             <div className="space-y-4">
+              {/* Display name */}
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Display name</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Display name <span className="text-red-400">*</span></label>
                 <input
-                  value={newTenant.display_name}
-                  onChange={e => setNewTenant({ ...newTenant, display_name: e.target.value })}
+                  value={tenantForm.display_name}
+                  onChange={e => setTenantForm({ ...tenantForm, display_name: e.target.value })}
                   placeholder="e.g. Bright Futures Counseling"
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
                 />
               </div>
+              {/* Subdomain */}
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Subdomain</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Subdomain <span className="text-red-400">*</span></label>
                 <input
-                  value={newTenant.subdomain}
-                  onChange={e => setNewTenant({ ...newTenant, subdomain: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
+                  value={tenantForm.subdomain}
+                  onChange={e => setTenantForm({ ...tenantForm, subdomain: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
                   placeholder="e.g. brightfutures"
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-indigo-400"
                 />
                 <p className="text-[10px] text-gray-400 mt-1">Lowercase letters, numbers, and hyphens only</p>
               </div>
+              {/* Plan */}
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Plan</label>
                 <select
-                  value={newTenant.plan}
-                  onChange={e => setNewTenant({ ...newTenant, plan: e.target.value })}
+                  value={tenantForm.plan}
+                  onChange={e => setTenantForm({ ...tenantForm, plan: e.target.value })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
                 >
-                  <option value="beta">Beta</option>
-                  <option value="starter">Starter</option>
-                  <option value="pro">Pro</option>
-                  <option value="enterprise">Enterprise</option>
+                  {counselorTierOptions.map(t => (
+                    <option key={t.name} value={t.name}>{t.display_name}</option>
+                  ))}
                 </select>
               </div>
+              {/* Bot name */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">AI assistant name</label>
+                <input
+                  value={tenantForm.bot_name}
+                  onChange={e => setTenantForm({ ...tenantForm, bot_name: e.target.value })}
+                  placeholder="e.g. Soar"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                />
+              </div>
+              {/* Tagline */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Tagline</label>
+                <input
+                  value={tenantForm.tagline}
+                  onChange={e => setTenantForm({ ...tenantForm, tagline: e.target.value })}
+                  placeholder="e.g. Your AI-powered college and career planning assistant."
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                />
+              </div>
+              {/* Header logo URL */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Header logo URL</label>
+                <input
+                  value={tenantForm.header_logo_url}
+                  onChange={e => setTenantForm({ ...tenantForm, header_logo_url: e.target.value })}
+                  placeholder="https://…"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                />
+              </div>
+              {/* Brand colors */}
+              <div className="grid grid-cols-3 gap-3">
+                {(['primary_color', 'header_color', 'accent_color'] as const).map(field => (
+                  <div key={field}>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      {field === 'primary_color' ? 'Primary' : field === 'header_color' ? 'Header' : 'Accent'} color
+                    </label>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        value={tenantForm[field]}
+                        onChange={e => setTenantForm({ ...tenantForm, [field]: e.target.value })}
+                        placeholder="#0369a1"
+                        className="w-full border border-gray-300 rounded-lg px-2 py-2 text-sm font-mono focus:outline-none focus:border-indigo-400"
+                      />
+                      <ColorSwatch value={tenantForm[field]} />
+                    </div>
+                    <p className="text-[10px] text-gray-400 mt-1">6 or 8 hex digits, # optional</p>
+                  </div>
+                ))}
+              </div>
+              {/* Active */}
+              <div>
+                <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={tenantForm.is_active}
+                    onChange={e => setTenantForm({ ...tenantForm, is_active: e.target.checked })}
+                  />
+                  Active
+                </label>
+              </div>
+              {/* Custom instructions */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">AI context / custom instructions</label>
+                <textarea
+                  value={tenantForm.custom_instructions}
+                  onChange={e => setTenantForm({ ...tenantForm, custom_instructions: e.target.value })}
+                  placeholder="You are a college and career planning assistant for…"
+                  rows={5}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400 resize-y"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  This text shapes how the AI introduces itself and responds to students. It can include your practice&apos;s philosophy, focus areas, and anything specific to your students.
+                </p>
+                <details className="mt-2">
+                  <summary className="text-xs text-indigo-500 cursor-pointer hover:text-indigo-700 select-none">
+                    Need help writing this? →
+                  </summary>
+                  <div className="mt-2 bg-gray-50 border border-gray-200 rounded-lg p-3">
+                    <p className="text-xs font-medium text-gray-700 mb-2">Paste this prompt into Claude, ChatGPT, or Google Gemini:</p>
+                    <pre className="whitespace-pre-wrap font-sans text-[11px] text-gray-600 bg-white border border-gray-200 rounded p-2 leading-relaxed">{STARTER_PROMPT}</pre>
+                    <button
+                      type="button"
+                      onClick={() => navigator.clipboard.writeText(STARTER_PROMPT)}
+                      className="mt-1.5 text-indigo-500 hover:text-indigo-700 text-[11px] font-medium"
+                    >
+                      Copy prompt
+                    </button>
+                  </div>
+                </details>
+              </div>
             </div>
+
             <div className="flex gap-3 mt-6">
-              <button onClick={createTenant} disabled={saving}
-                className="flex-1 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-300 text-white rounded-lg py-2 text-sm font-medium transition-colors">
-                {saving ? 'Creating…' : 'Create tenant'}
+              <button
+                onClick={saveTenantForm}
+                disabled={saving}
+                className="flex-1 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-300 text-white rounded-lg py-2 text-sm font-medium transition-colors"
+              >
+                {saving ? 'Saving…' : editingTenantId !== null ? 'Save changes' : 'Create tenant'}
               </button>
-              <button onClick={() => { setCreatingTenant(false); setCreateMsg('') }}
-                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-medium transition-colors">
+              <button
+                onClick={() => { setTenantModalOpen(false); setTenantFormMsg('') }}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-medium transition-colors"
+              >
                 Cancel
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Delete tenant confirmation modal ── */}
+      {deletingTenant && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
+            <h3 className="text-base font-semibold text-gray-800 mb-1">Delete Tenant</h3>
+            <p className="text-sm text-gray-500 mb-3">{deletingTenant.display_name}</p>
+
+            {deletingTenant.user_count > 0 ? (
+              <>
+                <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4">
+                  <p className="text-sm text-red-700 font-medium">
+                    Cannot delete — tenant has {deletingTenant.user_count} active user{deletingTenant.user_count !== 1 ? 's' : ''}.
+                  </p>
+                  <p className="text-xs text-red-500 mt-1">Remove or reassign all users before deleting this tenant.</p>
+                </div>
+                <p className="text-xs text-gray-400 mb-4">
+                  Need help? Contact <a href="mailto:help@lifelaunchr.com" className="text-indigo-500 hover:underline">help@lifelaunchr.com</a>.
+                </p>
+                <button
+                  onClick={() => { setDeletingTenant(null); setDeleteConfirmInput('') }}
+                  className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-medium transition-colors"
+                >
+                  Close
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-xs text-gray-400 mb-4">
+                  This action is permanent and cannot be undone. Type the tenant name to confirm.
+                </p>
+                <input
+                  autoFocus
+                  type="text"
+                  value={deleteConfirmInput}
+                  onChange={e => setDeleteConfirmInput(e.target.value)}
+                  placeholder={deletingTenant.display_name}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:border-red-400"
+                />
+                <div className="flex gap-3">
+                  <button
+                    onClick={confirmDeleteTenant}
+                    disabled={saving || deleteConfirmInput.trim().toLowerCase() !== deletingTenant.display_name.toLowerCase()}
+                    className="flex-1 bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white rounded-lg py-2 text-sm font-medium transition-colors"
+                  >
+                    {saving ? 'Deleting…' : 'Delete tenant'}
+                  </button>
+                  <button
+                    onClick={() => { setDeletingTenant(null); setDeleteConfirmInput('') }}
+                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-medium transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
