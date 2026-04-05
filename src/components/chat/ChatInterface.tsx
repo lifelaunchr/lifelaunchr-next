@@ -92,7 +92,9 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
   const [guestToken, setGuestToken] = useState<string | null>(null)
   const [activeModules, setActiveModules] = useState<string[]>([])
   const [usageData, setUsageData] = useState<UsageData | null>(null)
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(() =>
+    typeof window === 'undefined' ? true : window.innerWidth >= 768
+  )
   const [limitModalData, setLimitModalData] = useState<LimitReachedData | null>(null)
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
   const [sessions, setSessions] = useState<Session[]>([])
