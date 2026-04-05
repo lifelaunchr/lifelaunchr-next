@@ -788,13 +788,15 @@ function ReportsContent() {
           display: (!isMobile || mobileShowDetail) ? 'flex' : 'none',
           flexDirection: 'column', flex: 1, overflowY: 'auto', padding: 24,
         }}>
-          {/* Mobile back button */}
-          <button
-            onClick={() => setMobileShowDetail(false)}
-            style={{ display: isMobile ? 'flex' : 'none', alignItems: 'center', gap: 6, fontSize: '0.875rem', color: '#4f46e5', marginBottom: 16, marginLeft: -4, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}
-          >
-            ← Back to list
-          </button>
+          {/* Mobile back button — show whenever mobileShowDetail is true */}
+          {mobileShowDetail && (
+            <button
+              onClick={() => setMobileShowDetail(false)}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.875rem', color: '#4f46e5', marginBottom: 16, marginLeft: -4, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              ← Back to list
+            </button>
+          )}
           <div style={{ maxWidth: 760, margin: '0 auto' }}>
 
             {/* Post-send green banner */}
