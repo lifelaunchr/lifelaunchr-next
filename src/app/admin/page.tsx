@@ -132,6 +132,9 @@ export default function AdminPage() {
   const [tab, setTab] = useState<TabType>('users')
   const [search, setSearch] = useState('')
   const [userPage, setUserPage] = useState(1)
+  const [typeFilter, setTypeFilter] = useState<string>('all')
+  const [sortCol, setSortCol] = useState<string>('name')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [editingUser, setEditingUser] = useState<UserRow | null>(null)
   const [editingTier, setEditingTier] = useState<TierRow | null>(null)
   const [saving, setSaving] = useState(false)
@@ -238,8 +241,8 @@ export default function AdminPage() {
 
   useEffect(() => { load() }, [])
 
-  // Reset to page 1 when search changes
-  useEffect(() => { setUserPage(1) }, [search])
+  // Reset to page 1 when search or filter changes
+  useEffect(() => { setUserPage(1) }, [search, typeFilter])
 
   const saveUser = async () => {
     if (!editingUser) return
@@ -436,12 +439,37 @@ export default function AdminPage() {
     setSaving(false)
   }
 
-  const filteredUsers = users.filter(u =>
-    !search ||
-    u.email?.toLowerCase().includes(search.toLowerCase()) ||
-    u.full_name?.toLowerCase().includes(search.toLowerCase()) ||
-    u.organization?.toLowerCase().includes(search.toLowerCase())
-  )
+  const toggleSort = (col: string) => {
+    if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    else { setSortCol(col); setSortDir('asc') }
+    setUserPage(1)
+  }
+
+  const sortIndicator = (col: string) =>
+    sortCol === col ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''
+
+  const filteredUsers = users
+    .filter(u =>
+      (typeFilter === 'all' || u.account_type === typeFilter) &&
+      (!search ||
+        u.email?.toLowerCase().includes(search.toLowerCase()) ||
+        u.full_name?.toLowerCase().includes(search.toLowerCase()) ||
+        u.organization?.toLowerCase().includes(search.toLowerCase()))
+    )
+    .sort((a, b) => {
+      let av: string | number, bv: string | number
+      switch (sortCol) {
+        case 'name':  av = (a.full_name || a.email).toLowerCase(); bv = (b.full_name || b.email).toLowerCase(); break
+        case 'type':  av = a.account_type; bv = b.account_type; break
+        case 'tier':  av = (a.tier_display_name || a.tier || '').toLowerCase(); bv = (b.tier_display_name || b.tier || '').toLowerCase(); break
+        case 'limit': av = a.monthly_message_limit ?? 999999; bv = b.monthly_message_limit ?? 999999; break
+        case 'used':  av = a.messages_used; bv = b.messages_used; break
+        default: return 0
+      }
+      if (av < bv) return sortDir === 'asc' ? -1 : 1
+      if (av > bv) return sortDir === 'asc' ? 1 : -1
+      return 0
+    })
 
   const totalPages = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE))
   const pagedUsers = filteredUsers.slice((userPage - 1) * PAGE_SIZE, userPage * PAGE_SIZE)
@@ -528,24 +556,35 @@ export default function AdminPage() {
                 <a href="mailto:help@lifelaunchr.com" className="text-indigo-500 hover:underline">help@lifelaunchr.com</a>.
               </p>
             )}
-            <div className="mb-4 flex gap-3 items-center">
+            <div className="mb-4 flex gap-3 items-center flex-wrap">
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Search by name, email, or org…"
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-80 focus:outline-none focus:border-indigo-400"
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-72 focus:outline-none focus:border-indigo-400"
               />
+              <select
+                value={typeFilter}
+                onChange={e => setTypeFilter(e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400 bg-white"
+              >
+                <option value="all">All types</option>
+                <option value="student">Students</option>
+                <option value="parent">Parents</option>
+                <option value="counselor">Counselors</option>
+              </select>
               <span className="text-sm text-gray-400">{filteredUsers.length} users</span>
             </div>
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-100">
                   <tr>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">User</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Tier / Role</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Msg limit</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Used</th>
+                    {[['name','User','left'],['type','Type','left'],['tier','Tier / Role','left'],['limit','Msg limit','right'],['used','Used','right']].map(([col, label, align]) => (
+                      <th key={col} onClick={() => toggleSort(col)}
+                        className={`px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none text-${align}`}>
+                        {label}{sortIndicator(col)}
+                      </th>
+                    ))}
                     <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Overrides</th>
                     <th className="px-4 py-3"></th>
                   </tr>
@@ -783,20 +822,30 @@ export default function AdminPage() {
               ) : (
                 <div className="divide-y divide-gray-50">
                   {tenantCounselors.map(u => (
-                    <div key={u.id} className="py-3 flex items-center justify-between">
-                      <div>
+                    <div key={u.id} className="py-3 flex items-center justify-between gap-3">
+                      <div className="min-w-0">
                         <p className="text-sm font-medium text-gray-800">{u.full_name || '—'}</p>
                         <p className="text-xs text-gray-400">{u.email}</p>
                         {u.organization && <p className="text-xs text-gray-400">{u.organization}</p>}
                       </div>
-                      <div className="text-right">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-700">
-                          {u.tier_display_name || u.tier || 'free'}
-                        </span>
-                        {u.is_tenant_admin && (
-                          <span className="ml-1 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-teal-50 text-teal-700">admin</span>
+                      <div className="text-right flex-shrink-0 flex items-center gap-3">
+                        <div>
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-700">
+                            {u.tier_display_name || u.tier || 'free'}
+                          </span>
+                          {u.is_tenant_admin && (
+                            <span className="ml-1 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-teal-50 text-teal-700">admin</span>
+                          )}
+                          <p className="text-xs text-gray-400 mt-0.5">{u.messages_used} msgs used</p>
+                        </div>
+                        {(isAdmin || isSuperAdmin) && (
+                          <button
+                            onClick={() => setEditingUser({ ...u })}
+                            className="text-xs text-indigo-500 hover:text-indigo-700 font-medium"
+                          >
+                            Edit
+                          </button>
                         )}
-                        <p className="text-xs text-gray-400 mt-0.5">{u.messages_used} msgs used</p>
                       </div>
                     </div>
                   ))}
