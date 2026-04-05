@@ -563,9 +563,12 @@ function ReportsContent() {
   const pagedReports = activeReports.slice(listPage * LIST_PAGE_SIZE, (listPage + 1) * LIST_PAGE_SIZE)
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f9fafb' }}>
-      {/* Top nav */}
-      <header style={{ background: '#0c1b33', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} className="px-4 sm:px-6 py-3">
+    <div style={{ background: '#f9fafb' }}>
+      {/* Top nav — fixed so we can anchor panels below it */}
+      <header
+        id="reports-header"
+        style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 20, background: '#0c1b33', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}
+      >
         <Link href="/" style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>
           <span style={{ color: '#7dd3fc' }}>Soar</span> by LifeLaunchr
         </Link>
@@ -574,15 +577,15 @@ function ReportsContent() {
         </Link>
       </header>
 
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0 }}>
+      {/* Two-panel: fixed below header, fills rest of screen */}
+      <div style={{ position: 'fixed', top: 49, left: 0, right: 0, bottom: 0, display: 'flex', overflow: 'hidden' }}>
 
         {/* Left Panel — Report List */}
-        <aside style={{
-          display: mobileShowDetail ? 'none' : 'flex',
+        <aside className={mobileShowDetail ? 'hidden md:flex' : 'flex'} style={{
           flexDirection: 'column', overflow: 'hidden', flexShrink: 0,
           width: '100%', maxWidth: 320,
           background: '#fff', borderRight: '1px solid #e5e7eb',
-        }} className="md:flex">
+        }}>
           {/* Panel header */}
           <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid #f3f4f6' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -770,10 +773,9 @@ function ReportsContent() {
         </aside>
 
         {/* Right Panel — Report Form */}
-        <main style={{
-          display: mobileShowDetail ? 'flex' : 'none',
-          flexDirection: 'column', flex: 1, overflowY: 'auto', padding: 24, minHeight: 0,
-        }} className="md:flex md:flex-col md:flex-1 md:overflow-y-auto">
+        <main className={mobileShowDetail ? 'flex' : 'hidden md:flex'} style={{
+          flexDirection: 'column', flex: 1, overflowY: 'auto', padding: 24,
+        }}>
           {/* Mobile back button */}
           <button
             onClick={() => setMobileShowDetail(false)}
