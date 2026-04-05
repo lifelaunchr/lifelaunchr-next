@@ -613,7 +613,7 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Table */}
+        {/* Student list — cards on mobile, table on desktop */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           {loading ? (
             <div className="py-16 text-center text-gray-400 text-sm">Loading…</div>
@@ -626,111 +626,175 @@ export default function DashboardPage() {
                 : 'No students found.'}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-4 py-3 w-10">
-                      <input
-                        type="checkbox"
-                        checked={selected.size === displayed.length && displayed.length > 0}
-                        onChange={toggleSelectAll}
-                        className="rounded"
-                      />
-                    </th>
-                    <Th label="Name"         field="full_name" />
-                    <Th label="High School"  field="high_school_name" />
-                    <Th label="Grad Year"    field="graduation_year" />
-                    <Th label="Next Deadline" field="next_deadline" />
-                    <Th label="Overall"      field="overall_status" />
-                    <Th label="Essay"        field="essay_status" />
-                    <Th label="Last Login"   field="last_login" />
-                    <Th label="End Date"     field="expected_end_date" />
-                    <Th label="Actions" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {displayed.map(s => (
-                    <tr
-                      key={s.id}
-                      className={`hover:bg-gray-50 transition-colors
-                        ${selected.has(s.id) ? 'bg-blue-50' : ''}`}
-                    >
-                      <td className="px-4 py-3">
+            <>
+              {/* ── Mobile card list (hidden on md+) ── */}
+              <div className="md:hidden divide-y divide-gray-100">
+                {displayed.map(s => (
+                  <div key={s.id} className={`px-4 py-4 ${selected.has(s.id) ? 'bg-blue-50' : ''}`}>
+                    <div className="flex items-start justify-between gap-3">
+                      {/* Left: checkbox + name */}
+                      <div className="flex items-start gap-3 min-w-0">
                         <input
                           type="checkbox"
                           checked={selected.has(s.id)}
                           onChange={() => toggleSelect(s.id)}
+                          className="rounded mt-0.5 flex-shrink-0"
+                        />
+                        <div className="min-w-0">
+                          <div className="font-medium text-gray-900 flex items-center gap-1.5 flex-wrap">
+                            {s.has_safety_flag && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setSafetyStudent(s) }}
+                                title="View unacknowledged safety event"
+                                className="text-base leading-none flex-shrink-0"
+                              >🚩</button>
+                            )}
+                            <span>{s.full_name}</span>
+                            {s.preferred_name && s.preferred_name !== s.full_name.split(' ')[0] && (
+                              <span className="text-gray-400 font-normal text-sm">({s.preferred_name})</span>
+                            )}
+                          </div>
+                          <div className="text-xs text-gray-400 mt-0.5">{s.high_school_name || s.email}</div>
+                          {/* Status badges */}
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {s.overall_status && (
+                              <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(s.overall_status)}`}>
+                                {OVERALL_LABELS[s.overall_status] || s.overall_status}
+                              </span>
+                            )}
+                            {s.essay_status && (
+                              <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${essayColor(s.essay_status)}`}>
+                                Essay: {ESSAY_LABELS[s.essay_status] || s.essay_status}
+                              </span>
+                            )}
+                          </div>
+                          {/* Next deadline */}
+                          {s.next_deadline && (
+                            <div className="flex items-center gap-1.5 mt-1.5 text-xs text-gray-500">
+                              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${deadlineDot(s.deadline_status)}`} />
+                              Next deadline: {fmtDate(s.next_deadline)}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      {/* Right: Edit button always visible */}
+                      <button
+                        onClick={() => setEditStudent(s)}
+                        className="flex-shrink-0 px-3 py-1.5 text-xs bg-white border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-700 font-medium"
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* ── Desktop table (hidden on mobile) ── */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-4 py-3 w-10">
+                        <input
+                          type="checkbox"
+                          checked={selected.size === displayed.length && displayed.length > 0}
+                          onChange={toggleSelectAll}
                           className="rounded"
                         />
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-gray-900 flex items-center gap-1.5">
-                          {s.has_safety_flag && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setSafetyStudent(s) }}
-                              title="View unacknowledged safety event"
-                              className="text-base leading-none flex-shrink-0 hover:scale-110 transition-transform px-1 py-0.5 rounded hover:bg-red-50"
-                            >🚩</button>
-                          )}
-                          {s.full_name}
-                          {s.preferred_name && s.preferred_name !== s.full_name.split(' ')[0] && (
-                            <span className="text-gray-400 font-normal"> ({s.preferred_name})</span>
-                          )}
-                        </div>
-                        <div className="text-xs text-gray-400">{s.email}</div>
-                      </td>
-                      <td className="px-4 py-3 text-gray-600">{s.high_school_name || '—'}</td>
-                      <td className="px-4 py-3 text-gray-600">{s.graduation_year || '—'}</td>
-                      <td className="px-4 py-3">
-                        {s.next_deadline ? (
-                          <div className="flex items-center gap-2">
-                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${deadlineDot(s.deadline_status)}`} />
-                            <span className="text-gray-700">{fmtDate(s.next_deadline)}</span>
-                          </div>
-                        ) : (
-                          <span className="text-gray-400">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {s.overall_status ? (
-                          <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${statusColor(s.overall_status)}`}>
-                            {OVERALL_LABELS[s.overall_status] || s.overall_status}
-                          </span>
-                        ) : <span className="text-gray-400">—</span>}
-                      </td>
-                      <td className="px-4 py-3">
-                        {s.essay_status ? (
-                          <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${essayColor(s.essay_status)}`}>
-                            {ESSAY_LABELS[s.essay_status] || s.essay_status}
-                          </span>
-                        ) : <span className="text-gray-400">—</span>}
-                      </td>
-                      <td className="px-4 py-3 text-gray-500 text-xs">{relativeTime(s.last_login)}</td>
-                      <td className="px-4 py-3 text-gray-500 text-xs">{fmtDate(s.expected_end_date)}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => setEditStudent(s)}
-                            className="px-3 py-1 text-xs bg-white border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-700"
-                          >
-                            Edit
-                          </button>
-                          {!s.archived && (
-                            <button
-                              onClick={() => archiveSingle(s)}
-                              className="px-3 py-1 text-xs bg-white border border-gray-200 rounded-lg hover:bg-amber-50 text-amber-600 border-amber-200"
-                            >
-                              Archive
-                            </button>
-                          )}
-                        </div>
-                      </td>
+                      </th>
+                      <Th label="Name"         field="full_name" />
+                      <Th label="High School"  field="high_school_name" />
+                      <Th label="Grad Year"    field="graduation_year" />
+                      <Th label="Next Deadline" field="next_deadline" />
+                      <Th label="Overall"      field="overall_status" />
+                      <Th label="Essay"        field="essay_status" />
+                      <Th label="Last Login"   field="last_login" />
+                      <Th label="End Date"     field="expected_end_date" />
+                      <Th label="Actions" />
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {displayed.map(s => (
+                      <tr
+                        key={s.id}
+                        className={`hover:bg-gray-50 transition-colors ${selected.has(s.id) ? 'bg-blue-50' : ''}`}
+                      >
+                        <td className="px-4 py-3">
+                          <input
+                            type="checkbox"
+                            checked={selected.has(s.id)}
+                            onChange={() => toggleSelect(s.id)}
+                            className="rounded"
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-gray-900 flex items-center gap-1.5">
+                            {s.has_safety_flag && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setSafetyStudent(s) }}
+                                title="View unacknowledged safety event"
+                                className="text-base leading-none flex-shrink-0 hover:scale-110 transition-transform px-1 py-0.5 rounded hover:bg-red-50"
+                              >🚩</button>
+                            )}
+                            {s.full_name}
+                            {s.preferred_name && s.preferred_name !== s.full_name.split(' ')[0] && (
+                              <span className="text-gray-400 font-normal"> ({s.preferred_name})</span>
+                            )}
+                          </div>
+                          <div className="text-xs text-gray-400">{s.email}</div>
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">{s.high_school_name || '—'}</td>
+                        <td className="px-4 py-3 text-gray-600">{s.graduation_year || '—'}</td>
+                        <td className="px-4 py-3">
+                          {s.next_deadline ? (
+                            <div className="flex items-center gap-2">
+                              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${deadlineDot(s.deadline_status)}`} />
+                              <span className="text-gray-700">{fmtDate(s.next_deadline)}</span>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {s.overall_status ? (
+                            <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${statusColor(s.overall_status)}`}>
+                              {OVERALL_LABELS[s.overall_status] || s.overall_status}
+                            </span>
+                          ) : <span className="text-gray-400">—</span>}
+                        </td>
+                        <td className="px-4 py-3">
+                          {s.essay_status ? (
+                            <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${essayColor(s.essay_status)}`}>
+                              {ESSAY_LABELS[s.essay_status] || s.essay_status}
+                            </span>
+                          ) : <span className="text-gray-400">—</span>}
+                        </td>
+                        <td className="px-4 py-3 text-gray-500 text-xs">{relativeTime(s.last_login)}</td>
+                        <td className="px-4 py-3 text-gray-500 text-xs">{fmtDate(s.expected_end_date)}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setEditStudent(s)}
+                              className="px-3 py-1 text-xs bg-white border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-700"
+                            >
+                              Edit
+                            </button>
+                            {!s.archived && (
+                              <button
+                                onClick={() => archiveSingle(s)}
+                                className="px-3 py-1 text-xs bg-white border border-gray-200 rounded-lg hover:bg-amber-50 text-amber-600 border-amber-200"
+                              >
+                                Archive
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
 
