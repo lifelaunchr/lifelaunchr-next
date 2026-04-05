@@ -427,7 +427,7 @@ function ActivitiesContent() {
     <div style={{ minHeight: '100vh', background: '#f5f6fa', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
 
       {/* Header */}
-      <header style={{ background: '#fff', borderBottom: '1px solid #e2e8f0', padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
+      <header style={{ background: '#fff', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }} className="px-4 sm:px-6 py-3.5">
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <Link href="/chat" style={{ color: '#6b7280', textDecoration: 'none', fontSize: '0.875rem' }}>← Back to Soar</Link>
           <span style={{ color: '#e2e8f0' }}>|</span>

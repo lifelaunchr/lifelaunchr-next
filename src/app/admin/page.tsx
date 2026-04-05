@@ -524,7 +524,7 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
-      <div className="bg-[#0c1b33] text-white px-6 py-4 flex items-center justify-between">
+      <div className="bg-[#0c1b33] text-white px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold"><span className="text-sky-300">Soar</span> Admin</h1>
           <p className="text-xs text-slate-400 mt-0.5">{roleLabel}</p>
@@ -535,7 +535,7 @@ export default function AdminPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 sm:py-6">
         {/* Tabs */}
         <div className="flex gap-1 mb-6 border-b border-gray-200">
           {(isAdmin || isSuperAdmin || isTenantAdmin) && (

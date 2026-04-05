@@ -439,7 +439,7 @@ function ProfileContent() {
   return (
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', background: '#f5f6fa', minHeight: '100dvh' }}>
       {/* Header */}
-      <header style={{ background: '#0c1b33', color: '#fff', padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <header style={{ background: '#0c1b33', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} className="px-4 sm:px-6 py-3">
         <Link href="/" style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>
           <span style={{ color: '#7dd3fc' }}>Soar</span> by LifeLaunchr
         </Link>
@@ -448,7 +448,7 @@ function ProfileContent() {
         </Link>
       </header>
 
-      <div style={{ maxWidth: 760, margin: '0 auto', padding: '32px 24px 80px' }}>
+      <div style={{ maxWidth: 760, margin: '0 auto' }} className="px-4 sm:px-6 pt-6 sm:pt-8 pb-20">
         <h1 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#0c1b33', marginBottom: isViewingStudent ? 12 : 24 }}>
           {pageTitle}
         </h1>
@@ -827,7 +827,7 @@ function ProfileContent() {
         {/* College Interests */}
         <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 24, marginBottom: 24 }}>
           <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0c1b33', marginBottom: 16 }}>College Interests</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             {COLLEGE_INTERESTS.map((ci) => {
               const checked = (profile.college_interests || []).includes(ci.value)
               return (

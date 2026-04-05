@@ -558,7 +558,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Top nav bar — matches profile/lists pages */}
-      <header style={{ background: '#0c1b33', color: '#fff', padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <header style={{ background: '#0c1b33', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} className="px-4 sm:px-6 py-3">
         <Link href="/" style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>
           <span style={{ color: '#7dd3fc' }}>Soar</span> by LifeLaunchr
         </Link>
@@ -567,7 +567,7 @@ export default function DashboardPage() {
         </Link>
       </header>
 
-      <div className="max-w-screen-xl mx-auto px-6 py-8">
+      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
 
         {/* Header */}
         <div className="mb-6">
@@ -599,7 +599,7 @@ export default function DashboardPage() {
             placeholder="Search by name or school…"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="flex-1 min-w-48 border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 min-w-0 border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
 
           {/* Bulk archive */}

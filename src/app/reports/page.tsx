@@ -113,6 +113,7 @@ function ReportsContent() {
     searchParams.get('student_id') ? parseInt(searchParams.get('student_id')!, 10) : null
   )
   const [selectedReport, setSelectedReport] = useState<SessionReport | null>(null)
+  const [mobileShowDetail, setMobileShowDetail] = useState(false)
   const [loading, setLoading] = useState(true)
   const [accessDenied, setAccessDenied] = useState(false)
   const [coachName, setCoachName] = useState('')
@@ -560,7 +561,7 @@ function ReportsContent() {
   return (
     <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
       {/* Top nav */}
-      <header style={{ background: '#0c1b33', color: '#fff', padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <header style={{ background: '#0c1b33', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} className="px-4 sm:px-6 py-3">
         <Link href="/" style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>
           <span style={{ color: '#7dd3fc' }}>Soar</span> by LifeLaunchr
         </Link>
@@ -572,13 +573,12 @@ function ReportsContent() {
       {/* Mobile toggle */}
       <div style={{ display: 'none' }} className="mobile-toggle-bar" />
 
-      <div style={{ display: 'flex', height: 'calc(100vh - 49px)', overflow: 'hidden' }}>
+      <div className="flex h-[calc(100vh-49px)] overflow-hidden">
 
         {/* Left Panel — Report List */}
-        <aside style={{
+        <aside className={`${mobileShowDetail ? 'hidden md:flex' : 'flex'} flex-col overflow-hidden`} style={{
           width: 320, minWidth: 280, flexShrink: 0,
           background: '#fff', borderRight: '1px solid #e5e7eb',
-          display: 'flex', flexDirection: 'column', overflow: 'hidden',
         }}>
           {/* Panel header */}
           <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid #f3f4f6' }}>
@@ -586,7 +586,7 @@ function ReportsContent() {
               <h1 style={{ fontSize: '1rem', fontWeight: 700, color: '#0c1b33', margin: 0 }}>Session Reports</h1>
               {!teamView && (
                 <button
-                  onClick={resetForm}
+                  onClick={() => { resetForm(); setMobileShowDetail(true) }}
                   style={{
                     background: '#4f46e5', color: '#fff', border: 'none',
                     borderRadius: 8, padding: '6px 12px', fontSize: '0.78rem',
@@ -671,7 +671,7 @@ function ReportsContent() {
                 return (
                   <button
                     key={r.id}
-                    onClick={() => { setSelectedReport(r); populateForm(r) }}
+                    onClick={() => { setSelectedReport(r); populateForm(r); setMobileShowDetail(true) }}
                     style={{
                       display: 'block', width: '100%', textAlign: 'left',
                       padding: '12px 16px', border: 'none', borderBottom: '1px solid #f3f4f6',
@@ -728,7 +728,14 @@ function ReportsContent() {
         </aside>
 
         {/* Right Panel — Report Form */}
-        <main style={{ flex: 1, overflowY: 'auto', padding: 24 }}>
+        <main className={`${mobileShowDetail ? 'flex' : 'hidden md:flex'} flex-col flex-1 overflow-y-auto`} style={{ padding: 24 }}>
+          {/* Mobile back button */}
+          <button
+            onClick={() => setMobileShowDetail(false)}
+            className="md:hidden flex items-center gap-1.5 text-sm text-indigo-600 mb-4 -ml-1 font-medium"
+          >
+            ← Back to list
+          </button>
           <div style={{ maxWidth: 760, margin: '0 auto' }}>
 
             {/* Post-send green banner */}

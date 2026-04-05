@@ -716,6 +716,7 @@ function ScholarshipSpreadsheetView({ entries, canWrite, onEdit, onStatusChange 
   }
   return (
     <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+      <div style={{ overflowX: 'auto' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr style={{ borderBottom: '2px solid #e2e8f0', background: '#f8fafc' }}>
@@ -771,6 +772,7 @@ function ScholarshipSpreadsheetView({ entries, canWrite, onEdit, onStatusChange 
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   )
 }
@@ -1336,6 +1338,7 @@ function EnrichmentSpreadsheetView({ entries, canWrite, onEdit, onStatusChange }
   }
   return (
     <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+      <div style={{ overflowX: 'auto' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr style={{ borderBottom: '2px solid #e2e8f0', background: '#f8fafc' }}>
@@ -1402,6 +1405,7 @@ function EnrichmentSpreadsheetView({ entries, canWrite, onEdit, onStatusChange }
           })}
         </tbody>
       </table>
+      </div>
     </div>
   )
 }
@@ -3104,7 +3108,7 @@ function ListsContent() {
   return (
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', background: '#f5f6fa', minHeight: '100dvh' }}>
       {/* Header */}
-      <header style={{ background: '#0c1b33', color: '#fff', padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <header style={{ background: '#0c1b33', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} className="px-4 sm:px-6 py-3">
         <Link href="/" style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>
           <span style={{ color: '#7dd3fc' }}>Soar</span> by LifeLaunchr
         </Link>
@@ -3113,7 +3117,7 @@ function ListsContent() {
         </Link>
       </header>
 
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '28px 24px 80px' }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto' }} className="px-4 sm:px-6 pt-6 sm:pt-7 pb-20">
         {/* Page header */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
           <div>

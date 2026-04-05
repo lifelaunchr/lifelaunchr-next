@@ -63,7 +63,7 @@ export default function SafetyPage() {
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', background: '#f5f6fa', color: '#0c1b33', minHeight: '100dvh' }}>
 
       {/* Header */}
-      <header style={{ background: '#0c1b33', color: '#fff', padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+      <header style={{ background: '#0c1b33', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }} className="px-4 sm:px-6 py-3">
         <Link href="/" style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>
           <span style={{ color: '#7dd3fc' }}>Soar</span> by LifeLaunchr
         </Link>
@@ -73,7 +73,7 @@ export default function SafetyPage() {
       </header>
 
       {/* Hero */}
-      <div style={{ background: '#0c1b33', color: '#fff', padding: '48px 24px 40px', textAlign: 'center' }}>
+      <div style={{ background: '#0c1b33', color: '#fff', padding: '40px 16px 32px', textAlign: 'center' }} className="sm:py-12 sm:px-6">
         <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>🛡️</div>
         <h1 style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: 10 }}>How We Keep Students Safe</h1>
         <p style={{ fontSize: '1rem', color: '#a0aec0', maxWidth: 560, margin: '0 auto', lineHeight: 1.6 }}>
@@ -82,7 +82,7 @@ export default function SafetyPage() {
       </div>
 
       {/* Content */}
-      <div style={{ maxWidth: 720, margin: '0 auto', padding: '40px 24px 80px' }}>
+      <div style={{ maxWidth: 720, margin: '0 auto' }} className="px-4 sm:px-6 pt-8 sm:pt-10 pb-20">
 
         {/* Crisis banner */}
         <div style={{ background: '#fef2f2', border: '1.5px solid #fca5a5', borderRadius: 10, padding: '18px 20px', marginBottom: 36, display: 'flex', gap: 14, alignItems: 'flex-start' }}>
