@@ -82,7 +82,7 @@ interface TenantFormData {
 const BLANK_TENANT: TenantFormData = {
   subdomain: '',
   display_name: '',
-  plan: 'beta',
+  plan: 'counselor_starter',
   bot_name: 'Soar',
   tagline: 'Your AI-powered college and career planning assistant.',
   header_logo_url: '',
@@ -360,7 +360,7 @@ export default function AdminPage() {
     setTenantForm({
       subdomain: t.subdomain,
       display_name: t.display_name,
-      plan: t.plan || 'beta',
+      plan: t.plan || 'counselor_starter',
       bot_name: t.bot_name || 'Soar',
       tagline: t.tagline || '',
       header_logo_url: t.header_logo_url || '',
@@ -746,7 +746,7 @@ export default function AdminPage() {
                       <td className="px-4 py-3 text-gray-500 font-mono text-xs">{t.subdomain}</td>
                       <td className="px-4 py-3">
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-700">
-                          {t.plan || '—'}
+                          {tiers.find(r => r.name === t.plan)?.display_name || t.plan || '—'}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right text-gray-600">{t.user_count}</td>
