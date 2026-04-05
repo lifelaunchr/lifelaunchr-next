@@ -59,7 +59,7 @@ export function ChatHeader({
   logoUrl,
 }: ChatHeaderProps) {
   return (
-    <header className="bg-[#1a1a2e] text-white px-4 py-3 flex items-center justify-between gap-3 flex-shrink-0 border-b border-white/10">
+    <header className="bg-[#1a1a2e] text-white px-3 sm:px-4 py-3 flex items-center justify-between gap-3 flex-shrink-0 border-b border-white/10">
       {/* Left side */}
       <div className="flex items-center gap-3 min-w-0">
         {/* Hamburger */}
@@ -97,7 +97,7 @@ export function ChatHeader({
               <span className="text-sky-300">{botName}</span> by LifeLaunchr
             </h1>
           )}
-          <span className="text-xs text-white/45 whitespace-nowrap">
+          <span className="text-xs text-white/45 truncate">
             {tagline}
           </span>
         </div>
@@ -130,9 +130,13 @@ export function ChatHeader({
         {/* New conversation button */}
         <button
           onClick={onNewConversation}
-          className="border border-white/20 text-white/60 hover:border-white/40 hover:text-white/90 text-xs px-3 py-1.5 rounded-md transition-all whitespace-nowrap"
+          className="border border-white/20 text-white/60 hover:border-white/40 hover:text-white/90 text-xs px-2 sm:px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5"
+          aria-label="New conversation"
         >
-          New conversation
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 flex-shrink-0">
+            <path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712zM19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z" />
+          </svg>
+          <span className="hidden sm:inline whitespace-nowrap">New conversation</span>
         </button>
 
         {/* Auth section */}

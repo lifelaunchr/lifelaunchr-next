@@ -666,7 +666,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
             fixed md:relative inset-y-0 left-0 z-30
             bg-[#1a1a2e] text-slate-300 flex flex-col flex-shrink-0
             border-r border-white/10 transition-all duration-200 overflow-hidden
-            ${sidebarOpen ? 'w-[260px]' : 'w-0'}
+            ${sidebarOpen ? 'w-full md:w-[260px]' : 'w-0'}
           `}
         >
           {/* New conversation button */}
@@ -1007,7 +1007,8 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
             ) : null
           })()}
           {/* Messages area */}
-          <div className="flex-1 overflow-y-auto px-4 py-6 flex flex-col gap-4">
+          <div className="flex-1 overflow-y-auto px-3 sm:px-4 md:px-6 py-6 pb-safe flex flex-col gap-4">
+            <div className="max-w-3xl mx-auto w-full flex flex-col gap-4 flex-1">
             {/* Parent with multiple students — block until one is selected */}
             {isParent && myStudents.length > 1 && !forStudentId ? (
               <div className="flex flex-col items-center justify-center flex-1 h-full text-center px-6 py-16">
@@ -1039,14 +1040,15 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
               ))
             )}
             <div ref={messagesEndRef} />
+            </div>
           </div>
 
           {/* Module chips */}
           <ModuleChips activeModules={activeModules} onToggle={toggleModule} />
 
           {/* Input area */}
-          <div className="bg-white border-t border-gray-200 px-4 py-3 flex-shrink-0">
-            <div className="max-w-3xl mx-auto">
+          <div className="bg-white border-t border-gray-200 px-3 sm:px-4 py-3 flex-shrink-0">
+            <div className="max-w-3xl mx-auto w-full">
               <div className="flex gap-2 items-end">
                 <textarea
                   ref={textareaRef}
@@ -1062,7 +1064,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                 <button
                   onClick={() => sendMessage(input)}
                   disabled={isStreaming || !input.trim() || (isParent && myStudents.length > 1 && !forStudentId)}
-                  className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-300 text-white rounded-xl px-5 h-11 flex items-center justify-center flex-shrink-0 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                  className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-300 text-white rounded-xl h-10 w-10 sm:h-9 sm:w-9 flex items-center justify-center flex-shrink-0 transition-colors cursor-pointer disabled:cursor-not-allowed"
                   aria-label="Send message"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
