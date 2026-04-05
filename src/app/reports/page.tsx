@@ -573,11 +573,11 @@ function ReportsContent() {
   const pagedReports = activeReports.slice(listPage * LIST_PAGE_SIZE, (listPage + 1) * LIST_PAGE_SIZE)
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#f9fafb' }}>
       {/* Top nav */}
       <header
         id="reports-header"
-        style={{ background: '#0c1b33', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}
+        style={{ flexShrink: 0, background: '#0c1b33', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}
       >
         <Link href="/" style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>
           <span style={{ color: '#7dd3fc' }}>Soar</span> by LifeLaunchr
@@ -587,8 +587,8 @@ function ReportsContent() {
         </Link>
       </header>
 
-      {/* Two-panel: fills remaining viewport height */}
-      <div style={{ display: 'flex', height: 'calc(100vh - 49px)', overflow: 'hidden' }}>
+      {/* Two-panel: takes all remaining height after header */}
+      <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
 
         {/* Left Panel — Report List */}
         <aside style={{
