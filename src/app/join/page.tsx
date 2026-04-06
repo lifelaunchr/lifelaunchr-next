@@ -37,19 +37,17 @@ function JoinContent() {
         const token = await getToken()
 
         // Ensure the user has a DB row before calling /invites/accept.
-        // This handles new users who signed up via the invite link and
-        // were redirected back here before ever visiting /chat (where
-        // auth/sync normally runs).
-        await fetch(`${apiUrl}/auth/sync`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({
-            clerk_user_id: clerkUser.id,
-            email: clerkUser.emailAddresses[0]?.emailAddress || '',
-            full_name: clerkUser.fullName || clerkUser.firstName || '',
-            account_type: 'student',
-          }),
+        // First check if they already exist — if not, send them through onboarding
+        // so they can set their role correctly (not hardcode 'student').
+        const usageRes = await fetch(`${apiUrl}/my-usage`, {
+          headers: { Authorization: `Bearer ${token}` },
         })
+        if (!usageRes.ok) {
+          // No backend account yet — route through onboarding so they pick their role
+          if (code) sessionStorage.setItem('pending_invite_code', code)
+          router.push('/onboarding')
+          return
+        }
 
         const res = await fetch(`${apiUrl}/invites/accept/${code}`, {
           method: 'POST',

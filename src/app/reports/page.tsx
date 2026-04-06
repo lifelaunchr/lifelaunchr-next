@@ -118,6 +118,7 @@ function ReportsContent() {
   const LIST_PAGE_SIZE = 20
   const [loading, setLoading] = useState(true)
   const [accessDenied, setAccessDenied] = useState(false)
+  const [isStudent, setIsStudent] = useState(false)
   const [coachName, setCoachName] = useState('')
   const [myUserId, setMyUserId] = useState<number | null>(null)
 
@@ -192,19 +193,32 @@ function ReportsContent() {
         })
         if (!usageRes.ok) { setAccessDenied(true); setLoading(false); return }
         const usage = await usageRes.json()
-        if (usage.account_type !== 'counselor' && !usage.is_admin) {
+        const studentMode = usage.account_type === 'student'
+        if (!studentMode && usage.account_type !== 'counselor' && !usage.is_admin) {
           setAccessDenied(true); setLoading(false); return
         }
+        setIsStudent(studentMode)
         setMyUserId(usage.user_id)
         setCoachName(clerkUser.fullName || clerkUser.firstName || clerkUser.emailAddresses[0]?.emailAddress || '')
         setIsTenantAdmin(Boolean(usage.is_tenant_admin))
 
-        const studRes = await fetch(`${apiUrl}/my-students`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        if (studRes.ok) {
-          const data: Student[] = await studRes.json()
-          setStudents(data)
+        if (studentMode) {
+          // Students load their own reports directly — no student picker needed
+          const rRes = await fetch(`${apiUrl}/session-reports`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          if (rRes.ok) {
+            const data = await rRes.json()
+            setReports(data.reports || [])
+          }
+        } else {
+          const studRes = await fetch(`${apiUrl}/my-students`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          if (studRes.ok) {
+            const data: Student[] = await studRes.json()
+            setStudents(data)
+          }
         }
       } catch { /* ignore */ } finally {
         setLoading(false)
@@ -527,7 +541,7 @@ function ReportsContent() {
   // ── Derived view flags ──────────────────────────────────────────────────────
 
   const isSentReport = !teamView && Boolean(selectedReport?.sent_at)
-  const isReadOnly = teamView || (isSentReport && !editResendMode)
+  const isReadOnly = isStudent || teamView || (isSentReport && !editResendMode)
 
   // ── Styles ─────────────────────────────────────────────────────────────────
 
@@ -562,9 +576,9 @@ function ReportsContent() {
       <div style={{ minHeight: '100vh', background: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center', maxWidth: 380 }}>
           <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>🔒</div>
-          <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827', marginBottom: 8 }}>Counselor Access Only</h1>
+          <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827', marginBottom: 8 }}>Access Restricted</h1>
           <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
-            Session Reports are only available to counselors.
+            Session Reports are available to counselors and students only.
           </p>
           <Link href="/chat" style={{ display: 'inline-block', marginTop: 20, color: '#4f46e5', textDecoration: 'none', fontSize: '0.875rem' }}>
             ← Back to Soar
@@ -644,7 +658,7 @@ function ReportsContent() {
           <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid #f3f4f6' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <h1 style={{ fontSize: '1rem', fontWeight: 700, color: '#0c1b33', margin: 0 }}>Session Reports</h1>
-              {!teamView && (
+              {!teamView && !isStudent && (
                 <button
                   onClick={() => { resetForm(); setMobileShowDetail(true) }}
                   style={{
@@ -659,7 +673,7 @@ function ReportsContent() {
             </div>
 
             {/* Tenant admin: My Reports / Team Reports toggle */}
-            {isTenantAdmin && (
+            {!isStudent && isTenantAdmin && (
               <div style={{ display: 'flex', gap: 0, marginBottom: 12, border: '1px solid #e5e7eb', borderRadius: 8, overflow: 'hidden' }}>
                 <button
                   onClick={() => { setTeamView(false); setListPage(0) }}
@@ -686,8 +700,8 @@ function ReportsContent() {
               </div>
             )}
 
-            {/* Student filter — only in my-reports mode */}
-            {!teamView && (
+            {/* Student filter — only in my-reports mode (counselors only) */}
+            {!teamView && !isStudent && (
               <select
                 value={selectedStudentId ?? ''}
                 onChange={(e) => {
@@ -718,11 +732,13 @@ function ReportsContent() {
               </p>
             ) : activeReports.length === 0 ? (
               <p style={{ padding: '24px 16px', fontSize: '0.82rem', color: '#9ca3af', textAlign: 'center' }}>
-                {teamView
-                  ? 'No team reports found.'
-                  : selectedStudentId
-                    ? 'No reports yet for this student.'
-                    : 'Select a student to view their reports.'}
+                {isStudent
+                  ? 'No session reports have been sent to you yet.'
+                  : teamView
+                    ? 'No team reports found.'
+                    : selectedStudentId
+                      ? 'No reports yet for this student.'
+                      : 'Select a student to view their reports.'}
               </p>
             ) : (
               pagedReports.map((r) => {
@@ -1027,35 +1043,39 @@ function ReportsContent() {
                   </>
                 )}
 
-                {/* Additional emails */}
-                <div style={{ gridColumn: '1 / -1' }}>
-                  <label style={labelSt}>Additional email addresses (comma-separated)</label>
-                  <input
-                    type="text"
-                    value={additionalEmails}
-                    onChange={(e) => { if (!isReadOnly) setAdditionalEmails(e.target.value) }}
-                    readOnly={isReadOnly}
-                    placeholder="parent@example.com, other@example.com"
-                    style={isReadOnly ? inputDisabledSt : inputSt}
-                  />
-                </div>
+                {/* Additional emails — hidden from students */}
+                {!isStudent && (
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={labelSt}>Additional email addresses (comma-separated)</label>
+                    <input
+                      type="text"
+                      value={additionalEmails}
+                      onChange={(e) => { if (!isReadOnly) setAdditionalEmails(e.target.value) }}
+                      readOnly={isReadOnly}
+                      placeholder="parent@example.com, other@example.com"
+                      style={isReadOnly ? inputDisabledSt : inputSt}
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Notes Section */}
             <div style={sectionSt}>
-              {/* Raw notes */}
-              <div style={{ marginBottom: 16 }}>
-                <label style={labelSt}>Session notes (internal — not shared)</label>
-                <textarea
-                  value={rawNotes}
-                  onChange={(e) => { if (!isReadOnly) setRawNotes(e.target.value) }}
-                  readOnly={isReadOnly}
-                  rows={6}
-                  placeholder="Type notes during the meeting…"
-                  style={{ ...(isReadOnly ? inputDisabledSt : inputSt), resize: 'vertical', fontFamily: 'inherit' }}
-                />
-              </div>
+              {/* Raw notes — hidden from students */}
+              {!isStudent && (
+                <div style={{ marginBottom: 16 }}>
+                  <label style={labelSt}>Session notes (internal — not shared)</label>
+                  <textarea
+                    value={rawNotes}
+                    onChange={(e) => { if (!isReadOnly) setRawNotes(e.target.value) }}
+                    readOnly={isReadOnly}
+                    rows={6}
+                    placeholder="Type notes during the meeting…"
+                    style={{ ...(isReadOnly ? inputDisabledSt : inputSt), resize: 'vertical', fontFamily: 'inherit' }}
+                  />
+                </div>
+              )}
 
               {/* Otter transcript collapsible — hidden in team view and sent read-only */}
               {!isReadOnly && (
@@ -1118,24 +1138,26 @@ function ReportsContent() {
                 />
               </div>
 
-              {/* Internal notes */}
-              <div>
-                <label style={labelSt}>Internal notes (coach &amp; team only)</label>
-                <textarea
-                  value={internalNotes}
-                  onChange={(e) => { if (!isReadOnly) setInternalNotes(e.target.value) }}
-                  readOnly={isReadOnly}
-                  rows={5}
-                  placeholder="Private notes for the coach and team lead — never shared…"
-                  style={{ ...(isReadOnly ? inputDisabledSt : inputSt), resize: 'vertical', fontFamily: 'inherit' }}
-                />
-              </div>
+              {/* Internal notes — hidden from students */}
+              {!isStudent && (
+                <div>
+                  <label style={labelSt}>Internal notes (coach &amp; team only)</label>
+                  <textarea
+                    value={internalNotes}
+                    onChange={(e) => { if (!isReadOnly) setInternalNotes(e.target.value) }}
+                    readOnly={isReadOnly}
+                    rows={5}
+                    placeholder="Private notes for the coach and team lead — never shared…"
+                    style={{ ...(isReadOnly ? inputDisabledSt : inputSt), resize: 'vertical', fontFamily: 'inherit' }}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Action Buttons */}
 
-            {/* Case 1: Sent report — read-only, show Resend + Edit & Resend */}
-            {isSentReport && !editResendMode && !teamView && (
+            {/* Case 1: Sent report — read-only, show Resend + Edit & Resend (counselors only) */}
+            {!isStudent && isSentReport && !editResendMode && !teamView && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 24 }}>
                 <button
                   type="button"
@@ -1174,8 +1196,8 @@ function ReportsContent() {
               </div>
             )}
 
-            {/* Case 2: Edit-resend mode — show Save & Resend */}
-            {isSentReport && editResendMode && !teamView && (
+            {/* Case 2: Edit-resend mode — show Save & Resend (counselors only) */}
+            {!isStudent && isSentReport && editResendMode && !teamView && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 24 }}>
                 <button
                   type="button"
@@ -1205,8 +1227,8 @@ function ReportsContent() {
               </div>
             )}
 
-            {/* Case 3: Draft / new report — show Save Draft + Save & Send */}
-            {!isSentReport && !teamView && (
+            {/* Case 3: Draft / new report — show Save Draft + Save & Send (counselors only) */}
+            {!isStudent && !isSentReport && !teamView && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 24 }}>
                 <button
                   type="button"
