@@ -720,8 +720,8 @@ function ScholarshipSpreadsheetView({ entries, canWrite, onEdit, onStatusChange 
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr style={{ borderBottom: '2px solid #e2e8f0', background: '#f8fafc' }}>
-            {['Scholarship', 'Award', 'Deadline', 'Status', ''].map((h, i) => (
-              <th key={i} style={{ padding: '10px 14px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 700, color: '#6b7280', letterSpacing: '0.05em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
+            {[['Scholarship', ''], ['Award', 'hidden sm:table-cell'], ['Deadline', 'hidden sm:table-cell'], ['Status', ''], ['', '']].map(([h, cls], i) => (
+              <th key={i} className={cls} style={{ padding: '10px 14px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 700, color: '#6b7280', letterSpacing: '0.05em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
             ))}
           </tr>
         </thead>
@@ -742,10 +742,10 @@ function ScholarshipSpreadsheetView({ entries, canWrite, onEdit, onStatusChange 
                   </a>
                 )}
               </td>
-              <td style={{ padding: '10px 14px', fontSize: '0.85rem', color: '#374151', whiteSpace: 'nowrap' }}>
+              <td className="hidden sm:table-cell" style={{ padding: '10px 14px', fontSize: '0.85rem', color: '#374151', whiteSpace: 'nowrap' }}>
                 {formatScholarshipAward(entry) || <span style={{ color: '#d1d5db' }}>—</span>}
               </td>
-              <td style={{ padding: '10px 14px', fontSize: '0.85rem', color: '#374151', whiteSpace: 'nowrap' }}>
+              <td className="hidden sm:table-cell" style={{ padding: '10px 14px', fontSize: '0.85rem', color: '#374151', whiteSpace: 'nowrap' }}>
                 {formatScholarshipDeadline(entry) || <span style={{ color: '#d1d5db' }}>—</span>}
               </td>
               <td style={{ padding: '10px 14px' }} onClick={(e) => e.stopPropagation()}>
@@ -1342,8 +1342,8 @@ function EnrichmentSpreadsheetView({ entries, canWrite, onEdit, onStatusChange }
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr style={{ borderBottom: '2px solid #e2e8f0', background: '#f8fafc' }}>
-            {['Program', 'Organization', 'Cost', 'Deadline', 'Status', ''].map((h, i) => (
-              <th key={i} style={{ padding: '10px 14px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 700, color: '#6b7280', letterSpacing: '0.05em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
+            {[['Program', ''], ['Organization', 'hidden sm:table-cell'], ['Cost', 'hidden sm:table-cell'], ['Deadline', 'hidden sm:table-cell'], ['Status', ''], ['', '']].map(([h, cls], i) => (
+              <th key={i} className={cls} style={{ padding: '10px 14px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 700, color: '#6b7280', letterSpacing: '0.05em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
             ))}
           </tr>
         </thead>
@@ -1366,13 +1366,13 @@ function EnrichmentSpreadsheetView({ entries, canWrite, onEdit, onStatusChange }
                     </a>
                   )}
                 </td>
-                <td style={{ padding: '10px 14px', fontSize: '0.85rem', color: '#374151' }}>
+                <td className="hidden sm:table-cell" style={{ padding: '10px 14px', fontSize: '0.85rem', color: '#374151' }}>
                   {entry.organization || <span style={{ color: '#d1d5db' }}>—</span>}
                 </td>
-                <td style={{ padding: '10px 14px', fontSize: '0.85rem', color: '#374151', whiteSpace: 'nowrap' }}>
+                <td className="hidden sm:table-cell" style={{ padding: '10px 14px', fontSize: '0.85rem', color: '#374151', whiteSpace: 'nowrap' }}>
                   {entry.cost_estimate || <span style={{ color: '#d1d5db' }}>—</span>}
                 </td>
-                <td style={{ padding: '10px 14px', fontSize: '0.85rem', color: '#374151', whiteSpace: 'nowrap' }}>
+                <td className="hidden sm:table-cell" style={{ padding: '10px 14px', fontSize: '0.85rem', color: '#374151', whiteSpace: 'nowrap' }}>
                   {entry.program_category === 'program' && entry.deadline_date
                     ? (() => {
                         const d = new Date(entry.deadline_date + 'T00:00:00')
@@ -2579,10 +2579,10 @@ function SpreadsheetView({ entries, canWrite, accountType, onEdit, onDelete, onS
               <th style={thStyle}>College</th>
               <th style={thStyle}>Status</th>
               <th style={thStyle}>Likelihood</th>
-              <th style={thStyle}>Deadline</th>
-              <th style={thStyle}>Major</th>
-              <th style={thStyle}>Est. Cost</th>
-              <th style={thStyle}>Visited</th>
+              <th className="hidden sm:table-cell" style={thStyle}>Deadline</th>
+              <th className="hidden md:table-cell" style={thStyle}>Major</th>
+              <th className="hidden md:table-cell" style={thStyle}>Est. Cost</th>
+              <th className="hidden md:table-cell" style={thStyle}>Visited</th>
               <th style={{ ...thStyle, width: 80 }}>Actions</th>
             </tr>
           </thead>
@@ -2621,20 +2621,20 @@ function SpreadsheetView({ entries, canWrite, accountType, onEdit, onDelete, onS
                 <td style={tdStyle}>
                   <LikelihoodBadge tier={e.likelihood} />
                 </td>
-                <td style={{ ...tdStyle, fontSize: '0.78rem', color: '#6b7280', whiteSpace: 'nowrap' }}>
+                <td className="hidden sm:table-cell" style={{ ...tdStyle, fontSize: '0.78rem', color: '#6b7280', whiteSpace: 'nowrap' }}>
                   {formatDeadline(e)}
                 </td>
-                <td style={{ ...tdStyle, color: '#6b7280' }}>
+                <td className="hidden md:table-cell" style={{ ...tdStyle, color: '#6b7280' }}>
                   {e.primary_major || '—'}
                 </td>
-                <td style={{ ...tdStyle, color: '#6b7280' }}>
+                <td className="hidden md:table-cell" style={{ ...tdStyle, color: '#6b7280' }}>
                   {e.counselor_cost_estimate
                     ? `$${e.counselor_cost_estimate.toLocaleString()}`
                     : e.cost_estimate
                     ? `$${e.cost_estimate.toLocaleString()}`
                     : '—'}
                 </td>
-                <td style={{ ...tdStyle, textAlign: 'center' }}>
+                <td className="hidden md:table-cell" style={{ ...tdStyle, textAlign: 'center' }}>
                   {e.visited ? (
                     <span style={{ color: '#16a34a', fontWeight: 700 }}>✓</span>
                   ) : (
