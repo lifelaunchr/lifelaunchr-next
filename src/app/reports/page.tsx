@@ -19,7 +19,8 @@ interface Student {
 interface SessionReport {
   id: number
   coach_id: number
-  coach_name?: string   // present in team-view (joined from users)
+  coach_name?: string   // present in team-view and student/parent view (joined from users)
+  student_name?: string // present in parent view (joined from users)
   student_id: number
   report_type: 'single' | 'multiple' | 'note'
   appointment_type: string
@@ -759,10 +760,12 @@ function ReportsContent() {
                     onMouseOver={(e) => { if (!isSelected) e.currentTarget.style.background = '#f9fafb' }}
                     onMouseOut={(e) => { if (!isSelected) e.currentTarget.style.background = 'transparent' }}
                   >
-                    {/* Student name */}
-                    <div style={{ fontWeight: 700, fontSize: '0.875rem', color: '#111827', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {student?.full_name || student?.email || `Student #${r.student_id}`}
-                    </div>
+                    {/* Student name — shown for counselors (team view) and parents */}
+                    {!isStudent && (
+                      <div style={{ fontWeight: 700, fontSize: '0.875rem', color: '#111827', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {r.student_name || student?.full_name || student?.email || `Student #${r.student_id}`}
+                      </div>
+                    )}
                     {/* Coach name */}
                     {r.coach_name && (
                       <div style={{ fontSize: '0.72rem', color: '#7c3aed', marginBottom: 2, fontWeight: 500 }}>
@@ -853,7 +856,120 @@ function ReportsContent() {
               ← Back to list
             </button>
           )}
-          <div style={{ maxWidth: 760, margin: '0 auto' }}>
+          {/* ── Student / Parent read-only view ─────────────────────────────── */}
+          {isStudent && (
+            <div style={{ maxWidth: 760, margin: '0 auto' }}>
+              {!selectedReport ? (
+                <div style={{ textAlign: 'center', color: '#9ca3af', padding: '64px 0' }}>
+                  <div style={{ fontSize: '2rem', marginBottom: 12 }}>📋</div>
+                  <p style={{ fontSize: '0.875rem' }}>Select a report from the list to view it.</p>
+                </div>
+              ) : (
+                <div>
+                  {/* Sent badge */}
+                  <div style={{ marginBottom: 20 }}>
+                    <span style={{
+                      background: '#dcfce7', color: '#15803d', borderRadius: 20,
+                      padding: '4px 14px', fontSize: '0.78rem', fontWeight: 700,
+                    }}>
+                      Sent {fmtDate(selectedReport.sent_at?.slice(0, 10))}
+                    </span>
+                  </div>
+
+                  {/* Meta card */}
+                  <div style={sectionSt}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
+
+                      {/* Student name — parents only */}
+                      {selectedReport.student_name && (
+                        <div>
+                          <div style={labelSt}>Student</div>
+                          <div style={{ fontSize: '0.875rem', color: '#111827', fontWeight: 600 }}>{selectedReport.student_name}</div>
+                        </div>
+                      )}
+
+                      {/* Coach name */}
+                      {selectedReport.coach_name && (
+                        <div>
+                          <div style={labelSt}>Coach</div>
+                          <div style={{ fontSize: '0.875rem', color: '#111827' }}>{selectedReport.coach_name}</div>
+                        </div>
+                      )}
+
+                      {/* Report type */}
+                      <div>
+                        <div style={labelSt}>Session type</div>
+                        <div style={{ fontSize: '0.875rem', color: '#111827' }}>
+                          <span style={badgeStyle(selectedReport.report_type)}>{REPORT_TYPE_LABELS[selectedReport.report_type]}</span>
+                        </div>
+                      </div>
+
+                      {/* Appointment type */}
+                      {selectedReport.report_type !== 'note' && selectedReport.appointment_type && (
+                        <div>
+                          <div style={labelSt}>Appointment type</div>
+                          <div style={{ fontSize: '0.875rem', color: '#111827' }}>{selectedReport.appointment_type}</div>
+                        </div>
+                      )}
+
+                      {/* Date / time / duration — single session */}
+                      {selectedReport.report_type === 'single' && selectedReport.appointment_date && (
+                        <div>
+                          <div style={labelSt}>Date</div>
+                          <div style={{ fontSize: '0.875rem', color: '#111827' }}>
+                            {fmtDate(selectedReport.appointment_date)}
+                            {selectedReport.appointment_time && ` at ${selectedReport.appointment_time}`}
+                          </div>
+                        </div>
+                      )}
+                      {selectedReport.report_type === 'single' && selectedReport.appointment_duration && (
+                        <div>
+                          <div style={labelSt}>Duration</div>
+                          <div style={{ fontSize: '0.875rem', color: '#111827' }}>{selectedReport.appointment_duration} min</div>
+                        </div>
+                      )}
+
+                      {/* Date range — multiple sessions */}
+                      {selectedReport.report_type === 'multiple' && (
+                        <div>
+                          <div style={labelSt}>Period</div>
+                          <div style={{ fontSize: '0.875rem', color: '#111827' }}>
+                            {fmtDate(selectedReport.start_date)} – {fmtDate(selectedReport.end_date)}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Attended */}
+                      {selectedReport.report_type !== 'note' && selectedReport.attended && (
+                        <div>
+                          <div style={labelSt}>Attended</div>
+                          <div style={{ fontSize: '0.875rem', color: '#111827' }}>{selectedReport.attended}</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Shared notes */}
+                  {selectedReport.shared_notes && (
+                    <div style={sectionSt}>
+                      <div style={labelSt}>Session notes</div>
+                      <div style={{ fontSize: '0.875rem', color: '#374151', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+                        {selectedReport.shared_notes}
+                      </div>
+                    </div>
+                  )}
+                  {!selectedReport.shared_notes && (
+                    <p style={{ fontSize: '0.82rem', color: '#9ca3af', textAlign: 'center', padding: '24px 0' }}>
+                      No notes were included with this report.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Counselor / Admin form view ──────────────────────────────────── */}
+          {!isStudent && <div style={{ maxWidth: 760, margin: '0 auto' }}>
 
             {/* Post-send green banner */}
             {sentBanner && (
@@ -1295,7 +1411,8 @@ function ReportsContent() {
               </div>
             )}
 
-          </div>
+          </div>}
+
         </main>
       </div>
 
