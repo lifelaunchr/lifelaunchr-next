@@ -1280,9 +1280,6 @@ function ReportsContent() {
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
-        @media (max-width: 640px) {
-          aside { display: none !important; }
-        }
       `}</style>
     </div>
   )
