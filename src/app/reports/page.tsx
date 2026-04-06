@@ -581,13 +581,53 @@ function ReportsContent() {
   const totalPages = Math.ceil(activeReports.length / LIST_PAGE_SIZE)
   const pagedReports = activeReports.slice(listPage * LIST_PAGE_SIZE, (listPage + 1) * LIST_PAGE_SIZE)
 
+  // ── Layout styles — mobile uses normal flow, desktop uses fixed two-panel ──
+  const outerSt: React.CSSProperties = isMobile
+    ? { background: '#f9fafb' }
+    : { position: 'fixed', top: 0, right: 0, bottom: 0, left: 0, display: 'flex', flexDirection: 'column', background: '#f9fafb' }
+
+  const headerSt: React.CSSProperties = isMobile
+    ? { background: '#0c1b33', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }
+    : { flexShrink: 0, background: '#0c1b33', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }
+
+  const twoPanelSt: React.CSSProperties = isMobile
+    ? { display: 'block' }
+    : { position: 'relative', flex: 1, minHeight: 0, overflow: 'hidden', ...(panelHeight > 0 ? { height: panelHeight } : {}) }
+
+  const asideSt: React.CSSProperties = isMobile
+    ? {
+        display: mobileShowDetail ? 'none' : 'flex',
+        flexDirection: 'column',
+        width: '100%',
+        minHeight: 'calc(100vh - 49px)',
+        background: '#fff',
+        borderBottom: '1px solid #e5e7eb',
+      }
+    : {
+        position: 'absolute', top: 0, bottom: 0, left: 0,
+        display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        width: 320,
+        background: '#fff', borderRight: '1px solid #e5e7eb',
+      }
+
+  const mainSt: React.CSSProperties = isMobile
+    ? {
+        display: mobileShowDetail ? 'flex' : 'none',
+        flexDirection: 'column',
+        width: '100%',
+        minHeight: 'calc(100vh - 49px)',
+        overflowY: 'auto',
+        padding: 24,
+      }
+    : {
+        position: 'absolute', top: 0, bottom: 0, left: 320, right: 0,
+        display: 'flex', flexDirection: 'column', overflowY: 'auto', padding: 24,
+      }
+
   return (
-    <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, left: 0, display: 'flex', flexDirection: 'column', background: '#f9fafb' }}>
+    <div style={outerSt}>
       {/* Top nav */}
-      <header
-        id="reports-header"
-        style={{ flexShrink: 0, background: '#0c1b33', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}
-      >
+      <header id="reports-header" style={headerSt}>
         <Link href="/" style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>
           <span style={{ color: '#7dd3fc' }}>Soar</span> by LifeLaunchr
         </Link>
@@ -596,17 +636,11 @@ function ReportsContent() {
         </Link>
       </header>
 
-      {/* Two-panel: absolute-positioned children fill all remaining space */}
-      <div style={{ position: 'relative', flex: 1, minHeight: 0, overflow: 'hidden', ...(panelHeight > 0 ? { height: panelHeight } : {}) }}>
+      {/* Two-panel */}
+      <div style={twoPanelSt}>
 
         {/* Left Panel — Report List */}
-        <aside style={{
-          position: 'absolute', top: 0, bottom: 0, left: 0,
-          display: (isMobile && mobileShowDetail) ? 'none' : 'flex',
-          flexDirection: 'column', overflow: 'hidden',
-          width: isMobile ? '100%' : 320,
-          background: '#fff', borderRight: '1px solid #e5e7eb',
-        }}>
+        <aside style={asideSt}>
           {/* Panel header */}
           <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid #f3f4f6' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -794,12 +828,7 @@ function ReportsContent() {
         </aside>
 
         {/* Right Panel — Report Form */}
-        <main style={{
-          position: 'absolute', top: 0, bottom: 0, right: 0,
-          left: isMobile ? 0 : 320,
-          display: (!isMobile || mobileShowDetail) ? 'flex' : 'none',
-          flexDirection: 'column', overflowY: 'auto', padding: 24,
-        }}>
+        <main style={mainSt}>
           {/* Mobile back button — show whenever mobileShowDetail is true */}
           {mobileShowDetail && (
             <button
