@@ -913,7 +913,7 @@ function ReportsContent() {
           )}
           {/* ── Student / Parent read-only view ─────────────────────────────── */}
           {isStudent && (
-            <div style={{ maxWidth: 760, margin: '0 auto' }}>
+            <div style={{ width: '100%', maxWidth: 760, margin: '0 auto' }}>
               {!selectedReport ? (
                 <div style={{ textAlign: 'center', color: '#9ca3af', padding: '64px 0' }}>
                   <div style={{ fontSize: '2rem', marginBottom: 12 }}>📋</div>
@@ -1023,7 +1023,7 @@ function ReportsContent() {
           )}
 
           {/* ── Counselor / Admin form view ──────────────────────────────────── */}
-          {!isStudent && <div style={{ maxWidth: 760, margin: '0 auto' }}>
+          {!isStudent && <div style={{ width: '100%', maxWidth: 760, margin: '0 auto' }}>
 
             {/* Post-send green banner */}
             {sentBanner && (
