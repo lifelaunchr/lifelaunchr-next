@@ -578,7 +578,7 @@ export default function AdminPage() {
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Search by name, email, or org…"
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-72 focus:outline-none focus:border-indigo-400"
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full sm:w-72 focus:outline-none focus:border-indigo-400"
               />
               <select
                 value={typeFilter}
@@ -596,27 +596,27 @@ export default function AdminPage() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-100">
                   <tr>
-                    {[['name','User','left'],['type','Type','left'],['tier','Tier / Role','left'],['limit','Msg limit','right'],['used','Used','right']].map(([col, label, align]) => (
+                    {[['name','User','left',''],['type','Type','left','hidden sm:table-cell'],['tier','Tier / Role','left',''],['limit','Msg limit','right','hidden sm:table-cell'],['used','Used','right','']].map(([col, label, align, responsive]) => (
                       <th key={col} onClick={() => toggleSort(col)}
-                        className={`px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none text-${align}`}>
+                        className={`px-2 py-2 sm:px-4 sm:py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none text-${align} ${responsive}`}>
                         {label}{sortIndicator(col)}
                       </th>
                     ))}
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Overrides</th>
-                    <th className="px-4 py-3"></th>
+                    <th className="hidden md:table-cell text-right px-2 py-2 sm:px-4 sm:py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Overrides</th>
+                    <th className="px-2 py-2 sm:px-4 sm:py-3"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {pagedUsers.map(u => (
                     <tr key={u.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3">
+                      <td className="px-2 py-2 sm:px-4 sm:py-3">
                         <p className="font-medium text-gray-800">{u.full_name || '—'}</p>
                         <p className="text-xs text-gray-400">{u.email}</p>
                         {u.organization && <p className="text-xs text-gray-400">{u.organization}</p>}
                         {u.tenant_name && <p className="text-xs text-indigo-400">{u.tenant_name}</p>}
                       </td>
-                      <td className="px-4 py-3 text-gray-600 capitalize">{u.account_type}</td>
-                      <td className="px-4 py-3">
+                      <td className="hidden sm:table-cell px-2 py-2 sm:px-4 sm:py-3 text-gray-600 capitalize">{u.account_type}</td>
+                      <td className="px-2 py-2 sm:px-4 sm:py-3">
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-700">
                           {u.tier_display_name || u.tier || 'free'}
                         </span>
@@ -630,11 +630,11 @@ export default function AdminPage() {
                           <span className="ml-1 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-teal-50 text-teal-700">tenant-admin</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-right text-gray-600">
+                      <td className="hidden sm:table-cell px-2 py-2 sm:px-4 sm:py-3 text-right text-gray-600">
                         {u.monthly_message_limit === null ? '∞' : u.monthly_message_limit ?? '—'}
                       </td>
-                      <td className="px-4 py-3 text-right text-gray-600">{u.messages_used}</td>
-                      <td className="px-4 py-3 text-right text-xs text-gray-400">
+                      <td className="px-2 py-2 sm:px-4 sm:py-3 text-right text-gray-600">{u.messages_used}</td>
+                      <td className="hidden md:table-cell px-2 py-2 sm:px-4 sm:py-3 text-right text-xs text-gray-400">
                         {[
                           u.history_retention_days_override != null && `hist:${u.history_retention_days_override}d`,
                           u.essays_enabled_override != null && `essays:${u.essays_enabled_override}`,
@@ -642,7 +642,7 @@ export default function AdminPage() {
                           u.max_students_override != null && `maxStu:${u.max_students_override}`,
                         ].filter(Boolean).join(', ') || '—'}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-2 py-2 sm:px-4 sm:py-3">
                         {(isAdmin || isSuperAdmin) ? (
                           <button
                             onClick={() => setEditingUser({ ...u })}
@@ -693,28 +693,28 @@ export default function AdminPage() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-100">
                   <tr>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Tier</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Msg/mo</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">History</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Max students</th>
-                    <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Essays</th>
-                    <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Plans</th>
-                    <th className="px-4 py-3"></th>
+                    <th className="text-left px-2 py-2 sm:px-4 sm:py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Tier</th>
+                    <th className="text-right px-2 py-2 sm:px-4 sm:py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Msg/mo</th>
+                    <th className="hidden sm:table-cell text-right px-2 py-2 sm:px-4 sm:py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">History</th>
+                    <th className="text-right px-2 py-2 sm:px-4 sm:py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Max Stu</th>
+                    <th className="text-center px-2 py-2 sm:px-4 sm:py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Essays</th>
+                    <th className="text-center px-2 py-2 sm:px-4 sm:py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Plans</th>
+                    <th className="px-2 py-2 sm:px-4 sm:py-3"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {tiers.map(t => (
                     <tr key={t.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3">
+                      <td className="px-2 py-2 sm:px-4 sm:py-3">
                         <p className="font-medium text-gray-800">{t.display_name}</p>
                         <p className="text-xs text-gray-400 font-mono">{t.name}</p>
                       </td>
-                      <td className="px-4 py-3 text-right text-gray-600">{t.monthly_message_limit ?? '∞'}</td>
-                      <td className="px-4 py-3 text-right text-gray-600">{t.history_retention_days ? `${t.history_retention_days}d` : '∞'}</td>
-                      <td className="px-4 py-3 text-right text-gray-600">{t.max_students ?? '∞'}</td>
-                      <td className="px-4 py-3 text-center">{t.can_use_essays ? '✓' : '—'}</td>
-                      <td className="px-4 py-3 text-center">{t.can_use_plans ? '✓' : '—'}</td>
-                      <td className="px-4 py-3">
+                      <td className="px-2 py-2 sm:px-4 sm:py-3 text-right text-gray-600">{t.monthly_message_limit ?? '∞'}</td>
+                      <td className="hidden sm:table-cell px-2 py-2 sm:px-4 sm:py-3 text-right text-gray-600">{t.history_retention_days ? `${t.history_retention_days}d` : '∞'}</td>
+                      <td className="px-2 py-2 sm:px-4 sm:py-3 text-right text-gray-600">{t.max_students ?? '∞'}</td>
+                      <td className="px-2 py-2 sm:px-4 sm:py-3 text-center">{t.can_use_essays ? '✓' : '—'}</td>
+                      <td className="px-2 py-2 sm:px-4 sm:py-3 text-center">{t.can_use_plans ? '✓' : '—'}</td>
+                      <td className="px-2 py-2 sm:px-4 sm:py-3">
                         <button onClick={() => setEditingTier({ ...t })}
                           className="text-xs text-indigo-500 hover:text-indigo-700 font-medium">
                           Edit
@@ -744,34 +744,34 @@ export default function AdminPage() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-100">
                   <tr>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Tenant</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Subdomain</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Plan</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Users</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">AI queries (mo)</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Created</th>
-                    <th className="px-4 py-3"></th>
+                    <th className="text-left px-2 py-2 sm:px-4 sm:py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Tenant</th>
+                    <th className="text-left px-2 py-2 sm:px-4 sm:py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Subdomain</th>
+                    <th className="text-left px-2 py-2 sm:px-4 sm:py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Plan</th>
+                    <th className="text-right px-2 py-2 sm:px-4 sm:py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Users</th>
+                    <th className="text-right px-2 py-2 sm:px-4 sm:py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider"><span className="hidden sm:inline">AI queries (mo)</span><span className="sm:hidden">AI/mo</span></th>
+                    <th className="hidden sm:table-cell text-right px-2 py-2 sm:px-4 sm:py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Created</th>
+                    <th className="px-2 py-2 sm:px-4 sm:py-3"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {tenants.map(t => (
                     <tr key={t.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3">
+                      <td className="px-2 py-2 sm:px-4 sm:py-3">
                         <p className="font-medium text-gray-800">{t.display_name}</p>
                         {!t.is_active && <span className="text-xs text-gray-400">inactive</span>}
                       </td>
-                      <td className="px-4 py-3 text-gray-500 font-mono text-xs">{t.subdomain}</td>
-                      <td className="px-4 py-3">
+                      <td className="px-2 py-2 sm:px-4 sm:py-3 text-gray-500 font-mono text-xs">{t.subdomain}</td>
+                      <td className="px-2 py-2 sm:px-4 sm:py-3">
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-700">
                           {tiers.find(r => r.name === t.plan)?.display_name || t.plan || '—'}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right text-gray-600">{t.user_count}</td>
-                      <td className="px-4 py-3 text-right text-gray-600">{t.ai_queries_this_month}</td>
-                      <td className="px-4 py-3 text-right text-gray-400 text-xs">
+                      <td className="px-2 py-2 sm:px-4 sm:py-3 text-right text-gray-600">{t.user_count}</td>
+                      <td className="px-2 py-2 sm:px-4 sm:py-3 text-right text-gray-600">{t.ai_queries_this_month}</td>
+                      <td className="hidden sm:table-cell px-2 py-2 sm:px-4 sm:py-3 text-right text-gray-400 text-xs">
                         {new Date(t.created_at).toLocaleDateString()}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-2 py-2 sm:px-4 sm:py-3">
                         <div className="flex items-center justify-end gap-3">
                           <button
                             onClick={() => openEditTenant(t)}
