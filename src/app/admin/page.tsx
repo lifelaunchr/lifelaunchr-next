@@ -17,6 +17,8 @@ interface UserRow {
   essays_enabled_override: boolean | null
   plans_enabled_override: boolean | null
   max_students_override: number | null
+  editate_enabled: boolean | null
+  editate_review_limit: number | null
   organization: string | null
   is_admin: boolean
   is_super_admin: boolean
@@ -259,6 +261,8 @@ export default function AdminPage() {
           essays_enabled_override: editingUser.essays_enabled_override,
           plans_enabled_override: editingUser.plans_enabled_override,
           max_students_override: editingUser.max_students_override,
+          editate_enabled: editingUser.editate_enabled ?? false,
+          editate_review_limit: editingUser.editate_review_limit,
         })
       })
       if (res.ok) {
@@ -923,6 +927,34 @@ export default function AdminPage() {
                   placeholder="Leave blank = use tier default"
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
                 />
+              </div>
+
+              {/* Editate section */}
+              <div className="border-t border-gray-100 pt-4">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Editate (Essay Review)</p>
+                <div className="space-y-3">
+                  <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editingUser.editate_enabled ?? false}
+                      onChange={e => setEditingUser({ ...editingUser, editate_enabled: e.target.checked })}
+                    />
+                    Editate enabled (student can access Editate link &amp; drafts)
+                  </label>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Feedback rounds included <span className="text-gray-400 font-normal">(can only increase)</span>
+                    </label>
+                    <input
+                      type="number"
+                      min={editingUser.editate_review_limit ?? 0}
+                      value={editingUser.editate_review_limit ?? ''}
+                      onChange={e => setEditingUser({ ...editingUser, editate_review_limit: e.target.value ? parseInt(e.target.value) : null })}
+                      placeholder="0 = no limit shown"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="flex gap-4">
