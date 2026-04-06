@@ -59,6 +59,8 @@ interface TenantRow {
   ai_queries_this_month: number
   created_at: string
   session_report_cc_emails: string | null
+  editate_auth_token: string | null
+  editate_org_id: string | null
 }
 
 interface TenantSettings {
@@ -79,6 +81,8 @@ interface TenantFormData {
   accent_color: string
   custom_instructions: string
   is_active: boolean
+  editate_auth_token: string
+  editate_org_id: string
 }
 
 const BLANK_TENANT: TenantFormData = {
@@ -93,6 +97,8 @@ const BLANK_TENANT: TenantFormData = {
   accent_color: '#c2410c',
   custom_instructions: '',
   is_active: true,
+  editate_auth_token: '',
+  editate_org_id: '',
 }
 
 const STARTER_PROMPT = `I run a college counseling practice called [PRACTICE NAME]. Help me write a 2–3 paragraph context description for an AI college and career planning assistant that will work with my students. It should capture: our counseling philosophy, the types of students we work with, any geographic or school-type focus, and anything that makes our practice distinctive. Keep it concise and written in second person addressed to the AI ("You are a college research assistant for…"). Ask me questions first to help create it.`
@@ -373,6 +379,8 @@ export default function AdminPage() {
       accent_color: t.accent_color || '#c2410c',
       custom_instructions: t.custom_instructions || '',
       is_active: t.is_active,
+      editate_auth_token: t.editate_auth_token || '',
+      editate_org_id: t.editate_org_id || '',
     })
     setEditingTenantId(t.id)
     setTenantFormMsg('')
@@ -387,7 +395,7 @@ export default function AdminPage() {
     setSaving(true)
     try {
       const token = await getToken()
-      const payload = {
+      const payload: Record<string, unknown> = {
         ...tenantForm,
         primary_color: normalizeColor(tenantForm.primary_color),
         header_color: normalizeColor(tenantForm.header_color),
@@ -395,6 +403,8 @@ export default function AdminPage() {
         header_logo_url: tenantForm.header_logo_url.trim() || null,
         custom_instructions: tenantForm.custom_instructions.trim() || null,
       }
+      // Don't send editate_auth_token if blank (preserves existing token on server)
+      if (!tenantForm.editate_auth_token.trim()) delete payload.editate_auth_token
       const isEdit = editingTenantId !== null
       const res = await fetch(
         isEdit ? `${apiUrl}/admin/tenants/${editingTenantId}` : `${apiUrl}/admin/tenants`,
@@ -1341,6 +1351,33 @@ export default function AdminPage() {
                     </button>
                   </div>
                 </details>
+              </div>
+
+              {/* Editate integration */}
+              <div className="border-t border-gray-100 pt-4">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Editate Integration</p>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">API token</label>
+                    <input
+                      type="password"
+                      value={tenantForm.editate_auth_token}
+                      onChange={e => setTenantForm({ ...tenantForm, editate_auth_token: e.target.value })}
+                      placeholder="Leave blank to keep existing token"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-indigo-400"
+                    />
+                    <p className="text-[10px] text-gray-400 mt-1">Required to generate Editate access links for students</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Org ID</label>
+                    <input
+                      value={tenantForm.editate_org_id}
+                      onChange={e => setTenantForm({ ...tenantForm, editate_org_id: e.target.value })}
+                      placeholder="e.g. Lifelaunchr"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
