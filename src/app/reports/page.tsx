@@ -72,6 +72,14 @@ function fmtDate(d?: string) {
   return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+function fmtTime(t?: string) {
+  if (!t) return ''
+  const [h, m] = t.split(':').map(Number)
+  const ampm = h >= 12 ? 'PM' : 'AM'
+  const h12 = h % 12 || 12
+  return ` at ${h12}:${String(m).padStart(2, '0')} ${ampm}`
+}
+
 function reportLabel(r: SessionReport) {
   if (r.report_type === 'multiple') {
     return `${fmtDate(r.start_date)} – ${fmtDate(r.end_date)}`
@@ -878,23 +886,21 @@ function ReportsContent() {
 
                   {/* Meta card */}
                   <div style={sectionSt}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
 
                       {/* Student name — parents only */}
                       {selectedReport.student_name && (
-                        <div>
+                        <div style={{ gridColumn: '1 / -1' }}>
                           <div style={labelSt}>Student</div>
                           <div style={{ fontSize: '0.875rem', color: '#111827', fontWeight: 600 }}>{selectedReport.student_name}</div>
                         </div>
                       )}
 
-                      {/* Coach name */}
-                      {selectedReport.coach_name && (
-                        <div>
-                          <div style={labelSt}>Coach</div>
-                          <div style={{ fontSize: '0.875rem', color: '#111827' }}>{selectedReport.coach_name}</div>
-                        </div>
-                      )}
+                      {/* Coach — always shown */}
+                      <div style={{ gridColumn: '1 / -1' }}>
+                        <div style={labelSt}>Coach</div>
+                        <div style={{ fontSize: '0.875rem', color: '#111827' }}>{selectedReport.coach_name || '—'}</div>
+                      </div>
 
                       {/* Report type */}
                       <div>
@@ -912,16 +918,17 @@ function ReportsContent() {
                         </div>
                       )}
 
-                      {/* Date / time / duration — single session */}
+                      {/* Date / time — single session */}
                       {selectedReport.report_type === 'single' && selectedReport.appointment_date && (
                         <div>
                           <div style={labelSt}>Date</div>
                           <div style={{ fontSize: '0.875rem', color: '#111827' }}>
-                            {fmtDate(selectedReport.appointment_date)}
-                            {selectedReport.appointment_time && ` at ${selectedReport.appointment_time}`}
+                            {fmtDate(selectedReport.appointment_date)}{fmtTime(selectedReport.appointment_time)}
                           </div>
                         </div>
                       )}
+
+                      {/* Duration */}
                       {selectedReport.report_type === 'single' && selectedReport.appointment_duration && (
                         <div>
                           <div style={labelSt}>Duration</div>
@@ -931,7 +938,7 @@ function ReportsContent() {
 
                       {/* Date range — multiple sessions */}
                       {selectedReport.report_type === 'multiple' && (
-                        <div>
+                        <div style={{ gridColumn: '1 / -1' }}>
                           <div style={labelSt}>Period</div>
                           <div style={{ fontSize: '0.875rem', color: '#111827' }}>
                             {fmtDate(selectedReport.start_date)} – {fmtDate(selectedReport.end_date)}
