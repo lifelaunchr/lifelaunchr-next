@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { useAuth, useUser } from '@clerk/nextjs'
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -176,6 +177,8 @@ function EssayGroupCard({ group }: { group: EssayGroup }) {
 export default function EssaysPage() {
   const { getToken } = useAuth()
   const { user: clerkUser } = useUser()
+  const searchParams = useSearchParams()
+  const forStudentId = searchParams.get('for') ? parseInt(searchParams.get('for')!, 10) : null
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://lifelaunchr.onrender.com'
 
@@ -225,19 +228,21 @@ export default function EssaysPage() {
   // Load essay prompts once we know the module is enabled
   useEffect(() => {
     if (!essaysModule) return
+    if (accountType === 'counselor' && !forStudentId) return
     const loadPrompts = async () => {
       setPromptsLoading(true)
       try {
         const token = await getToken()
-        const res = await fetch(`${apiUrl}/essays/prompts`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
+        const url = forStudentId
+          ? `${apiUrl}/essays/prompts?student_id=${forStudentId}`
+          : `${apiUrl}/essays/prompts`
+        const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
         if (res.ok) setPrompts(await res.json())
       } catch { /* ignore */ }
       finally { setPromptsLoading(false) }
     }
     loadPrompts()
-  }, [essaysModule, getToken, apiUrl])
+  }, [essaysModule, accountType, forStudentId, getToken, apiUrl])
 
   // Load drafts for students with editate access
   useEffect(() => {
@@ -360,7 +365,7 @@ export default function EssaysPage() {
         <h1 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#0c1b33', marginBottom: 4 }}>Essays</h1>
         <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: 24 }}>
           Essay prompts for your college list.
-          {isCounselor && ' Select a student to view their essay requirements.'}
+          {isCounselor && !forStudentId && ' Select a student from the sidebar to view their essay requirements.'}
         </p>
 
         {/* ── Editate access button (students only, editate_available) ── */}
