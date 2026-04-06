@@ -19,6 +19,7 @@ interface Student {
 interface SessionReport {
   id: number
   coach_id: number
+  appointment_timezone?: string
   coach_name?: string   // present in team-view and student/parent view (joined from users)
   student_name?: string // present in parent view (joined from users)
   student_id: number
@@ -72,12 +73,24 @@ function fmtDate(d?: string) {
   return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-function fmtTime(t?: string) {
+function fmtTime(t?: string, ianaTimezone?: string, date?: string) {
   if (!t) return ''
   const [h, m] = t.split(':').map(Number)
   const ampm = h >= 12 ? 'PM' : 'AM'
   const h12 = h % 12 || 12
-  return ` at ${h12}:${String(m).padStart(2, '0')} ${ampm}`
+  const base = `${h12}:${String(m).padStart(2, '0')} ${ampm}`
+  if (!ianaTimezone) return ` at ${base}`
+  try {
+    const dateStr = date || new Date().toISOString().slice(0, 10)
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZoneName: 'short',
+      timeZone: ianaTimezone,
+    }).formatToParts(new Date(`${dateStr}T${t}`))
+    const abbr = parts.find(p => p.type === 'timeZoneName')?.value || ''
+    return ` at ${base}${abbr ? ` ${abbr}` : ''}`
+  } catch {
+    return ` at ${base}`
+  }
 }
 
 function reportLabel(r: SessionReport) {
@@ -128,6 +141,11 @@ function ReportsContent() {
   const [loading, setLoading] = useState(true)
   const [accessDenied, setAccessDenied] = useState(false)
   const [isStudent, setIsStudent] = useState(false)
+  const [isParentUser, setIsParentUser] = useState(false)
+  const [selectedChildId, setSelectedChildId] = useState<number | null>(null)
+  const [coachTimezone] = useState<string>(() => {
+    try { return Intl.DateTimeFormat().resolvedOptions().timeZone } catch { return '' }
+  })
   const [coachName, setCoachName] = useState('')
   const [myUserId, setMyUserId] = useState<number | null>(null)
 
@@ -207,6 +225,7 @@ function ReportsContent() {
           setAccessDenied(true); setLoading(false); return
         }
         setIsStudent(studentMode)
+        setIsParentUser(usage.account_type === 'parent')
         setMyUserId(usage.user_id)
         setCoachName(clerkUser.fullName || clerkUser.firstName || clerkUser.emailAddresses[0]?.emailAddress || '')
         setIsTenantAdmin(Boolean(usage.is_tenant_admin))
@@ -376,6 +395,7 @@ function ReportsContent() {
     appointment_date: appointmentDate || null,
     appointment_time: appointmentTime || null,
     appointment_duration: appointmentDuration || null,
+    appointment_timezone: coachTimezone || null,
     start_date: startDate || null,
     end_date: endDate || null,
     total_duration: totalDuration || null,
@@ -599,7 +619,10 @@ function ReportsContent() {
 
   // ── Active list & reports for current view mode ───────────────────────────
 
-  const activeReports = teamView ? teamReports : reports
+  const baseReports = teamView ? teamReports : reports
+  const activeReports = isParentUser && selectedChildId
+    ? baseReports.filter(r => r.student_id === selectedChildId)
+    : baseReports
   const totalPages = Math.ceil(activeReports.length / LIST_PAGE_SIZE)
   const pagedReports = activeReports.slice(listPage * LIST_PAGE_SIZE, (listPage + 1) * LIST_PAGE_SIZE)
 
@@ -709,6 +732,30 @@ function ReportsContent() {
               </div>
             )}
 
+            {/* Child filter — parents with multiple linked students */}
+            {isParentUser && (() => {
+              const children = Array.from(
+                new Map(
+                  reports
+                    .filter(r => r.student_id && r.student_name)
+                    .map(r => [r.student_id, { id: r.student_id!, name: r.student_name! }])
+                ).values()
+              )
+              if (children.length < 2) return null
+              return (
+                <select
+                  value={selectedChildId ?? ''}
+                  onChange={(e) => { setSelectedChildId(e.target.value ? parseInt(e.target.value, 10) : null); setListPage(0) }}
+                  style={{ ...inputSt, marginBottom: 8 }}
+                >
+                  <option value="">— All children —</option>
+                  {children.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              )
+            })()}
+
             {/* Student filter — only in my-reports mode (counselors only) */}
             {!teamView && !isStudent && (
               <select
@@ -742,7 +789,7 @@ function ReportsContent() {
             ) : activeReports.length === 0 ? (
               <p style={{ padding: '24px 16px', fontSize: '0.82rem', color: '#9ca3af', textAlign: 'center' }}>
                 {isStudent
-                  ? 'No session reports have been sent to you yet.'
+                  ? (isParentUser && selectedChildId ? 'No reports for this child yet.' : 'No session reports have been sent yet.')
                   : teamView
                     ? 'No team reports found.'
                     : selectedStudentId
@@ -923,7 +970,7 @@ function ReportsContent() {
                         <div>
                           <div style={labelSt}>Date</div>
                           <div style={{ fontSize: '0.875rem', color: '#111827' }}>
-                            {fmtDate(selectedReport.appointment_date)}{fmtTime(selectedReport.appointment_time)}
+                            {fmtDate(selectedReport.appointment_date)}{fmtTime(selectedReport.appointment_time, selectedReport.appointment_timezone, selectedReport.appointment_date)}
                           </div>
                         </div>
                       )}
@@ -1098,7 +1145,19 @@ function ReportsContent() {
                     </div>
 
                     <div>
-                      <label style={labelSt}>Time</label>
+                      <label style={labelSt}>
+                        Time
+                        {coachTimezone && !isReadOnly && (
+                          <span style={{ fontWeight: 400, color: '#9ca3af', marginLeft: 6 }}>
+                            — enter in your local time ({coachTimezone.replace(/_/g, ' ')})
+                          </span>
+                        )}
+                        {coachTimezone && isReadOnly && selectedReport?.appointment_timezone && (
+                          <span style={{ fontWeight: 400, color: '#9ca3af', marginLeft: 6 }}>
+                            ({selectedReport.appointment_timezone.replace(/_/g, ' ')})
+                          </span>
+                        )}
+                      </label>
                       <input type="time" value={appointmentTime} onChange={(e) => { if (!isReadOnly) setAppointmentTime(e.target.value) }} readOnly={isReadOnly} style={isReadOnly ? inputDisabledSt : inputSt} />
                     </div>
                     <div>
