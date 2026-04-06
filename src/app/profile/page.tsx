@@ -46,18 +46,6 @@ interface Profile {
   prompt_user_id?: string
 }
 
-interface Activity {
-  id: number
-  category: string
-  role: string
-  organization: string
-  description?: string
-  grade_levels?: string
-  hours_per_week?: number
-  weeks_per_year?: number
-  is_current: boolean
-}
-
 interface HsSuggestion {
   ncessch: string
   name: string
@@ -170,7 +158,6 @@ function ProfileContent() {
   } | null>(null)
   const [canWrite, setCanWrite] = useState(true)   // from API; false for parents
   const [profile, setProfile] = useState<Profile>({})
-  const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -247,7 +234,6 @@ function ProfileContent() {
           const data = await profRes.json()
           const p = data.profile || {}
           setProfile(p)
-          setActivities(data.activities || [])
           if (typeof data.can_write === 'boolean') setCanWrite(data.can_write)
           if (data.counselor_info) {
             setCounselorOrg(data.counselor_info.organization || '')
@@ -981,47 +967,6 @@ function ProfileContent() {
         )}
         </>)}
 
-        {/* Activities & Awards — link card */}
-        <Link
-          href={forStudentId ? `/activities?for=${forStudentId}` : '/activities'}
-          style={{ textDecoration: 'none', display: 'block', marginBottom: 24 }}
-        >
-          <div style={{
-            background: '#fff',
-            border: '1px solid #e2e8f0',
-            borderRadius: 12,
-            padding: '20px 24px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            cursor: 'pointer',
-            transition: 'box-shadow 0.15s, border-color 0.15s',
-          }}
-            onMouseEnter={(e) => {
-              const el = e.currentTarget as HTMLDivElement
-              el.style.boxShadow = '0 4px 12px rgba(79,70,229,0.12)'
-              el.style.borderColor = '#c7d2fe'
-            }}
-            onMouseLeave={(e) => {
-              const el = e.currentTarget as HTMLDivElement
-              el.style.boxShadow = 'none'
-              el.style.borderColor = '#e2e8f0'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <span style={{ fontSize: '1.6rem' }}>🏆</span>
-              <div>
-                <p style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0c1b33', marginBottom: 2 }}>Activities &amp; Awards</p>
-                <p style={{ fontSize: '0.8rem', color: '#6b7280' }}>
-                  {activities.length > 0
-                    ? `${activities.length} activit${activities.length === 1 ? 'y' : 'ies'} · drag to reorder, edit, or add more`
-                    : 'Add extracurriculars, sports, jobs, honors, and awards'}
-                </p>
-              </div>
-            </div>
-            <span style={{ color: '#4f46e5', fontWeight: 600, fontSize: '1.1rem', flexShrink: 0 }}>→</span>
-          </div>
-        </Link>
       </div>
     </div>
   )
