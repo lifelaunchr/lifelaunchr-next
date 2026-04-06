@@ -171,18 +171,6 @@ function ProfileContent() {
   const [canWrite, setCanWrite] = useState(true)   // from API; false for parents
   const [profile, setProfile] = useState<Profile>({})
   const [activities, setActivities] = useState<Activity[]>([])
-  const [sessionReports, setSessionReports] = useState<Array<{
-    id: number
-    report_type: string
-    appointment_type: string
-    appointment_date?: string
-    start_date?: string
-    end_date?: string
-    attended?: string
-    shared_notes?: string
-    sent_at: string
-    created_at: string
-  }>>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -274,20 +262,7 @@ function ProfileContent() {
           }
         }
 
-        // Load session reports (for student view or counselor viewing student)
-        const srTarget = forStudentId ?? usage.user_id
-        if (srTarget) {
-          try {
-            const srParams = usage.account_type === 'counselor' ? `?student_id=${srTarget}` : ''
-            const srRes = await fetch(`${apiUrl}/session-reports${srParams}`, {
-              headers: { Authorization: `Bearer ${token}` },
-            })
-            if (srRes.ok) {
-              const srData = await srRes.json()
-              setSessionReports(srData.reports || [])
-            }
-          } catch { /* ignore — non-critical */ }
-        }
+
       } catch {
         setError('Failed to load profile.')
       } finally {
@@ -1005,51 +980,6 @@ function ProfileContent() {
           </div>
         )}
         </>)}
-
-        {/* Session Notes */}
-        {(accountType !== 'counselor' || isViewingStudent) && sessionReports.length > 0 && (
-          <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 24, marginBottom: 24 }}>
-            <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0c1b33', marginBottom: 16 }}>Session Notes</h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              {sessionReports.map((r) => {
-                const dateDisplay = r.report_type === 'multiple'
-                  ? `${r.start_date ? new Date(r.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''} – ${r.end_date ? new Date(r.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}`
-                  : r.appointment_date
-                    ? new Date(r.appointment_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-                    : new Date(r.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-                const typeLabels: Record<string, string> = { single: 'Single Session', multiple: 'Multiple Sessions', note: 'Note' }
-                return (
-                  <div key={r.id} style={{ borderTop: '1px solid #f3f4f6', paddingTop: 16 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
-                      <span style={{ fontWeight: 700, fontSize: '0.875rem', color: '#0c1b33' }}>{dateDisplay}</span>
-                      <span style={{ fontSize: '0.75rem', background: '#ede9fe', color: '#5b21b6', borderRadius: 4, padding: '2px 8px', fontWeight: 600 }}>
-                        {typeLabels[r.report_type] || r.report_type}
-                      </span>
-                      {r.appointment_type && (
-                        <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>{r.appointment_type}</span>
-                      )}
-                    </div>
-                    {r.shared_notes ? (
-                      <div
-                        style={{ fontSize: '0.875rem', color: '#374151', lineHeight: 1.7 }}
-                        dangerouslySetInnerHTML={{ __html: r.shared_notes.replace(/\n\n/g, '</p><p style="margin:0 0 12px; line-height:1.7;">').replace(/\n/g, '<br/>').replace(/^/, '<p style="margin:0 0 12px; line-height:1.7;">').replace(/$/, '</p>').replace(/•\s?/g, '• ') }}
-                      />
-                    ) : (
-                      <p style={{ fontSize: '0.875rem', color: '#9ca3af', fontStyle: 'italic' }}>No notes content.</p>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        {(accountType !== 'counselor' || isViewingStudent) && sessionReports.length === 0 && (
-          <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 24, marginBottom: 24 }}>
-            <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0c1b33', marginBottom: 8 }}>Session Notes</h2>
-            <p style={{ fontSize: '0.875rem', color: '#9ca3af' }}>No session notes yet.</p>
-          </div>
-        )}
 
         {/* Activities & Awards — link card */}
         <Link
