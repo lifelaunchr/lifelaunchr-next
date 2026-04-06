@@ -193,7 +193,7 @@ function ReportsContent() {
         })
         if (!usageRes.ok) { setAccessDenied(true); setLoading(false); return }
         const usage = await usageRes.json()
-        const studentMode = usage.account_type === 'student'
+        const studentMode = usage.account_type === 'student' || usage.account_type === 'parent'
         if (!studentMode && usage.account_type !== 'counselor' && !usage.is_admin) {
           setAccessDenied(true); setLoading(false); return
         }
@@ -578,7 +578,7 @@ function ReportsContent() {
           <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>🔒</div>
           <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827', marginBottom: 8 }}>Access Restricted</h1>
           <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
-            Session Reports are available to counselors and students only.
+            Session Reports are not available for your account type.
           </p>
           <Link href="/chat" style={{ display: 'inline-block', marginTop: 20, color: '#4f46e5', textDecoration: 'none', fontSize: '0.875rem' }}>
             ← Back to Soar
