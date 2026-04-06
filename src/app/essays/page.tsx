@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useAuth, useUser } from '@clerk/nextjs'
@@ -174,7 +174,7 @@ function EssayGroupCard({ group }: { group: EssayGroup }) {
 
 // ── Main page ──────────────────────────────────────────────────────────────
 
-export default function EssaysPage() {
+function EssaysPageInner() {
   const { getToken } = useAuth()
   const { user: clerkUser } = useUser()
   const searchParams = useSearchParams()
@@ -637,5 +637,13 @@ export default function EssaysPage() {
         )}
       </main>
     </div>
+  )
+}
+
+export default function EssaysPage() {
+  return (
+    <Suspense>
+      <EssaysPageInner />
+    </Suspense>
   )
 }
