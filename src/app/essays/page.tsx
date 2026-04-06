@@ -194,6 +194,10 @@ export default function EssaysPage() {
 
   const [drafts, setDrafts] = useState<Assignment[]>([])
   const [draftsLoading, setDraftsLoading] = useState(false)
+  const [roundsUsed, setRoundsUsed] = useState(0)
+  const [reviewLimit, setReviewLimit] = useState(0)
+
+  const [reviewModalOpen, setReviewModalOpen] = useState(false)
 
   // Load usage + modules on mount
   useEffect(() => {
@@ -248,6 +252,8 @@ export default function EssaysPage() {
         if (res.ok) {
           const data = await res.json()
           setDrafts(data.assignments || [])
+          setRoundsUsed(data.rounds_used ?? 0)
+          setReviewLimit(data.review_limit ?? 0)
         }
       } catch { /* ignore */ }
       finally { setDraftsLoading(false) }
@@ -415,6 +421,102 @@ export default function EssaysPage() {
                   </button>
                 </p>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Feedback rounds bar (students with editate, review_limit > 0) ── */}
+        {isStudent && editateAvailable && reviewLimit > 0 && (
+          <div style={{
+            background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12,
+            padding: '16px 20px', marginBottom: 20,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#374151' }}>
+                Detailed Feedback Rounds: {roundsUsed} used of {reviewLimit}
+              </span>
+              {(isStudent || isParent) && (
+                <button
+                  onClick={() => setReviewModalOpen(true)}
+                  style={{
+                    background: 'none', border: 'none', color: '#6366f1',
+                    fontSize: '0.75rem', cursor: 'pointer', padding: 0,
+                    textDecoration: 'underline',
+                  }}
+                >
+                  What does this mean?
+                </button>
+              )}
+            </div>
+            {/* Progress bar */}
+            <div style={{ height: 6, borderRadius: 9999, background: '#f3f4f6', overflow: 'hidden' }}>
+              <div style={{
+                height: '100%',
+                width: `${Math.min(100, reviewLimit > 0 ? (roundsUsed / reviewLimit) * 100 : 0)}%`,
+                background: roundsUsed >= reviewLimit ? '#ef4444' : roundsUsed / reviewLimit >= 0.75 ? '#f59e0b' : '#4f46e5',
+                borderRadius: 9999,
+                transition: 'width 0.3s ease',
+              }} />
+            </div>
+            {/* Warning */}
+            {roundsUsed >= reviewLimit && (
+              <p style={{
+                fontSize: '0.78rem', marginTop: 8,
+                color: '#dc2626',
+              }}>
+                You&apos;ve used all your included feedback rounds. Additional reviews are available — contact your coach.
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* ── "What does this mean?" modal ── */}
+        {reviewModalOpen && (
+          <div
+            onClick={() => setReviewModalOpen(false)}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 50,
+              background: 'rgba(0,0,0,0.45)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: 20,
+            }}
+          >
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{
+                background: '#fff', borderRadius: 14, maxWidth: 500, width: '100%',
+                padding: '28px 28px 24px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+              }}
+            >
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#111827', marginBottom: 16, marginTop: 0 }}>
+                About Essay Feedback Rounds
+              </h2>
+              <div style={{ fontSize: '0.85rem', color: '#374151', lineHeight: 1.65, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <p style={{ margin: 0 }}>
+                  <strong>When do reviews happen?</strong> Feedback rounds typically take place after your brainstorming and initial drafting sessions with your coach — once you have a working draft ready for in-depth critique.
+                </p>
+                <p style={{ margin: 0 }}>
+                  <strong>What&apos;s included?</strong> Each round of feedback includes written comments on what&apos;s working well, specific suggestions for improvement, goals for your next draft, and in-line markup directly on your essay.
+                </p>
+                <p style={{ margin: 0 }}>
+                  <strong>How long does it take?</strong> You&apos;ll typically receive feedback within 48–72 hours of submission. Plan ahead — aim to submit at least 2 weeks before any application deadline.
+                </p>
+                <p style={{ margin: 0 }}>
+                  <strong>Need more rounds?</strong> Additional feedback rounds are available at $55 each, or you can purchase a bundle of 12 for $600. Reach out to your coach to add more.
+                </p>
+              </div>
+              <div style={{ marginTop: 20, textAlign: 'right' }}>
+                <button
+                  onClick={() => setReviewModalOpen(false)}
+                  style={{
+                    background: '#4f46e5', color: '#fff', border: 'none',
+                    borderRadius: 8, padding: '8px 20px', fontWeight: 600,
+                    fontSize: '0.875rem', cursor: 'pointer',
+                  }}
+                >
+                  Got it
+                </button>
+              </div>
             </div>
           </div>
         )}
