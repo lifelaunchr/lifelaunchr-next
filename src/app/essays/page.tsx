@@ -50,6 +50,8 @@ interface SchoolEssays {
 interface PromptsResponse {
   platform_essays: EssayGroup[]
   schools: SchoolEssays[]
+  student_editate_available?: boolean
+  student_review_limit?: number
 }
 
 interface Assignment {
@@ -237,21 +239,33 @@ function EssaysPageInner() {
           ? `${apiUrl}/essays/prompts?student_id=${forStudentId}`
           : `${apiUrl}/essays/prompts`
         const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-        if (res.ok) setPrompts(await res.json())
+        if (res.ok) {
+          const data = await res.json()
+          setPrompts(data)
+          // For counselor view, pick up the target student's Editate status
+          if (forStudentId && data.student_editate_available != null) {
+            setEditateAvailable(data.student_editate_available)
+            setReviewLimit(data.student_review_limit ?? 0)
+          }
+        }
       } catch { /* ignore */ }
       finally { setPromptsLoading(false) }
     }
     loadPrompts()
   }, [essaysModule, accountType, forStudentId, getToken, apiUrl])
 
-  // Load drafts for students with editate access
+  // Load drafts for students with editate access, or counselors viewing a student
   useEffect(() => {
-    if (!editateAvailable || accountType !== 'student') return
+    if (!editateAvailable) return
+    if (accountType !== 'student' && !(accountType === 'counselor' && forStudentId)) return
     const loadDrafts = async () => {
       setDraftsLoading(true)
       try {
         const token = await getToken()
-        const res = await fetch(`${apiUrl}/essays/drafts`, {
+        const draftsUrl = (accountType === 'counselor' && forStudentId)
+          ? `${apiUrl}/essays/drafts?student_id=${forStudentId}`
+          : `${apiUrl}/essays/drafts`
+        const res = await fetch(draftsUrl, {
           headers: { Authorization: `Bearer ${token}` },
         })
         if (res.ok) {
@@ -264,7 +278,7 @@ function EssaysPageInner() {
       finally { setDraftsLoading(false) }
     }
     loadDrafts()
-  }, [editateAvailable, accountType, getToken, apiUrl])
+  }, [editateAvailable, accountType, forStudentId, getToken, apiUrl])
 
   const fetchEditateLink = useCallback(async () => {
     setEditateLinkLoading(true)
@@ -430,8 +444,8 @@ function EssaysPageInner() {
           </div>
         )}
 
-        {/* ── Feedback rounds bar (students with editate, review_limit > 0) ── */}
-        {isStudent && editateAvailable && reviewLimit > 0 && (
+        {/* ── Feedback rounds bar (students or counselors viewing a student with editate) ── */}
+        {editateAvailable && reviewLimit > 0 && (isStudent || (isCounselor && forStudentId)) && (
           <div style={{
             background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12,
             padding: '16px 20px', marginBottom: 20,
@@ -526,10 +540,10 @@ function EssaysPageInner() {
           </div>
         )}
 
-        {/* ── Drafts (students with editate access) ── */}
-        {isStudent && editateAvailable && (
+        {/* ── Drafts (students with editate access, or counselors viewing a student) ── */}
+        {editateAvailable && (isStudent || (isCounselor && forStudentId)) && (
           <div style={{ marginBottom: 28 }}>
-            <div style={sectionHeaderSt}>Your submitted drafts</div>
+            <div style={sectionHeaderSt}>{isCounselor ? "Student's submitted drafts" : "Your submitted drafts"}</div>
             {draftsLoading ? (
               <p style={{ fontSize: '0.82rem', color: '#9ca3af' }}>Loading drafts…</p>
             ) : drafts.length === 0 ? (
