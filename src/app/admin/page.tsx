@@ -647,7 +647,7 @@ export default function AdminPage() {
                         ].filter(Boolean).join(', ') || '—'}
                       </td>
                       <td className="px-2 py-2 sm:px-4 sm:py-3">
-                        {(isAdmin || isSuperAdmin) ? (
+                        {(isAdmin || isSuperAdmin || isTenantAdmin) ? (
                           <button
                             onClick={() => setEditingUser({ ...u })}
                             className="text-xs text-indigo-500 hover:text-indigo-700 font-medium"
@@ -885,49 +885,54 @@ export default function AdminPage() {
             <p className="text-sm text-gray-400 mb-5">{editingUser.full_name || editingUser.email}</p>
 
             <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Tier</label>
-                <input
-                  value={editingUser.tier || ''}
-                  onChange={e => setEditingUser({ ...editingUser, tier: e.target.value || null })}
-                  placeholder="e.g. student_plus, solo, practice, school"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
-                />
-                <p className="text-[10px] text-gray-400 mt-1">Leave blank to use default for account type</p>
-              </div>
+              {/* Platform-admin-only fields */}
+              {(isAdmin || isSuperAdmin) && (
+                <>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Tier</label>
+                    <input
+                      value={editingUser.tier || ''}
+                      onChange={e => setEditingUser({ ...editingUser, tier: e.target.value || null })}
+                      placeholder="e.g. student_plus, solo, practice, school"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                    />
+                    <p className="text-[10px] text-gray-400 mt-1">Leave blank to use default for account type</p>
+                  </div>
 
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Message limit override</label>
-                <input
-                  type="number"
-                  value={editingUser.monthly_message_limit ?? ''}
-                  onChange={e => setEditingUser({ ...editingUser, monthly_message_limit: e.target.value ? parseInt(e.target.value) : null })}
-                  placeholder="Leave blank = use tier default"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
-                />
-              </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Message limit override</label>
+                    <input
+                      type="number"
+                      value={editingUser.monthly_message_limit ?? ''}
+                      onChange={e => setEditingUser({ ...editingUser, monthly_message_limit: e.target.value ? parseInt(e.target.value) : null })}
+                      placeholder="Leave blank = use tier default"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">History retention override (days)</label>
-                <input
-                  type="number"
-                  value={editingUser.history_retention_days_override ?? ''}
-                  onChange={e => setEditingUser({ ...editingUser, history_retention_days_override: e.target.value ? parseInt(e.target.value) : null })}
-                  placeholder="Leave blank = use tier default"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
-                />
-              </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">History retention override (days)</label>
+                    <input
+                      type="number"
+                      value={editingUser.history_retention_days_override ?? ''}
+                      onChange={e => setEditingUser({ ...editingUser, history_retention_days_override: e.target.value ? parseInt(e.target.value) : null })}
+                      placeholder="Leave blank = use tier default"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Max students override (counselors)</label>
-                <input
-                  type="number"
-                  value={editingUser.max_students_override ?? ''}
-                  onChange={e => setEditingUser({ ...editingUser, max_students_override: e.target.value ? parseInt(e.target.value) : null })}
-                  placeholder="Leave blank = use tier default"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
-                />
-              </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Max students override (counselors)</label>
+                    <input
+                      type="number"
+                      value={editingUser.max_students_override ?? ''}
+                      onChange={e => setEditingUser({ ...editingUser, max_students_override: e.target.value ? parseInt(e.target.value) : null })}
+                      placeholder="Leave blank = use tier default"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                    />
+                  </div>
+                </>
+              )}
 
               {/* Editate section */}
               <div className="border-t border-gray-100 pt-4">
@@ -957,24 +962,26 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={editingUser.essays_enabled_override ?? false}
-                    onChange={e => setEditingUser({ ...editingUser, essays_enabled_override: e.target.checked })}
-                  />
-                  Essays override
-                </label>
-                <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={editingUser.plans_enabled_override ?? false}
-                    onChange={e => setEditingUser({ ...editingUser, plans_enabled_override: e.target.checked })}
-                  />
-                  Plans override
-                </label>
-              </div>
+              {(isAdmin || isSuperAdmin) && (
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editingUser.essays_enabled_override ?? false}
+                      onChange={e => setEditingUser({ ...editingUser, essays_enabled_override: e.target.checked })}
+                    />
+                    Essays override
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editingUser.plans_enabled_override ?? false}
+                      onChange={e => setEditingUser({ ...editingUser, plans_enabled_override: e.target.checked })}
+                    />
+                    Plans override
+                  </label>
+                </div>
+              )}
 
               {/* Role flags — visibility gated by caller role */}
               {(isSuperAdmin || isAdmin) && (
