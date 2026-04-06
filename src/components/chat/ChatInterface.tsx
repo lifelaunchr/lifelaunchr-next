@@ -46,6 +46,8 @@ interface UsageData {
   is_admin?: boolean
   is_tenant_admin?: boolean
   scheduling_link?: string | null
+  essays_module?: boolean      // essay prompts available (any tenant with module)
+  editate_available?: boolean  // editate link + drafts (LifeLaunchr + editate_enabled)
 }
 
 interface LimitReachedData {
@@ -871,6 +873,14 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                 <span className="text-base leading-none">📝</span>
                 <span>Session Reports</span>
               </Link>
+
+              {/* Essays link — essays module enabled */}
+              {usageData?.essays_module && (
+                <Link href="/essays" className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all">
+                  <span className="text-base leading-none">✏️</span>
+                  <span>Essays</span>
+                </Link>
+              )}
 
               {/* Admin dashboard link — admins and tenant admins */}
               {(isAdmin || (usageData?.is_tenant_admin)) && (
