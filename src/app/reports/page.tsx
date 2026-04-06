@@ -158,7 +158,6 @@ function ReportsContent() {
   const [sentBanner, setSentBanner] = useState<string | null>(null)   // top green banner after send
   const [sentConfirm, setSentConfirm] = useState<string | null>(null) // error feedback only now
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
-  const [mobileShowList, setMobileShowList] = useState(true)
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== 'undefined' ? window.innerWidth < 768 : false
   )
