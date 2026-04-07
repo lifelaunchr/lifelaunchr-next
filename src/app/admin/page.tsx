@@ -19,6 +19,8 @@ interface UserRow {
   max_students_override: number | null
   editate_enabled: boolean | null
   editate_review_limit: number | null
+  editate_school_selectivity: string | null
+  editate_feedback_preferences: string | null
   organization: string | null
   is_admin: boolean
   is_super_admin: boolean
@@ -269,6 +271,8 @@ export default function AdminPage() {
           max_students_override: editingUser.max_students_override,
           editate_enabled: editingUser.editate_enabled ?? false,
           editate_review_limit: editingUser.editate_review_limit,
+          editate_school_selectivity: editingUser.editate_school_selectivity || null,
+          editate_feedback_preferences: editingUser.editate_feedback_preferences || null,
         })
       })
       if (res.ok) {
@@ -968,6 +972,35 @@ export default function AdminPage() {
                       placeholder="0 = no limit shown"
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
                     />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">College list selectivity</label>
+                    <select
+                      value={editingUser.editate_school_selectivity ?? ''}
+                      onChange={e => setEditingUser({ ...editingUser, editate_school_selectivity: e.target.value || null })}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                    >
+                      <option value="">— not set —</option>
+                      <option value="most_selective">Most Selective</option>
+                      <option value="very_selective">Very Selective</option>
+                      <option value="moderately_selective">Moderately Selective</option>
+                      <option value="minimally_selective">Minimally Selective</option>
+                      <option value="least_selective">Least Selective</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Feedback preferences</label>
+                    <select
+                      value={editingUser.editate_feedback_preferences ?? ''}
+                      onChange={e => setEditingUser({ ...editingUser, editate_feedback_preferences: e.target.value || null })}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                    >
+                      <option value="">— not set —</option>
+                      <option value="most_open">Open to Rewriting or Major Changes</option>
+                      <option value="open">Open to Some Changes, But Keep the Topic</option>
+                      <option value="somewhat_open">Open to Select Changes</option>
+                      <option value="not_open">Just Polish Essays</option>
+                    </select>
                   </div>
                 </div>
               </div>
