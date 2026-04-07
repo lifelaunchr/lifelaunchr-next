@@ -353,7 +353,7 @@ function ProfileContent() {
     ...extra,
   })
 
-  const field = (label: string, key: keyof Profile, type: string = 'text', placeholder: string = '', inputProps?: React.InputHTMLAttributes<HTMLInputElement>) => (
+  const field = (label: string, key: keyof Profile, type: string = 'text', placeholder: string = '', inputProps?: React.InputHTMLAttributes<HTMLInputElement>, hint?: string) => (
     <div>
       <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: 4 }}>{label}</label>
       <input
@@ -365,10 +365,11 @@ function ProfileContent() {
         style={inputStyle()}
         {...inputProps}
       />
+      {hint && <p style={{ fontSize: '0.65rem', color: '#9ca3af', margin: '3px 0 0', lineHeight: 1.3 }}>{hint}</p>}
     </div>
   )
 
-  const counselorField = (label: string, key: keyof Profile, type: string = 'text', placeholder: string = '', inputProps?: React.InputHTMLAttributes<HTMLInputElement>) => (
+  const counselorField = (label: string, key: keyof Profile, type: string = 'text', placeholder: string = '', inputProps?: React.InputHTMLAttributes<HTMLInputElement>, hint?: string) => (
     <div>
       <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#92400e', marginBottom: 4 }}>{label}</label>
       <input
@@ -380,6 +381,7 @@ function ProfileContent() {
         style={inputStyle()}
         {...inputProps}
       />
+      {hint && <p style={{ fontSize: '0.65rem', color: '#9ca3af', margin: '3px 0 0', lineHeight: 1.3 }}>{hint}</p>}
     </div>
   )
 
@@ -561,7 +563,7 @@ function ProfileContent() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12 }}>
               {field('GPA (Weighted)', 'gpa_weighted', 'number', '4.0', { min: 0, max: 100, step: 0.01 })}
               {field('GPA (Unweighted)', 'gpa_unweighted', 'number', '3.8', { min: 0, max: 100, step: 0.01 })}
-              {field('GPA Scale', 'gpa_scale', 'number', '4.0', { min: 4, max: 100, step: 0.01 })}
+              {field('GPA Scale', 'gpa_scale', 'number', '4.0', { min: 4, max: 100, step: 0.01 }, 'Highest possible unweighted GPA at your school (e.g. 4.0, even if AP/honors courses add extra weight)')}
               {field('Class Rank', 'class_rank', 'number', '12')}
               {field('Class Size', 'class_size', 'number', '350')}
             </div>
