@@ -199,7 +199,9 @@ function EssaysPageInner() {
   const [accessDenied, setAccessDenied] = useState(false)
   const [accountType, setAccountType] = useState<string>('')
   const [essaysModule, setEssaysModule] = useState(false)
-  const [editateAvailable, setEditateAvailable] = useState(false)
+  const [editateAvailable, setEditateAvailable] = useState(false)       // student's own editate status (from /my-usage)
+  const [studentEditateAvailable, setStudentEditateAvailable] = useState(false) // counselor view: target student's status (from prompts)
+  const [studentReviewLimitForCounselor, setStudentReviewLimitForCounselor] = useState(0)
 
   const [prompts, setPrompts] = useState<PromptsResponse | null>(null)
   const [promptsLoading, setPromptsLoading] = useState(false)
@@ -254,10 +256,11 @@ function EssaysPageInner() {
         if (res.ok) {
           const data = await res.json()
           setPrompts(data)
-          // For counselor view, pick up the target student's Editate status
+          // For counselor view, store the student's Editate status in dedicated state
+          // (never use setEditateAvailable here — init effect overwrites it on re-render)
           if (forStudentId && data.student_editate_available != null) {
-            setEditateAvailable(data.student_editate_available)
-            setReviewLimit(data.student_review_limit ?? 0)
+            setStudentEditateAvailable(Boolean(data.student_editate_available))
+            setStudentReviewLimitForCounselor(data.student_review_limit ?? 0)
           }
         }
       } catch { /* ignore */ }
@@ -268,7 +271,8 @@ function EssaysPageInner() {
 
   // Load drafts for students with editate access, or counselors viewing a student
   useEffect(() => {
-    if (!editateAvailable) return
+    const avail = (accountType === 'counselor' && forStudentId) ? studentEditateAvailable : editateAvailable
+    if (!avail) return
     if (accountType !== 'student' && !(accountType === 'counselor' && forStudentId)) return
     const loadDrafts = async () => {
       setDraftsLoading(true)
@@ -290,7 +294,7 @@ function EssaysPageInner() {
       finally { setDraftsLoading(false) }
     }
     loadDrafts()
-  }, [editateAvailable, accountType, forStudentId, getToken, apiUrl])
+  }, [editateAvailable, studentEditateAvailable, accountType, forStudentId, getToken, apiUrl])
 
   const fetchEditateLink = useCallback(async () => {
     setEditateLinkLoading(true)
@@ -371,6 +375,11 @@ function EssaysPageInner() {
   const isParent = accountType === 'parent'
   const isCounselor = accountType === 'counselor'
 
+  // For counselor-viewing-student, use the dedicated student state (immune to init re-runs).
+  // For students, use their own editate status from /my-usage.
+  const effectiveEditateAvailable = (isCounselor && forStudentId) ? studentEditateAvailable : editateAvailable
+  const effectiveReviewLimit = (isCounselor && forStudentId) ? studentReviewLimitForCounselor : reviewLimit
+
   const noPrompts =
     !promptsLoading &&
     prompts &&
@@ -398,7 +407,7 @@ function EssaysPageInner() {
         </p>
 
         {/* ── Editate access panel (students + counselors viewing a student with editate) ── */}
-        {editateAvailable && (isStudent || (isCounselor && forStudentId)) && (
+        {effectiveEditateAvailable && (isStudent || (isCounselor && forStudentId)) && (
           <div style={{
             background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12,
             padding: '20px 24px', marginBottom: 24,
@@ -482,14 +491,14 @@ function EssaysPageInner() {
         )}
 
         {/* ── Feedback rounds bar (students or counselors viewing a student with editate) ── */}
-        {editateAvailable && reviewLimit > 0 && (isStudent || (isCounselor && forStudentId)) && (
+        {effectiveEditateAvailable && effectiveReviewLimit > 0 && (isStudent || (isCounselor && forStudentId)) && (
           <div style={{
             background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12,
             padding: '16px 20px', marginBottom: 20,
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
               <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#374151' }}>
-                Detailed Feedback Rounds: {roundsUsed} used of {reviewLimit}
+                Detailed Feedback Rounds: {roundsUsed} used of {effectiveReviewLimit}
               </span>
               {(isStudent || isParent) && (
                 <button
@@ -508,14 +517,14 @@ function EssaysPageInner() {
             <div style={{ height: 6, borderRadius: 9999, background: '#f3f4f6', overflow: 'hidden' }}>
               <div style={{
                 height: '100%',
-                width: `${Math.min(100, reviewLimit > 0 ? (roundsUsed / reviewLimit) * 100 : 0)}%`,
-                background: roundsUsed >= reviewLimit ? '#ef4444' : roundsUsed / reviewLimit >= 0.75 ? '#f59e0b' : '#4f46e5',
+                width: `${Math.min(100, effectiveReviewLimit > 0 ? (roundsUsed / effectiveReviewLimit) * 100 : 0)}%`,
+                background: roundsUsed >= effectiveReviewLimit ? '#ef4444' : roundsUsed / effectiveReviewLimit >= 0.75 ? '#f59e0b' : '#4f46e5',
                 borderRadius: 9999,
                 transition: 'width 0.3s ease',
               }} />
             </div>
             {/* Warning */}
-            {roundsUsed >= reviewLimit && (
+            {roundsUsed >= effectiveReviewLimit && (
               <p style={{
                 fontSize: '0.78rem', marginTop: 8,
                 color: '#dc2626',
@@ -578,7 +587,7 @@ function EssaysPageInner() {
         )}
 
         {/* ── Drafts (students with editate access, or counselors viewing a student) ── */}
-        {editateAvailable && (isStudent || (isCounselor && forStudentId)) && (
+        {effectiveEditateAvailable && (isStudent || (isCounselor && forStudentId)) && (
           <div style={{ marginBottom: 28 }}>
             <div style={sectionHeaderSt}>{isCounselor ? "Student's submitted drafts" : "Your submitted drafts"}</div>
             {draftsLoading ? (
