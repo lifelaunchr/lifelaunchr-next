@@ -561,8 +561,8 @@ function ProfileContent() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {/* Row 1: GPA, Class Rank/Size */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12 }}>
-              {field('GPA (Weighted)', 'gpa_weighted', 'number', '4.0', { min: 0, max: 100, step: 0.01 })}
-              {field('GPA (Unweighted)', 'gpa_unweighted', 'number', '3.8', { min: 0, max: 100, step: 0.01 })}
+              {field('GPA (Weighted)', 'gpa_weighted', 'number', '4.0', { min: 0.5, max: 100, step: 0.01 })}
+              {field('GPA (Unweighted)', 'gpa_unweighted', 'number', '3.8', { min: 0.5, max: 100, step: 0.01 })}
               {field('GPA Scale', 'gpa_scale', 'number', '4.0', { min: 4, max: 100, step: 0.01 }, 'Highest possible unweighted GPA at your school (e.g. 4.0, even if AP/honors courses add extra weight)')}
               {field('Class Rank', 'class_rank', 'number', '12')}
               {field('Class Size', 'class_size', 'number', '350')}
