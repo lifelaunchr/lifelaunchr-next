@@ -70,8 +70,17 @@ function lengthLabel(g: EssayGroup | EssayPrompt): string {
   return ''
 }
 
-function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, '').trim()
+function cleanText(html: string): string {
+  return html
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 // ── Sub-components ─────────────────────────────────────────────────────────
@@ -89,85 +98,87 @@ function EssayGroupCard({ group }: { group: EssayGroup }) {
       border: '1px solid #e2e8f0', borderRadius: 10, marginBottom: 10,
       background: '#fff', overflow: 'hidden',
     }}>
-      {/* Header */}
+      {/* Header — always clickable */}
       <div
-        onClick={() => multiplePrompts && setOpen(o => !o)}
+        onClick={() => setOpen(o => !o)}
         style={{
           padding: '12px 16px',
-          display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
-          cursor: multiplePrompts ? 'pointer' : 'default',
-          gap: 12,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          cursor: 'pointer', gap: 12, userSelect: 'none',
         }}
       >
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            {group.name && (
-              <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#111827' }}>
-                {group.name}
-              </span>
-            )}
-            {group.optional && (
-              <span style={{
-                fontSize: '0.7rem', fontWeight: 600, color: '#6366f1',
-                background: '#eef2ff', borderRadius: 4, padding: '1px 6px',
-              }}>Optional</span>
-            )}
-            {lengthLabel(group) && (
-              <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{lengthLabel(group)}</span>
-            )}
-            {multiplePrompts && (
-              <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>· {chooseLabel}</span>
-            )}
-          </div>
-
-          {/* Single prompt — show inline */}
-          {!multiplePrompts && group.prompts[0] && (
-            <p style={{ fontSize: '0.82rem', color: '#374151', margin: '6px 0 0', lineHeight: 1.5 }}>
-              {stripHtml(group.prompts[0].prompt)}
-            </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
+          {group.name && (
+            <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#111827' }}>
+              {group.name}
+            </span>
           )}
-
-          {/* Instructions */}
-          {group.instructions && (
-            <p style={{ fontSize: '0.75rem', color: '#9ca3af', margin: '4px 0 0', lineHeight: 1.4, fontStyle: 'italic' }}>
-              {stripHtml(group.instructions)}
-            </p>
+          {group.optional && (
+            <span style={{
+              fontSize: '0.7rem', fontWeight: 600, color: '#6366f1',
+              background: '#eef2ff', borderRadius: 4, padding: '1px 6px',
+            }}>Optional</span>
+          )}
+          {lengthLabel(group) && (
+            <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{lengthLabel(group)}</span>
+          )}
+          {multiplePrompts && (
+            <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>· {chooseLabel}</span>
           )}
         </div>
-
-        {multiplePrompts && (
-          <span style={{ color: '#9ca3af', fontSize: '0.8rem', flexShrink: 0, marginTop: 2 }}>
-            {open ? '▲' : '▼'}
-          </span>
-        )}
+        <span style={{ color: '#9ca3af', fontSize: '0.8rem', flexShrink: 0 }}>
+          {open ? '▲' : '▼'}
+        </span>
       </div>
 
-      {/* Expanded prompts */}
-      {multiplePrompts && open && (
-        <div style={{ borderTop: '1px solid #f3f4f6', padding: '4px 0' }}>
-          {group.prompts.map((p, i) => (
-            <div key={p.slug} style={{
-              padding: '10px 16px',
-              borderBottom: i < group.prompts.length - 1 ? '1px solid #f9fafb' : 'none',
-            }}>
-              <div style={{ display: 'flex', gap: 10 }}>
-                <span style={{
-                  fontSize: '0.75rem', fontWeight: 700, color: '#9ca3af',
-                  minWidth: 20, marginTop: 1,
-                }}>{i + 1}.</span>
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: '0.82rem', color: '#374151', margin: 0, lineHeight: 1.5 }}>
-                    {stripHtml(p.prompt)}
-                  </p>
-                  {lengthLabel(p) && (
-                    <span style={{ fontSize: '0.72rem', color: '#9ca3af', marginTop: 4, display: 'block' }}>
-                      {lengthLabel(p)}
-                    </span>
-                  )}
+      {/* Expanded content */}
+      {open && (
+        <div style={{ borderTop: '1px solid #f3f4f6' }}>
+          {multiplePrompts ? (
+            <div style={{ padding: '4px 0' }}>
+              {group.prompts.map((p, i) => (
+                <div key={p.slug} style={{
+                  padding: '10px 16px',
+                  borderBottom: i < group.prompts.length - 1 ? '1px solid #f9fafb' : 'none',
+                }}>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <span style={{
+                      fontSize: '0.75rem', fontWeight: 700, color: '#9ca3af',
+                      minWidth: 20, marginTop: 1, flexShrink: 0,
+                    }}>{i + 1}.</span>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: '0.82rem', color: '#374151', margin: 0, lineHeight: 1.5 }}>
+                        {cleanText(p.prompt)}
+                      </p>
+                      {lengthLabel(p) && (
+                        <span style={{ fontSize: '0.72rem', color: '#9ca3af', marginTop: 4, display: 'block' }}>
+                          {lengthLabel(p)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
-          ))}
+          ) : group.prompts[0] ? (
+            <div style={{ padding: '12px 16px' }}>
+              <p style={{ fontSize: '0.82rem', color: '#374151', margin: 0, lineHeight: 1.6 }}>
+                {cleanText(group.prompts[0].prompt)}
+              </p>
+              {lengthLabel(group.prompts[0]) && lengthLabel(group.prompts[0]) !== lengthLabel(group) && (
+                <span style={{ fontSize: '0.72rem', color: '#9ca3af', marginTop: 4, display: 'block' }}>
+                  {lengthLabel(group.prompts[0])}
+                </span>
+              )}
+            </div>
+          ) : null}
+          {group.instructions && (
+            <div style={{ padding: '8px 16px 12px', borderTop: group.prompts.length > 0 ? '1px solid #f9fafb' : 'none' }}>
+              <p style={{ fontSize: '0.75rem', color: '#9ca3af', margin: 0, lineHeight: 1.4, fontStyle: 'italic' }}>
+                {cleanText(group.instructions)}
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -203,6 +214,7 @@ function EssaysPageInner() {
   const [reviewLimit, setReviewLimit] = useState(0)
 
   const [reviewModalOpen, setReviewModalOpen] = useState(false)
+  const [linkCopied, setLinkCopied] = useState(false)
 
   // Load usage + modules on mount
   useEffect(() => {
@@ -286,7 +298,10 @@ function EssaysPageInner() {
     setEditateUrl(null)
     try {
       const token = await getToken()
-      const res = await fetch(`${apiUrl}/essays/link`, {
+      const url = (isCounselor && forStudentId)
+        ? `${apiUrl}/essays/link?student_id=${forStudentId}`
+        : `${apiUrl}/essays/link`
+      const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) {
@@ -301,7 +316,7 @@ function EssaysPageInner() {
     } finally {
       setEditateLinkLoading(false)
     }
-  }, [getToken, apiUrl])
+  }, [getToken, apiUrl, accountType, forStudentId])
 
   // ── Styles ────────────────────────────────────────────────────────────────
 
@@ -382,8 +397,8 @@ function EssaysPageInner() {
           {isCounselor && !forStudentId && ' Select a student from the sidebar to view their essay requirements.'}
         </p>
 
-        {/* ── Editate access button (students only, editate_available) ── */}
-        {isStudent && editateAvailable && (
+        {/* ── Editate access panel (students + counselors viewing a student with editate) ── */}
+        {editateAvailable && (isStudent || (isCounselor && forStudentId)) && (
           <div style={{
             background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12,
             padding: '20px 24px', marginBottom: 24,
@@ -392,26 +407,48 @@ function EssaysPageInner() {
           }}>
             <div>
               <div style={{ fontWeight: 600, fontSize: '0.95rem', color: '#111827', marginBottom: 4 }}>
-                Submit & Review Essays with Editate
+                {isCounselor ? "Student's Editate Access" : 'Submit & Review Essays with Editate'}
               </div>
               <div style={{ fontSize: '0.82rem', color: '#6b7280' }}>
-                Upload your drafts, get feedback from your coach, and track revisions — all in one place.
+                {isCounselor
+                  ? 'Generate a login link for this student to access Editate.'
+                  : 'Upload your drafts, get feedback from your coach, and track revisions — all in one place.'}
               </div>
             </div>
             <div>
               {editateUrl ? (
-                <a
-                  href={editateUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    background: '#4f46e5', color: '#fff', borderRadius: 8,
-                    padding: '8px 18px', fontWeight: 600, fontSize: '0.875rem',
-                    textDecoration: 'none', display: 'inline-block',
-                  }}
-                >
-                  Open Editate →
-                </a>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                  {!isCounselor && (
+                    <a
+                      href={editateUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        background: '#4f46e5', color: '#fff', borderRadius: 8,
+                        padding: '8px 18px', fontWeight: 600, fontSize: '0.875rem',
+                        textDecoration: 'none', display: 'inline-block',
+                      }}
+                    >
+                      Open Editate →
+                    </a>
+                  )}
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(editateUrl)
+                      setLinkCopied(true)
+                      setTimeout(() => setLinkCopied(false), 2000)
+                    }}
+                    style={{
+                      background: linkCopied ? '#d1fae5' : '#f3f4f6',
+                      color: linkCopied ? '#065f46' : '#374151',
+                      border: 'none', borderRadius: 8,
+                      padding: '8px 18px', fontWeight: 600, fontSize: '0.875rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {linkCopied ? 'Copied!' : 'Copy link'}
+                  </button>
+                </div>
               ) : (
                 <button
                   onClick={fetchEditateLink}
@@ -423,7 +460,7 @@ function EssaysPageInner() {
                     cursor: editateLinkLoading ? 'default' : 'pointer',
                   }}
                 >
-                  {editateLinkLoading ? 'Generating link…' : 'Access Editate'}
+                  {editateLinkLoading ? 'Generating link…' : isCounselor ? 'Generate Student Link' : 'Access Editate'}
                 </button>
               )}
               {editateLinkError && (
