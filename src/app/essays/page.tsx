@@ -56,9 +56,11 @@ interface PromptsResponse {
 
 interface Assignment {
   id?: number | string
-  title?: string
-  status?: string
-  updated_at?: string
+  name?: string
+  source_assignment_name?: string | null
+  total_assignment_submissions?: number
+  marked_complete?: boolean
+  next_due_date?: string | null
   [key: string]: unknown
 }
 
@@ -593,38 +595,62 @@ function EssaysPageInner() {
         {/* ── Drafts (students with editate access, or counselors/parents viewing a student) ── */}
         {effectiveEditateAvailable && (isStudent || viewingStudentAs) && (
           <div style={{ marginBottom: 28 }}>
-            <div style={sectionHeaderSt}>{isCounselor ? "Student's submitted drafts" : "Your submitted drafts"}</div>
+            <div style={sectionHeaderSt}>{isCounselor || isParent ? "Student's submitted drafts" : "Your submitted drafts"}</div>
             {draftsLoading ? (
               <p style={{ fontSize: '0.82rem', color: '#9ca3af' }}>Loading drafts…</p>
-            ) : drafts.length === 0 ? (
-              <p style={{ fontSize: '0.82rem', color: '#9ca3af' }}>No drafts submitted yet.</p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {drafts.map((a, i) => (
-                  <div key={a.id ?? i} style={{
-                    background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8,
-                    padding: '10px 16px', display: 'flex', alignItems: 'center',
-                    justifyContent: 'space-between',
+            ) : (() => {
+              const activeDrafts = drafts.filter(a =>
+                (a.total_assignment_submissions ?? 0) > 0 || a.marked_complete
+              )
+              return activeDrafts.length === 0 ? (
+                <p style={{ fontSize: '0.82rem', color: '#9ca3af' }}>No drafts submitted yet.</p>
+              ) : (
+                <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden' }}>
+                  {/* Table header */}
+                  <div style={{
+                    display: 'grid', gridTemplateColumns: '1fr 100px 120px',
+                    padding: '8px 16px', background: '#f9fafb',
+                    borderBottom: '1px solid #e2e8f0',
                   }}>
-                    <div>
-                      <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#111827' }}>
-                        {String(a.title || a.name || `Draft ${i + 1}`)}
-                      </div>
-                      {a.status && (
-                        <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 2 }}>
-                          {String(a.status)}
-                        </div>
-                      )}
-                    </div>
-                    {a.updated_at && (
-                      <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
-                        {new Date(String(a.updated_at)).toLocaleDateString()}
-                      </div>
-                    )}
+                    <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Essay</span>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>Submissions</span>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>Status</span>
                   </div>
-                ))}
-              </div>
-            )}
+                  {activeDrafts.map((a, i) => {
+                    const displayName = a.source_assignment_name || a.name || `Draft ${i + 1}`
+                    const subs = a.total_assignment_submissions ?? 0
+                    const complete = a.marked_complete
+                    return (
+                      <div key={String(a.id ?? i)} style={{
+                        display: 'grid', gridTemplateColumns: '1fr 100px 120px',
+                        padding: '10px 16px', alignItems: 'center',
+                        borderBottom: i < activeDrafts.length - 1 ? '1px solid #f3f4f6' : 'none',
+                      }}>
+                        <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#111827' }}>
+                          {String(displayName)}
+                        </span>
+                        <span style={{ fontSize: '0.82rem', color: '#6b7280', textAlign: 'center' }}>
+                          {subs}
+                        </span>
+                        <div style={{ textAlign: 'center' }}>
+                          {complete ? (
+                            <span style={{
+                              fontSize: '0.72rem', fontWeight: 600, color: '#065f46',
+                              background: '#d1fae5', borderRadius: 4, padding: '2px 8px',
+                            }}>Complete</span>
+                          ) : (
+                            <span style={{
+                              fontSize: '0.72rem', fontWeight: 600, color: '#92400e',
+                              background: '#fef3c7', borderRadius: 4, padding: '2px 8px',
+                            }}>In Progress</span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            })()}
           </div>
         )}
 
