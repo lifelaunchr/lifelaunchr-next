@@ -441,22 +441,24 @@ function EssaysPageInner() {
                       Open Editate →
                     </a>
                   )}
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(editateUrl)
-                      setLinkCopied(true)
-                      setTimeout(() => setLinkCopied(false), 2000)
-                    }}
-                    style={{
-                      background: linkCopied ? '#d1fae5' : '#f3f4f6',
-                      color: linkCopied ? '#065f46' : '#374151',
-                      border: 'none', borderRadius: 8,
-                      padding: '8px 18px', fontWeight: 600, fontSize: '0.875rem',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {linkCopied ? 'Copied!' : 'Copy link'}
-                  </button>
+                  {isCounselor && (
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(editateUrl)
+                        setLinkCopied(true)
+                        setTimeout(() => setLinkCopied(false), 2000)
+                      }}
+                      style={{
+                        background: linkCopied ? '#d1fae5' : '#f3f4f6',
+                        color: linkCopied ? '#065f46' : '#374151',
+                        border: 'none', borderRadius: 8,
+                        padding: '8px 18px', fontWeight: 600, fontSize: '0.875rem',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {linkCopied ? 'Copied!' : 'Copy link'}
+                    </button>
+                  )}
                 </div>
               ) : (
                 <button

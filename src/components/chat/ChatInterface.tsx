@@ -926,10 +926,33 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                 </>
               )}
 
-              {/* Student connections — shown for students who are linked to a counselor or parent */}
+              {/* Activities + My Lists — students only (grouped with other nav links) */}
+              {!isCounselor && !isParent && (
+                <>
+                  <Link
+                    href="/activities"
+                    className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                  >
+                    <span className="text-base leading-none">🏆</span>
+                    <span>My Activities</span>
+                  </Link>
+                  <Link
+                    href="/lists"
+                    className="flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                  >
+                    <span className="text-base leading-none flex-shrink-0">📋</span>
+                    <span className="flex flex-col min-w-0">
+                      <span className="text-sm leading-tight">My Lists</span>
+                      <span className="text-[10px] text-slate-500 leading-tight truncate">colleges · scholarships · programs</span>
+                    </span>
+                  </Link>
+                </>
+              )}
+
+              {/* Student connections — informational, shown at bottom */}
               {!isCounselor && !isParent && myConnections &&
                 (myConnections.counselors.length > 0 || myConnections.parents.length > 0) && (
-                <div className="mb-2">
+                <div className="mt-2 pt-2 border-t border-white/10">
                   <p className="text-[10px] uppercase tracking-widest text-slate-600 px-3 mb-1">
                     Connected to
                   </p>
@@ -951,29 +974,6 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                     </div>
                   ))}
                 </div>
-              )}
-
-              {/* Activities + My Lists — students only */}
-              {!isCounselor && !isParent && (
-                <>
-                  <Link
-                    href="/activities"
-                    className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
-                  >
-                    <span className="text-base leading-none">🏆</span>
-                    <span>My Activities</span>
-                  </Link>
-                  <Link
-                    href="/lists"
-                    className="flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
-                  >
-                    <span className="text-base leading-none flex-shrink-0">📋</span>
-                    <span className="flex flex-col min-w-0">
-                      <span className="text-sm leading-tight">My Lists</span>
-                      <span className="text-[10px] text-slate-500 leading-tight truncate">colleges · scholarships · programs</span>
-                    </span>
-                  </Link>
-                </>
               )}
 
             </div>
