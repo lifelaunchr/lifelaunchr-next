@@ -6,20 +6,20 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
 interface Profile {
-  gpa_weighted?: number
-  gpa_unweighted?: number
-  gpa_scale?: number
-  sat_total?: number
-  sat_math?: number
-  sat_reading?: number
-  act_composite?: number
-  act_english?: number
-  act_math?: number
-  act_reading?: number
-  act_science?: number
-  class_rank?: number
-  class_size?: number
-  graduation_year?: number
+  gpa_weighted?: number | null
+  gpa_unweighted?: number | null
+  gpa_scale?: number | null
+  sat_total?: number | null
+  sat_math?: number | null
+  sat_reading?: number | null
+  act_composite?: number | null
+  act_english?: number | null
+  act_math?: number | null
+  act_reading?: number | null
+  act_science?: number | null
+  class_rank?: number | null
+  class_size?: number | null
+  graduation_year?: number | null
   home_state?: string
   citizenship?: string
   residence?: string
@@ -353,30 +353,32 @@ function ProfileContent() {
     ...extra,
   })
 
-  const field = (label: string, key: keyof Profile, type: string = 'text', placeholder: string = '') => (
+  const field = (label: string, key: keyof Profile, type: string = 'text', placeholder: string = '', inputProps?: React.InputHTMLAttributes<HTMLInputElement>) => (
     <div>
       <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: 4 }}>{label}</label>
       <input
         type={type}
-        value={(profile[key] as string | number) ?? ''}
-        onChange={(e) => canWrite && setProfile((p) => ({ ...p, [key]: type === 'number' ? (e.target.value === '' ? undefined : Number(e.target.value)) : e.target.value }))}
+        value={(profile[key] as string | number | null) ?? ''}
+        onChange={(e) => canWrite && setProfile((p) => ({ ...p, [key]: type === 'number' ? (e.target.value === '' ? null : Number(e.target.value)) : e.target.value }))}
         placeholder={placeholder}
         readOnly={!canWrite}
         style={inputStyle()}
+        {...inputProps}
       />
     </div>
   )
 
-  const counselorField = (label: string, key: keyof Profile, type: string = 'text', placeholder: string = '') => (
+  const counselorField = (label: string, key: keyof Profile, type: string = 'text', placeholder: string = '', inputProps?: React.InputHTMLAttributes<HTMLInputElement>) => (
     <div>
       <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#92400e', marginBottom: 4 }}>{label}</label>
       <input
         type={type}
-        value={(profile[key] as string | number) ?? ''}
-        onChange={(e) => canWrite && setProfile((p) => ({ ...p, [key]: type === 'number' ? (e.target.value === '' ? undefined : Number(e.target.value)) : e.target.value }))}
+        value={(profile[key] as string | number | null) ?? ''}
+        onChange={(e) => canWrite && setProfile((p) => ({ ...p, [key]: type === 'number' ? (e.target.value === '' ? null : Number(e.target.value)) : e.target.value }))}
         placeholder={placeholder}
         readOnly={!canWrite}
         style={inputStyle()}
+        {...inputProps}
       />
     </div>
   )
@@ -557,9 +559,9 @@ function ProfileContent() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {/* Row 1: GPA, Class Rank/Size */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12 }}>
-              {field('GPA (Weighted)', 'gpa_weighted', 'number', '4.0')}
-              {field('GPA (Unweighted)', 'gpa_unweighted', 'number', '3.8')}
-              {field('GPA Scale', 'gpa_scale', 'number', '4.0')}
+              {field('GPA (Weighted)', 'gpa_weighted', 'number', '4.0', { min: 0, max: 5, step: 0.01 })}
+              {field('GPA (Unweighted)', 'gpa_unweighted', 'number', '3.8', { min: 0, max: 4, step: 0.01 })}
+              {field('GPA Scale', 'gpa_scale', 'number', '4.0', { min: 4, max: 5, step: 1 })}
               {field('Class Rank', 'class_rank', 'number', '12')}
               {field('Class Size', 'class_size', 'number', '350')}
             </div>
