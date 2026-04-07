@@ -18,6 +18,7 @@ interface UserRow {
   plans_enabled_override: boolean | null
   max_students_override: number | null
   editate_enabled: boolean | null
+  editate_student_id: string | null
   editate_review_limit: number | null
   editate_school_selectivity: string | null
   editate_feedback_preferences: string | null
@@ -270,6 +271,7 @@ export default function AdminPage() {
           plans_enabled_override: editingUser.plans_enabled_override,
           max_students_override: editingUser.max_students_override,
           editate_enabled: editingUser.editate_enabled ?? false,
+          editate_student_id: editingUser.editate_student_id || null,
           editate_review_limit: editingUser.editate_review_limit,
           editate_school_selectivity: editingUser.editate_school_selectivity || null,
           editate_feedback_preferences: editingUser.editate_feedback_preferences || null,
@@ -960,6 +962,18 @@ export default function AdminPage() {
                     />
                     Editate enabled (student can access Editate link &amp; drafts)
                   </label>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Editate User ID <span className="text-gray-400 font-normal">(leave blank to auto-generate on first access)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={editingUser.editate_student_id ?? ''}
+                      onChange={e => setEditingUser({ ...editingUser, editate_student_id: e.target.value || null })}
+                      placeholder="Auto-generated"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                    />
+                  </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">
                       Feedback rounds included <span className="text-gray-400 font-normal">(can only increase)</span>

@@ -42,8 +42,6 @@ interface Profile {
   athletic_rating?: string
   academic_rigor_rating?: string
   coach_notes?: string
-  essay_reviews_allowed?: number
-  prompt_user_id?: string
 }
 
 interface HsSuggestion {
@@ -938,17 +936,6 @@ function ProfileContent() {
           </div>
         )}
 
-        {/* Coaching Settings — counselor-only */}
-        {isCounselorViewing && (
-          <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 12, padding: 24, marginBottom: 24 }}>
-            <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#92400e', marginBottom: 4 }}>Coaching Settings</h2>
-            <p style={{ fontSize: '0.8rem', color: '#b45309', marginBottom: 16 }}>Only visible and editable by counselors</p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 16 }}>
-              {counselorField('Essay Reviews Allowed', 'essay_reviews_allowed', 'number', '3')}
-              {counselorField('Prompt User ID', 'prompt_user_id', 'text', 'user_abc123')}
-            </div>
-          </div>
-        )}
 
         {/* Save button — editable profiles only */}
         {canWrite && (
