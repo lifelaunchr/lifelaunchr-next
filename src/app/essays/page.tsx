@@ -271,14 +271,15 @@ function EssaysPageInner() {
 
   // Load drafts for students with editate access, or counselors viewing a student
   useEffect(() => {
-    const avail = (accountType === 'counselor' && forStudentId) ? studentEditateAvailable : editateAvailable
+    const isViewingStudentAs = (accountType === 'counselor' || accountType === 'parent') && forStudentId
+    const avail = isViewingStudentAs ? studentEditateAvailable : editateAvailable
     if (!avail) return
-    if (accountType !== 'student' && !(accountType === 'counselor' && forStudentId)) return
+    if (accountType !== 'student' && !isViewingStudentAs) return
     const loadDrafts = async () => {
       setDraftsLoading(true)
       try {
         const token = await getToken()
-        const draftsUrl = (accountType === 'counselor' && forStudentId)
+        const draftsUrl = isViewingStudentAs
           ? `${apiUrl}/essays/drafts?student_id=${forStudentId}`
           : `${apiUrl}/essays/drafts`
         const res = await fetch(draftsUrl, {
@@ -375,10 +376,11 @@ function EssaysPageInner() {
   const isParent = accountType === 'parent'
   const isCounselor = accountType === 'counselor'
 
-  // For counselor-viewing-student, use the dedicated student state (immune to init re-runs).
+  // For counselor/parent-viewing-student, use the dedicated student state (immune to init re-runs).
   // For students, use their own editate status from /my-usage.
-  const effectiveEditateAvailable = (isCounselor && forStudentId) ? studentEditateAvailable : editateAvailable
-  const effectiveReviewLimit = (isCounselor && forStudentId) ? studentReviewLimitForCounselor : reviewLimit
+  const viewingStudentAs = (isCounselor || isParent) && forStudentId
+  const effectiveEditateAvailable = viewingStudentAs ? studentEditateAvailable : editateAvailable
+  const effectiveReviewLimit = viewingStudentAs ? studentReviewLimitForCounselor : reviewLimit
 
   const noPrompts =
     !promptsLoading &&
@@ -406,7 +408,7 @@ function EssaysPageInner() {
           {isCounselor && !forStudentId && ' Select a student from the sidebar to view their essay requirements.'}
         </p>
 
-        {/* ── Editate access panel (students + counselors viewing a student with editate) ── */}
+        {/* ── Editate access panel (students + counselors viewing a student with editate; not parents) ── */}
         {effectiveEditateAvailable && (isStudent || (isCounselor && forStudentId)) && (
           <div style={{
             background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12,
@@ -492,8 +494,8 @@ function EssaysPageInner() {
           </div>
         )}
 
-        {/* ── Feedback rounds bar (students or counselors viewing a student with editate) ── */}
-        {effectiveEditateAvailable && effectiveReviewLimit > 0 && (isStudent || (isCounselor && forStudentId)) && (
+        {/* ── Feedback rounds bar (students, counselors, or parents viewing a student with editate) ── */}
+        {effectiveEditateAvailable && effectiveReviewLimit > 0 && (isStudent || viewingStudentAs) && (
           <div style={{
             background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12,
             padding: '16px 20px', marginBottom: 20,
@@ -588,8 +590,8 @@ function EssaysPageInner() {
           </div>
         )}
 
-        {/* ── Drafts (students with editate access, or counselors viewing a student) ── */}
-        {effectiveEditateAvailable && (isStudent || (isCounselor && forStudentId)) && (
+        {/* ── Drafts (students with editate access, or counselors/parents viewing a student) ── */}
+        {effectiveEditateAvailable && (isStudent || viewingStudentAs) && (
           <div style={{ marginBottom: 28 }}>
             <div style={sectionHeaderSt}>{isCounselor ? "Student's submitted drafts" : "Your submitted drafts"}</div>
             {draftsLoading ? (
