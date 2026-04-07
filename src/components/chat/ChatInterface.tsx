@@ -877,7 +877,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
               {/* Essays link — essays module enabled */}
               {usageData?.essays_module && (
                 <Link
-                  href={forStudentId && isCounselor ? `/essays?for=${forStudentId}` : '/essays'}
+                  href={forStudentId && (isCounselor || isParent) ? `/essays?for=${forStudentId}` : '/essays'}
                   className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
                 >
                   <span className="text-base leading-none">✏️</span>
