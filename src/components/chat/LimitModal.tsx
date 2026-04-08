@@ -5,13 +5,15 @@ interface LimitModalProps {
   limit: number
   resetDate?: string
   supportEmail?: string
+  isSessionLimit?: boolean
   onClose: () => void
 }
 
-export function LimitModal({ messagesUsed, limit, resetDate, supportEmail = 'help@lifelaunchr.com', onClose }: LimitModalProps) {
+export function LimitModal({ messagesUsed, limit, resetDate, supportEmail = 'help@lifelaunchr.com', isSessionLimit = false, onClose }: LimitModalProps) {
   const resetLabel = resetDate
     ? new Date(resetDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
     : 'next month'
+  const unit = isSessionLimit ? 'research sessions' : 'messages'
 
   return (
     <div
@@ -40,7 +42,7 @@ export function LimitModal({ messagesUsed, limit, resetDate, supportEmail = 'hel
         </h3>
 
         <p className="text-sm text-gray-500 text-center mb-5 leading-relaxed">
-          You&apos;ve used {messagesUsed} of {limit} included messages this month. Your limit resets on{' '}
+          You&apos;ve used {messagesUsed} of {limit} included {unit} this month. Your limit resets on{' '}
           <strong className="text-gray-700">{resetLabel}</strong>.
         </p>
 

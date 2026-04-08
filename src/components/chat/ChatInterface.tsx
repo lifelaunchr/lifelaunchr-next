@@ -48,12 +48,16 @@ interface UsageData {
   scheduling_link?: string | null
   essays_module?: boolean      // essay prompts available (any tenant with module)
   editate_available?: boolean  // editate link + drafts (LifeLaunchr + editate_enabled)
+  sessions_used?: number
+  session_limit?: number | null
+  session_reset_date?: string | null
 }
 
 interface LimitReachedData {
   messages_used: number
   effective_limit: number
   reset_date?: string
+  is_session_limit?: boolean
 }
 
 interface Session {
@@ -98,6 +102,8 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
     typeof window === 'undefined' ? true : window.innerWidth >= 768
   )
   const [limitModalData, setLimitModalData] = useState<LimitReachedData | null>(null)
+  const [currentResearchSessionId, setCurrentResearchSessionId] = useState<number | null>(null)
+  const [showNewSessionBanner, setShowNewSessionBanner] = useState(false)
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
   const [sessions, setSessions] = useState<Session[]>([])
   const [activeSessionId, setActiveSessionId] = useState<number | null>(null)
@@ -481,8 +487,32 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                 if (data.messages_used !== undefined && data.effective_limit !== undefined) {
                   setUsageData((prev) => prev ? { ...prev, messages_used: data.messages_used, effective_limit: data.effective_limit } : null)
                 }
+                // Research session tracking
+                if (data.research_session_id != null) {
+                  const isNewRS = data.new_session && currentResearchSessionId !== data.research_session_id
+                  setCurrentResearchSessionId(data.research_session_id)
+                  if (data.sessions_used !== undefined) {
+                    setUsageData((prev) => prev ? {
+                      ...prev,
+                      sessions_used: data.sessions_used,
+                      session_limit: data.session_limit ?? prev.session_limit,
+                    } : null)
+                  }
+                  if (isNewRS) {
+                    setShowNewSessionBanner(true)
+                    setTimeout(() => setShowNewSessionBanner(false), 3000)
+                  }
+                }
                 // Refresh session list after each message
                 fetchSessions()
+              } else if (data.type === 'session_limit_reached') {
+                setLimitModalData({
+                  messages_used: data.sessions_used,
+                  effective_limit: data.session_limit,
+                  reset_date: data.reset_date,
+                  is_session_limit: true,
+                })
+                setMessages((prev) => prev.filter((m) => m.id !== assistantMsgId))
               } else if (data.type === 'error') {
                 setMessages((prev) =>
                   prev.map((m) =>
@@ -646,6 +676,14 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
 
   return (
     <div className="flex flex-col h-screen bg-slate-50 overflow-hidden">
+      {/* New research session banner */}
+      {showNewSessionBanner && (
+        <div className="flex items-center justify-between bg-emerald-600 text-white text-sm px-4 py-2 flex-shrink-0 z-40">
+          <span>✦ New research session started</span>
+          <button onClick={() => setShowNewSessionBanner(false)} className="text-white/70 hover:text-white ml-4">✕</button>
+        </div>
+      )}
+
       <ChatHeader
         userId={userId}
         onNewConversation={handleNewConversation}
@@ -684,13 +722,13 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 flex-shrink-0">
                 <path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712zM19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z" />
               </svg>
-              New conversation
+              + New research session
             </button>
           </div>
 
-          {/* Recent label */}
+          {/* Research sessions label */}
           <div className="px-4 py-1 text-[10px] font-semibold uppercase tracking-widest text-slate-600 flex-shrink-0">
-            Recent
+            Research sessions
           </div>
 
           {/* Session list — scrollable */}
@@ -726,32 +764,61 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
           {/* Bottom nav — pinned */}
           {userId && (
             <div className="border-t border-white/10 p-3 flex-shrink-0 flex flex-col gap-0.5">
-              {/* Usage bar — students/counselors/parents with a limit */}
-              {userId && usageData && usageData.effective_limit !== undefined && (
+              {/* Usage bar — sessions (primary) or messages (fallback) */}
+              {userId && usageData && (usageData.session_limit != null || usageData.effective_limit != null) && (
                 <div className="mb-2 px-3">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-[10px] uppercase tracking-widest text-slate-600">
-                      {usageData.display_plan || 'Your plan'}
-                    </span>
-                    <span className="text-[10px] text-slate-500">
-                      {usageData.effective_limit === null
-                        ? `${usageData.messages_used} msgs`
-                        : `${usageData.messages_used} / ${usageData.effective_limit}`}
-                    </span>
-                  </div>
-                  {usageData.effective_limit !== null && (
-                    <div className="w-full bg-white/10 rounded-full h-1">
-                      <div
-                        className={`h-1 rounded-full transition-all ${
-                          (usageData.messages_used / usageData.effective_limit) >= 0.85
-                            ? 'bg-red-400'
-                            : (usageData.messages_used / usageData.effective_limit) >= 0.6
-                            ? 'bg-amber-400'
-                            : 'bg-sky-400'
-                        }`}
-                        style={{ width: `${Math.min((usageData.messages_used / usageData.effective_limit) * 100, 100)}%` }}
-                      />
-                    </div>
+                  {usageData.session_limit != null ? (
+                    // Session-based usage
+                    <>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-[10px] uppercase tracking-widest text-slate-600">
+                          Research sessions
+                        </span>
+                        <span className="text-[10px] text-slate-500">
+                          {usageData.sessions_used ?? 0} / {usageData.session_limit}
+                        </span>
+                      </div>
+                      <div className="w-full bg-white/10 rounded-full h-1">
+                        <div
+                          className={`h-1 rounded-full transition-all ${
+                            ((usageData.sessions_used ?? 0) / usageData.session_limit) >= 0.85
+                              ? 'bg-red-400'
+                              : ((usageData.sessions_used ?? 0) / usageData.session_limit) >= 0.6
+                              ? 'bg-amber-400'
+                              : 'bg-sky-400'
+                          }`}
+                          style={{ width: `${Math.min(((usageData.sessions_used ?? 0) / usageData.session_limit) * 100, 100)}%` }}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    // Message-based usage (fallback)
+                    <>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-[10px] uppercase tracking-widest text-slate-600">
+                          {usageData.display_plan || 'Your plan'}
+                        </span>
+                        <span className="text-[10px] text-slate-500">
+                          {usageData.effective_limit === null
+                            ? `${usageData.messages_used} msgs`
+                            : `${usageData.messages_used} / ${usageData.effective_limit}`}
+                        </span>
+                      </div>
+                      {usageData.effective_limit !== null && (
+                        <div className="w-full bg-white/10 rounded-full h-1">
+                          <div
+                            className={`h-1 rounded-full transition-all ${
+                              (usageData.messages_used / usageData.effective_limit!) >= 0.85
+                                ? 'bg-red-400'
+                                : (usageData.messages_used / usageData.effective_limit!) >= 0.6
+                                ? 'bg-amber-400'
+                                : 'bg-sky-400'
+                            }`}
+                            style={{ width: `${Math.min((usageData.messages_used / usageData.effective_limit!) * 100, 100)}%` }}
+                          />
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               )}
@@ -1070,7 +1137,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                   value={input}
                   onChange={handleInputChange}
                   onKeyDown={handleKeyDown}
-                  placeholder={isParent && myStudents.length > 1 && !forStudentId ? 'Select a student first…' : `Ask ${tenantBranding.botName} about colleges, majors, costs, fit...`}
+                  placeholder={isParent && myStudents.length > 1 && !forStudentId ? 'Select a student first…' : `Research colleges, majors, costs, fit, and more...`}
                   disabled={isStreaming || (isParent && myStudents.length > 1 && !forStudentId)}
                   rows={1}
                   className="flex-1 border border-gray-300 rounded-xl px-4 py-3 text-sm font-sans resize-none outline-none leading-relaxed focus:border-indigo-500 transition-colors disabled:opacity-60 max-h-40 overflow-y-auto"
@@ -1132,6 +1199,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
           limit={limitModalData.effective_limit}
           resetDate={limitModalData.reset_date}
           supportEmail={tenantBranding.supportEmail}
+          isSessionLimit={limitModalData.is_session_limit}
           onClose={() => setLimitModalData(null)}
         />
       )}
