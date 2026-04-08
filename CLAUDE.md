@@ -1,5 +1,17 @@
 @AGENTS.md
 
+## ⚠️ CRITICAL — TWO REPO RULE (READ FIRST, EVERY SESSION)
+
+**This repo (`lifelaunchr-next`) is FRONTEND ONLY (Next.js → Vercel).**
+**ALL backend/API/AI/DB changes go in `lifelaunchr-app-3` (FastAPI → Render).**
+
+| What | Repo |
+|------|------|
+| UI pages, components, styles | `lifelaunchr-next` ← YOU ARE HERE |
+| API routes, chat engine, DB, AI logic | `lifelaunchr-app-3` |
+
+---
+
 # LifeLaunchr / Soar — Deployment Reference
 
 > Last updated: 2026-04-05.
