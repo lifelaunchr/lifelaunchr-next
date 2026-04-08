@@ -374,6 +374,32 @@ function EssaysPageInner() {
     )
   }
 
+  // Counselor landed here without a student selected (e.g. direct URL)
+  if (accountType === 'counselor' && !forStudentId) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#f9fafb', display: 'flex', flexDirection: 'column' }}>
+        <header style={headerSt}>
+          <Link href="/" style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>
+            <span style={{ color: '#7dd3fc' }}>Soar</span> by LifeLaunchr
+          </Link>
+          <Link href="/chat" style={{ fontSize: '0.82rem', color: '#8888aa', textDecoration: 'none', border: '1px solid #444466', padding: '4px 12px', borderRadius: 6 }}>
+            ← Back to Soar
+          </Link>
+        </header>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ textAlign: 'center', maxWidth: 380 }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>✏️</div>
+            <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827', marginBottom: 8 }}>Select a Student</h1>
+            <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>Choose a student from the sidebar to view their essay requirements.</p>
+            <Link href="/chat" style={{ display: 'inline-block', marginTop: 20, background: '#4f46e5', color: '#fff', padding: '8px 20px', borderRadius: 8, textDecoration: 'none', fontSize: '0.875rem', fontWeight: 600 }}>
+              Back to Soar
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const isStudent = accountType === 'student'
   const isParent = accountType === 'parent'
   const isCounselor = accountType === 'counselor'
