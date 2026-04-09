@@ -359,6 +359,13 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
 
   const handleGenerateSummary = useCallback(async () => {
     if (!currentResearchSessionId || generatingSummary) return
+    const ok = window.confirm(
+      "Generate a summary of this research session?\n\n" +
+      "We'll create a 3–5 bullet recap of what was discussed (colleges, key findings, next steps). " +
+      "If you're a counselor researching for a student, we'll also draft a follow-up email.\n\n" +
+      "You can find all summaries later in the Session Reports section."
+    )
+    if (!ok) return
     setGeneratingSummary(true)
     setSummaryToast(null)
     try {
@@ -1098,18 +1105,30 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                   <span className="text-xs text-indigo-700 font-medium">
                     🎓 Researching for: <strong>{s.full_name || s.email}</strong>
                   </span>
-                  {(!isParent || myStudents.length > 1) && (
-                    <button
-                      onClick={() => {
-                        setForStudentId(null)
-                        localStorage.removeItem('ll_for_student_id')
-                      }}
-                      className="text-xs text-indigo-400 hover:text-indigo-700 transition-colors ml-4"
-                      title="Clear student selection"
-                    >
-                      ✕ Clear
-                    </button>
-                  )}
+                  <div className="flex items-center gap-4 ml-4">
+                    {currentResearchSessionId && messages.length > 0 && (
+                      <button
+                        onClick={handleGenerateSummary}
+                        disabled={generatingSummary}
+                        className="text-xs text-indigo-700 hover:text-indigo-900 underline underline-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        title="Generate or regenerate a summary for this research session"
+                      >
+                        {generatingSummary ? 'Generating…' : 'Generate a summary of this session'}
+                      </button>
+                    )}
+                    {(!isParent || myStudents.length > 1) && (
+                      <button
+                        onClick={() => {
+                          setForStudentId(null)
+                          localStorage.removeItem('ll_for_student_id')
+                        }}
+                        className="text-xs text-indigo-400 hover:text-indigo-700 transition-colors"
+                        title="Clear student selection"
+                      >
+                        ✕ Clear
+                      </button>
+                    )}
+                  </div>
                 </div>
                 {/* Safety alert banner */}
                 {s.has_safety_flag && (
@@ -1128,25 +1147,23 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
               </>
             ) : null
           })()}
+          {/* Generate summary action bar — only when there's no "Researching for" banner above */}
+          {userId && currentResearchSessionId && messages.length > 0 && !((isCounselor || isParent) && forStudentId) && (
+            <div className="flex-shrink-0 border-b border-indigo-100 bg-indigo-50 px-4 py-1.5 flex justify-end">
+              <button
+                onClick={handleGenerateSummary}
+                disabled={generatingSummary}
+                className="text-xs text-indigo-700 hover:text-indigo-900 underline underline-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title="Generate or regenerate a summary for this research session"
+              >
+                {generatingSummary ? 'Generating…' : 'Generate a summary of this session'}
+              </button>
+            </div>
+          )}
+
           {/* Messages area */}
           <div className="flex-1 overflow-y-auto px-3 sm:px-4 md:px-6 py-6 pb-safe flex flex-col gap-4">
             <div className="max-w-3xl mx-auto w-full flex flex-col gap-4 flex-1">
-            {/* Generate summary action — visible when a research session is active with messages */}
-            {userId && currentResearchSessionId && messages.length > 0 && (
-              <div className="flex justify-end -mb-2">
-                <button
-                  onClick={handleGenerateSummary}
-                  disabled={generatingSummary}
-                  className="text-xs text-slate-500 hover:text-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
-                  title="Generate or regenerate a summary for the current research session"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  {generatingSummary ? 'Generating…' : 'Generate summary'}
-                </button>
-              </div>
-            )}
             {/* Parent with multiple students — block until one is selected */}
             {isParent && myStudents.length > 1 && !forStudentId ? (
               <div className="flex flex-col items-center justify-center flex-1 h-full text-center px-6 py-16">
