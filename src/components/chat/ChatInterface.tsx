@@ -536,7 +536,10 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                 }
                 // Research session tracking
                 if (data.research_session_id != null) {
-                  const isNewRS = data.new_session && currentResearchSessionId !== data.research_session_id
+                  // Trust the server's new_session flag — comparing against
+                  // currentResearchSessionId here would read a stale closure
+                  // value (it's not in sendMessage's useCallback deps).
+                  const isNewRS = !!data.new_session
                   setCurrentResearchSessionId(data.research_session_id)
                   if (data.sessions_used !== undefined) {
                     // Route the increment to the right pool: if billed against
