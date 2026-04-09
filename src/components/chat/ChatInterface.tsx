@@ -810,11 +810,22 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
               {userId && usageData && (usageData.session_limit != null || usageData.effective_limit != null) && (
                 <div className="mb-2 px-3">
                   {usageData.session_limit != null ? (
-                    // Session-based usage
+                    // Session-based usage. When researching for a specific student
+                    // (Option B / beneficiary-scoped billing), the counter reflects
+                    // that student's pool, not the caller's. Show whose pool.
+                    (() => {
+                      const beneficiary =
+                        forStudentId && (isCounselor || isParent)
+                          ? myStudents.find((s) => s.id === forStudentId)
+                          : null
+                      const beneficiaryName = beneficiary?.full_name || beneficiary?.email || null
+                      return (
                     <>
                       <div className="flex justify-between items-center mb-1">
                         <span className="text-[10px] uppercase tracking-widest text-slate-600">
-                          Research sessions
+                          {beneficiaryName
+                            ? <>Sessions for <span className="normal-case tracking-normal text-slate-400">{beneficiaryName}</span></>
+                            : 'Research sessions'}
                         </span>
                         <span className="text-[10px] text-slate-500">
                           {usageData.sessions_used ?? 0} / {usageData.session_limit}
@@ -833,6 +844,8 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                         />
                       </div>
                     </>
+                      )
+                    })()
                   ) : (
                     // Message-based usage (fallback)
                     <>
