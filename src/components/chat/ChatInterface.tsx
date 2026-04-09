@@ -221,11 +221,12 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
     if (!userId) return
     try {
       const token = await getToken()
-      // Only counselors and parents should use the student-sessions endpoint.
-      // Students must always call /sessions regardless of what's in localStorage,
-      // to avoid a stale ll_for_student_id (set during a previous counselor session
-      // in the same browser) causing a 403 that silently empties the session list.
-      const url = forStudentId && (isCounselor || isParent)
+      // Counselors: use /sessions?for_student_id=X to see their OWN sessions tagged for a student.
+      // Parents: use /student-sessions/{id} to see the student's own sessions.
+      // Students: always /sessions — never use student-sessions (stale ll_for_student_id guard).
+      const url = forStudentId && isCounselor
+        ? `${apiUrl}/sessions?for_student_id=${forStudentId}`
+        : forStudentId && isParent
         ? `${apiUrl}/student-sessions/${forStudentId}`
         : `${apiUrl}/sessions`
       const res = await fetch(url, {
