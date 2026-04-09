@@ -106,6 +106,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
   const [showNewSessionBanner, setShowNewSessionBanner] = useState(false)
   const [generatingSummary, setGeneratingSummary] = useState(false)
   const [summaryToast, setSummaryToast] = useState<{ kind: 'success' | 'error'; text: string } | null>(null)
+  const [showSummaryConfirm, setShowSummaryConfirm] = useState(false)
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
   const [sessions, setSessions] = useState<Session[]>([])
   const [activeSessionId, setActiveSessionId] = useState<number | null>(null)
@@ -359,13 +360,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
 
   const handleGenerateSummary = useCallback(async () => {
     if (!currentResearchSessionId || generatingSummary) return
-    const ok = window.confirm(
-      "Generate a summary of this research session?\n\n" +
-      "We'll create a 3–5 bullet recap of what was discussed (colleges, key findings, next steps). " +
-      "If you're a counselor researching for a student, we'll also draft a follow-up email.\n\n" +
-      "You can find all summaries later in the Session Reports section."
-    )
-    if (!ok) return
+    setShowSummaryConfirm(false)
     setGeneratingSummary(true)
     setSummaryToast(null)
     try {
@@ -1108,7 +1103,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                   <div className="flex items-center gap-4 ml-4">
                     {currentResearchSessionId && messages.length > 0 && (
                       <button
-                        onClick={handleGenerateSummary}
+                        onClick={() => setShowSummaryConfirm(true)}
                         disabled={generatingSummary}
                         className="text-xs text-indigo-700 hover:text-indigo-900 underline underline-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         title="Generate or regenerate a summary for this research session"
@@ -1151,7 +1146,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
           {userId && currentResearchSessionId && messages.length > 0 && !((isCounselor || isParent) && forStudentId) && (
             <div className="flex-shrink-0 border-b border-indigo-100 bg-indigo-50 px-4 py-1.5 flex justify-end">
               <button
-                onClick={handleGenerateSummary}
+                onClick={() => setShowSummaryConfirm(true)}
                 disabled={generatingSummary}
                 className="text-xs text-indigo-700 hover:text-indigo-900 underline underline-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 title="Generate or regenerate a summary for this research session"
@@ -1272,6 +1267,54 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
           </svg>
           {addedToListToast}
+        </div>
+      )}
+
+      {/* Generate-summary confirm modal */}
+      {showSummaryConfirm && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={() => setShowSummaryConfirm(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-7"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-4 mb-4">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-xl">
+                📄
+              </div>
+              <div className="flex-1">
+                <h2 className="text-lg font-semibold text-gray-900 mb-1">
+                  Generate session summary?
+                </h2>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  We&apos;ll create a 3–5 bullet recap of what was discussed — colleges,
+                  key findings, and recommended next steps.
+                  {isCounselor && forStudentId && (
+                    <> If you&apos;re researching for a student, we&apos;ll also draft a follow-up email.</>
+                  )}
+                </p>
+                <p className="text-sm text-gray-500 mt-3 leading-relaxed">
+                  You can find all summaries later in <strong className="text-gray-700">Session Reports</strong>.
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                onClick={() => setShowSummaryConfirm(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleGenerateSummary}
+                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors"
+              >
+                Generate summary
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
