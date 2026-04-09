@@ -178,7 +178,8 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
     if (!userId) return
     try {
       const token = await getToken()
-      const res = await fetch(`${apiUrl}/my-usage`, {
+      const qs = forStudentId ? `?for_student_id=${forStudentId}` : ''
+      const res = await fetch(`${apiUrl}/my-usage${qs}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       console.log('[fetchUsage] /my-usage status:', res.status)
@@ -219,7 +220,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
     } catch (err) {
       console.error('[fetchUsage] error:', err)
     }
-  }, [userId, getToken, apiUrl])
+  }, [userId, getToken, apiUrl, forStudentId])
 
   const fetchSessions = useCallback(async () => {
     if (!userId) return
@@ -288,34 +289,6 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
     fetchUsage()
     fetchSessions()
   }, [fetchUsage, fetchSessions])
-
-  // Refresh the session counter when the "Research For" selection changes,
-  // so the counter reflects the *beneficiary's* pool (student + parents +
-  // counselors) instead of the caller's personal pool. The backend computes
-  // the right values when /my-usage is called with for_student_id.
-  useEffect(() => {
-    if (!userId || !(isCounselor || isParent)) return
-    let cancelled = false
-    ;(async () => {
-      try {
-        const token = await getToken()
-        const qs = forStudentId ? `?for_student_id=${forStudentId}` : ''
-        const res = await fetch(`${apiUrl}/my-usage${qs}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        if (!res.ok || cancelled) return
-        const data = await res.json()
-        setUsageData((prev) => prev ? {
-          ...prev,
-          sessions_used:       data.sessions_used,
-          session_limit:       data.session_limit,
-          session_reset_date:  data.session_reset_date,
-          beneficiary_user_id: data.beneficiary_user_id,
-        } : data)
-      } catch { /* ignore */ }
-    })()
-    return () => { cancelled = true }
-  }, [forStudentId, userId, isCounselor, isParent, getToken, apiUrl])
 
   // Fetch student's linked counselors/parents (students only — others get empty arrays)
   useEffect(() => {
