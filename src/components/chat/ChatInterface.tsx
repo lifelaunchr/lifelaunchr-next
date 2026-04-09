@@ -385,7 +385,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
         setLimitModalData({
           messages_used: usageData.sessions_used ?? 0,
           effective_limit: usageData.session_limit,
-          reset_date: null,
+          reset_date: undefined,
           is_session_limit: true,
         })
         return
