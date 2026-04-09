@@ -401,6 +401,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
       setConversationHistory(toHistory(data.messages || []))
       setServerSessionId(sessionId)
       setActiveSessionId(sessionId)
+      setCurrentResearchSessionId(data.research_session_id ?? null)
       setInput('')
       if (textareaRef.current) textareaRef.current.style.height = 'auto'
     } catch { /* silently ignore */ }
@@ -1214,17 +1215,27 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                 Press Enter to send · Shift+Enter for new line
               </p>
 
-              {/* Usage counter */}
-              {userId && usageData && (
-                <p className={`text-center text-xs mt-1 ${usageData.effective_limit ? usageColor : 'text-gray-400'}`}>
-                  {usageData.effective_limit
-                    ? `${usageData.messages_used} of ${usageData.effective_limit} messages used this month`
-                    : `${usageData.messages_used} messages used this month`}
-                  {usageData.effective_limit && usagePercent >= 60 && (
-                    <> · <a href="/upgrade" className="underline hover:text-indigo-500">Upgrade for more →</a></>
-                  )}
-                </p>
-              )}
+              {/* Usage counter — prefer sessions, fall back to messages */}
+              {userId && usageData && (() => {
+                const useSessions = usageData.session_limit != null
+                const used = useSessions ? (usageData.sessions_used ?? 0) : usageData.messages_used
+                const lim = useSessions ? usageData.session_limit : usageData.effective_limit
+                const unit = useSessions ? 'research sessions' : 'messages'
+                const pct = lim ? (used / lim) * 100 : 0
+                const color = lim
+                  ? pct >= 85 ? 'text-red-500' : pct >= 60 ? 'text-amber-500' : 'text-gray-400'
+                  : 'text-gray-400'
+                return (
+                  <p className={`text-center text-xs mt-1 ${color}`}>
+                    {lim
+                      ? `${used} of ${lim} ${unit} used this month`
+                      : `${used} ${unit} used this month`}
+                    {lim && pct >= 60 && (
+                      <> · <a href="/upgrade" className="underline hover:text-indigo-500">Upgrade for more →</a></>
+                    )}
+                  </p>
+                )
+              })()}
 
               {/* Safety + upgrade links */}
               <p className="text-center text-xs mt-1 text-gray-400">
