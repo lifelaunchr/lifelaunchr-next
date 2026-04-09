@@ -364,6 +364,33 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
   }, [])
 
   const handleNewConversation = useCallback(() => {
+    // Proactive limit wall: clicking "+ New session" is an explicit signal
+    // of intent. If the relevant pool (beneficiary's if a student is
+    // selected, otherwise the caller's own) is already at limit, show the
+    // upgrade modal instead of clearing — typing would just hit the same
+    // wall on the first message anyway.
+    if (usageData) {
+      if (forStudentId && usageData.beneficiary) {
+        const ben = usageData.beneficiary
+        if (ben.session_limit != null && ben.sessions_used >= ben.session_limit) {
+          setLimitModalData({
+            messages_used: ben.sessions_used,
+            effective_limit: ben.session_limit,
+            reset_date: null,
+            is_session_limit: true,
+          })
+          return
+        }
+      } else if (usageData.session_limit != null && (usageData.sessions_used ?? 0) >= usageData.session_limit) {
+        setLimitModalData({
+          messages_used: usageData.sessions_used ?? 0,
+          effective_limit: usageData.session_limit,
+          reset_date: null,
+          is_session_limit: true,
+        })
+        return
+      }
+    }
     if (abortControllerRef.current) abortControllerRef.current.abort()
     // Just clear local state — the next message will create a fresh
     // chat_session row, and chat-scoped detection on the backend will
@@ -379,7 +406,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
     setIsStreaming(false)
     setStreamingMessageId(null)
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
-  }, [])
+  }, [usageData, forStudentId])
 
   const handleGenerateSummary = useCallback(async () => {
     if (!currentResearchSessionId || generatingSummary) return
