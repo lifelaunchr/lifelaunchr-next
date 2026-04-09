@@ -59,6 +59,12 @@ interface UsageData {
     sessions_used: number
     session_limit: number
     session_reset_date?: string | null
+    contributors?: Array<{
+      role: 'student' | 'parent' | 'counselor'
+      full_name?: string | null
+      email?: string | null
+      contribution: number
+    }>
   } | null
 }
 
@@ -763,6 +769,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
         onToggleSidebar={() => setSidebarOpen((v) => !v)}
         sessionsUsed={usageData?.sessions_used}
         sessionLimit={usageData?.session_limit ?? null}
+        onShowSessionsHelp={() => setShowSessionsHelp(true)}
         messagesUsed={usageData?.messages_used}
         effectiveLimit={usageData?.effective_limit ?? null}
         botName={tenantBranding.botName}
@@ -858,10 +865,10 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                     <>
                       {/* Caller's own pool — always visible */}
                       <div className="flex justify-between items-center mb-1">
-                        <span className="text-[10px] uppercase tracking-widest text-slate-600">
+                        <span className="text-[10px] uppercase tracking-widest text-slate-300">
                           Your sessions
                         </span>
-                        <span className="text-[10px] text-slate-500">
+                        <span className="text-[10px] text-slate-200 font-medium">
                           {callerUsed} / {callerLimit}
                         </span>
                       </div>
@@ -879,10 +886,10 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                         return (
                           <>
                             <div className="flex justify-between items-center mb-1 mt-3">
-                              <span className="text-[10px] uppercase tracking-widest text-slate-600">
+                              <span className="text-[10px] uppercase tracking-widest text-slate-300">
                                 {benName ? `${benName.split(' ')[0]}'s pool` : "Student pool"}
                               </span>
-                              <span className="text-[10px] text-slate-500">
+                              <span className="text-[10px] text-slate-200 font-medium">
                                 {ben.sessions_used} / {ben.session_limit}
                               </span>
                             </div>
@@ -892,8 +899,8 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                                 style={{ width: `${Math.min(benPct * 100, 100)}%` }}
                               />
                             </div>
-                            <p className="text-[9px] text-slate-500 mt-1 leading-snug">
-                              Shared between {benName || 'the student'}, parents, and counselors
+                            <p className="text-[10px] text-slate-400 mt-1 leading-snug">
+                              Shared with {benName || 'the student'}, parents, and counselors
                             </p>
                           </>
                         )
@@ -902,7 +909,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                       <button
                         type="button"
                         onClick={() => setShowSessionsHelp(true)}
-                        className="text-[10px] text-sky-400 hover:text-sky-300 underline mt-2 text-left"
+                        className="text-[11px] text-sky-300 hover:text-sky-200 underline mt-2 text-left"
                       >
                         How are sessions counted?
                       </button>
@@ -1398,6 +1405,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
       {showSessionsHelp && usageData && (
         <SessionsHelpModal
           usageData={usageData}
+          supportEmail={tenantBranding.supportEmail}
           onClose={() => setShowSessionsHelp(false)}
         />
       )}

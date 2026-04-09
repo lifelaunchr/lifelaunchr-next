@@ -43,6 +43,7 @@ interface ChatHeaderProps {
   onToggleSidebar: () => void
   sessionsUsed?: number
   sessionLimit?: number | null
+  onShowSessionsHelp?: () => void
   messagesUsed?: number
   effectiveLimit?: number | null
   botName?: string
@@ -56,6 +57,7 @@ export function ChatHeader({
   onToggleSidebar,
   sessionsUsed,
   sessionLimit,
+  onShowSessionsHelp,
   messagesUsed,
   effectiveLimit,
   botName = 'Soar',
@@ -116,12 +118,25 @@ export function ChatHeader({
       <div className="flex items-center gap-2 flex-shrink-0 flex-nowrap">
         {/* Database badge / upgrade CTA */}
         {userId && badgeLimit != null ? (
-          <a
-            href="/upgrade"
-            className="hidden sm:inline-flex items-center gap-1 bg-amber-500/20 text-amber-300 text-xs px-3 py-1 rounded-full border border-amber-500/30 whitespace-nowrap hover:bg-amber-500/30 transition-colors"
-          >
-            {badgeUsed} / {badgeLimit} {badgeUnit} · Upgrade →
-          </a>
+          <div className="hidden sm:inline-flex items-center gap-1">
+            <a
+              href="/upgrade"
+              className="inline-flex items-center gap-1 bg-amber-500/20 text-amber-300 text-xs px-3 py-1 rounded-full border border-amber-500/30 whitespace-nowrap hover:bg-amber-500/30 transition-colors"
+            >
+              {badgeUsed} / {badgeLimit} {badgeUnit} · Upgrade →
+            </a>
+            {onShowSessionsHelp && useSessions && (
+              <button
+                type="button"
+                onClick={onShowSessionsHelp}
+                aria-label="How are sessions counted?"
+                title="How are sessions counted?"
+                className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-white/10 text-white/80 hover:bg-white/20 text-xs leading-none"
+              >
+                ?
+              </button>
+            )}
+          </div>
         ) : !userId ? (
           <a
             href="/upgrade"

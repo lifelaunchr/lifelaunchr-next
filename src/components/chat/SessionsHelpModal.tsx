@@ -1,6 +1,14 @@
 'use client'
 
+interface Contributor {
+  role: 'student' | 'parent' | 'counselor'
+  full_name?: string | null
+  email?: string | null
+  contribution: number
+}
+
 interface UsageDataLite {
+  account_type?: string
   sessions_used?: number
   session_limit?: number | null
   beneficiary?: {
@@ -8,20 +16,29 @@ interface UsageDataLite {
     email?: string | null
     sessions_used: number
     session_limit: number
+    contributors?: Contributor[]
   } | null
+}
+
+function displayName(c: { full_name?: string | null; email?: string | null }) {
+  return c.full_name || c.email || 'Unnamed'
 }
 
 export default function SessionsHelpModal({
   usageData,
+  supportEmail,
   onClose,
 }: {
   usageData: UsageDataLite
+  supportEmail: string
   onClose: () => void
 }) {
   const ben = usageData.beneficiary
   const benName = ben?.full_name || ben?.email || 'this student'
+  const benFirst = (ben?.full_name || '').split(' ')[0] || benName
   const callerUsed = usageData.sessions_used ?? 0
   const callerLimit = usageData.session_limit ?? 0
+  const isStudent = usageData.account_type === 'student'
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
@@ -38,61 +55,83 @@ export default function SessionsHelpModal({
           <section>
             <h3 className="text-white font-medium mb-1">What counts as a session?</h3>
             <p>
-              A <em>research session</em> is a continuous block of work — your first message
-              opens a session, and any follow-up questions in the next <strong>60 minutes</strong> are
-              free. After 60 minutes of inactivity, your next message opens a new session and
-              counts +1 toward the limit.
+              A <em>research session</em> is a continuous block of work: your first
+              message in a new chat opens a session, and any follow-up questions in
+              the next <strong>60 minutes</strong> are included. After 60 minutes of
+              inactivity, your next message opens a new session and counts +1 toward
+              your session limit.
             </p>
             <p className="mt-2 text-slate-400">
-              This means you&apos;re billed for <em>research depth</em>, not message count. Ask as
-              many follow-ups as you need within the hour.
+              This means you&apos;re billed for research depth, not message count.
+              Ask as many follow-ups as you need within the hour. Soar works best
+              when you have a conversation and explore, so we encourage you to do that.
             </p>
           </section>
 
-          <section>
-            <h3 className="text-white font-medium mb-1">Two pools, tracked separately</h3>
-            <p>
-              When you research <em>for a specific student</em>, the session counts against
-              that student&apos;s shared pool — not your own. Your personal pool is for
-              unscoped research (no student selected).
-            </p>
-            <ul className="list-disc pl-5 mt-2 space-y-1">
-              <li><strong>Your sessions:</strong> {callerUsed} / {callerLimit} this month</li>
-              {ben && (
+          {!isStudent && (
+            <section>
+              <h3 className="text-white font-medium mb-1">
+                You have two pools, tracked separately
+              </h3>
+              <ul className="list-disc pl-5 space-y-1">
                 <li>
-                  <strong>{benName}&apos;s shared pool:</strong> {ben.sessions_used} / {ben.session_limit} this month
+                  When you research <em>for a specific student</em>, the session counts
+                  against that student&apos;s shared pool, not your own. The same pool
+                  is used whether the research is done by the student, a parent, or
+                  you on the student&apos;s behalf.
                 </li>
+                <li>
+                  Your personal pool is for research that&apos;s not tied to a
+                  particular student (no student selected).
+                </li>
+              </ul>
+            </section>
+          )}
+
+          <section>
+            <h3 className="text-white font-medium mb-1">Your current limits</h3>
+            <ul className="list-none space-y-1">
+              <li>
+                <strong className="text-white">Your sessions:</strong> {callerUsed} / {callerLimit} this month
+              </li>
+              {ben && (
+                <>
+                  <li>
+                    <strong className="text-white">{benName}&apos;s shared pool:</strong>{' '}
+                    {ben.sessions_used} / {ben.session_limit} this month
+                  </li>
+                  {ben.contributors && ben.contributors.length > 0 && (
+                    <li className="pl-5 mt-1">
+                      <ul className="list-disc space-y-0.5 text-slate-400 text-[13px]">
+                        {ben.contributors.map((c, i) => (
+                          <li key={i}>
+                            {c.contribution} from{' '}
+                            {c.role === 'student'
+                              ? `${benFirst}'s own account`
+                              : c.role === 'parent'
+                              ? `a parent (${displayName(c)})`
+                              : `a counselor (${displayName(c)})`}
+                          </li>
+                        ))}
+                      </ul>
+                    </li>
+                  )}
+                </>
               )}
             </ul>
           </section>
 
-          <section>
-            <h3 className="text-white font-medium mb-1">How limits are computed</h3>
-            <p>
-              Each user&apos;s <em>contribution</em> is the first non-null of:
-            </p>
-            <ol className="list-decimal pl-5 mt-1 space-y-0.5">
-              <li>Their per-user override (admin-set)</li>
-              <li>Their tier&apos;s default</li>
-              <li>5 (hard fallback)</li>
-            </ol>
-            <p className="mt-2">
-              <strong>Your personal pool</strong> = your contribution.
-            </p>
-            {ben && (
-              <p className="mt-1">
-                <strong>{benName}&apos;s shared pool</strong> = {benName}&apos;s contribution +
-                every linked parent&apos;s contribution + every active (non-archived)
-                counselor&apos;s contribution. If any contributor is unlimited, the whole
-                pool is unlimited.
-              </p>
-            )}
-          </section>
-
-          <section className="pt-2 border-t border-white/10">
-            <p className="text-xs text-slate-500">
-              Limits reset on the 1st of each month. Need more? Contact your counselor or
-              upgrade your plan.
+          <section className="pt-3 border-t border-white/10">
+            <p className="text-xs text-slate-400">
+              Limits reset on the 1st of each month. If you have questions, please
+              email us at{' '}
+              <a
+                href={`mailto:${supportEmail}`}
+                className="text-sky-400 hover:text-sky-300 underline"
+              >
+                {supportEmail}
+              </a>
+              .
             </p>
           </section>
         </div>
