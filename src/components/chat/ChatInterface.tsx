@@ -8,6 +8,7 @@ import { ChatMessage } from './ChatMessage'
 import { ModuleChips } from './ModuleChips'
 import { WelcomeCard } from './WelcomeCard'
 import { LimitModal } from './LimitModal'
+import SessionsHelpModal from './SessionsHelpModal'
 import SafetyEventModal, { SafetyStudent } from '@/components/safety/SafetyEventModal'
 
 export interface MessageDownload {
@@ -48,10 +49,17 @@ interface UsageData {
   scheduling_link?: string | null
   essays_module?: boolean      // essay prompts available (any tenant with module)
   editate_available?: boolean  // editate link + drafts (LifeLaunchr + editate_enabled)
-  sessions_used?: number
+  sessions_used?: number          // caller's own pool — always present
   session_limit?: number | null
   session_reset_date?: string | null
-  beneficiary_user_id?: number | null
+  beneficiary?: {
+    user_id: number
+    full_name?: string | null
+    email?: string | null
+    sessions_used: number
+    session_limit: number
+    session_reset_date?: string | null
+  } | null
 }
 
 interface LimitReachedData {
@@ -105,6 +113,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
   const [limitModalData, setLimitModalData] = useState<LimitReachedData | null>(null)
   const [currentResearchSessionId, setCurrentResearchSessionId] = useState<number | null>(null)
   const [showNewSessionBanner, setShowNewSessionBanner] = useState(false)
+  const [showSessionsHelp, setShowSessionsHelp] = useState(false)
   const [generatingSummary, setGeneratingSummary] = useState(false)
   const [summaryToast, setSummaryToast] = useState<{ kind: 'success' | 'error'; text: string } | null>(null)
   const [showSummaryConfirm, setShowSummaryConfirm] = useState(false)
@@ -524,15 +533,34 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                   const isNewRS = data.new_session && currentResearchSessionId !== data.research_session_id
                   setCurrentResearchSessionId(data.research_session_id)
                   if (data.sessions_used !== undefined) {
-                    setUsageData((prev) => prev ? {
-                      ...prev,
-                      sessions_used: data.sessions_used,
-                      session_limit: data.session_limit ?? prev.session_limit,
-                    } : null)
+                    // Route the increment to the right pool: if billed against
+                    // the beneficiary (student), update usageData.beneficiary;
+                    // otherwise update the caller's top-level fields. This keeps
+                    // the top-bar (caller) and sidebar (beneficiary) in sync
+                    // independently.
+                    const billedBeneficiary = data.beneficiary_user_id != null && data.beneficiary_user_id !== data.user_id
+                    setUsageData((prev) => {
+                      if (!prev) return null
+                      if (billedBeneficiary && prev.beneficiary && prev.beneficiary.user_id === data.beneficiary_user_id) {
+                        return {
+                          ...prev,
+                          beneficiary: {
+                            ...prev.beneficiary,
+                            sessions_used: data.sessions_used,
+                            session_limit: data.session_limit ?? prev.beneficiary.session_limit,
+                          },
+                        }
+                      }
+                      return {
+                        ...prev,
+                        sessions_used: data.sessions_used,
+                        session_limit: data.session_limit ?? prev.session_limit,
+                      }
+                    })
                   }
                   if (isNewRS) {
                     setShowNewSessionBanner(true)
-                    setTimeout(() => setShowNewSessionBanner(false), 3000)
+                    // Banner stays until dismissed or next message — don't auto-hide
                   }
                 }
                 // Refresh session list after each message
@@ -711,7 +739,10 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
       {/* New research session banner */}
       {showNewSessionBanner && (
         <div className="flex items-center justify-between bg-emerald-600 text-white text-sm px-4 py-2 flex-shrink-0 z-40">
-          <span>✦ New research session started</span>
+          <span>
+            ✦ New research session started — counts as 1 toward your limit.
+            Follow-up questions in the next 60 minutes are free.
+          </span>
           <button onClick={() => setShowNewSessionBanner(false)} className="text-white/70 hover:text-white ml-4">✕</button>
         </div>
       )}
@@ -812,39 +843,69 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
               {userId && usageData && (usageData.session_limit != null || usageData.effective_limit != null) && (
                 <div className="mb-2 px-3">
                   {usageData.session_limit != null ? (
-                    // Session-based usage. When researching for a specific student
-                    // (Option B / beneficiary-scoped billing), the counter reflects
-                    // that student's pool, not the caller's. Show whose pool.
+                    // Session-based usage. Show TWO blocks when a beneficiary is
+                    // selected: caller's own pool + the student's shared pool.
+                    // Both are tracked independently — answers the "why are these
+                    // numbers different?" confusion from #27.
                     (() => {
-                      const beneficiary =
-                        forStudentId && (isCounselor || isParent)
-                          ? myStudents.find((s) => s.id === forStudentId)
-                          : null
-                      const beneficiaryName = beneficiary?.full_name || beneficiary?.email || null
+                      const ben = usageData.beneficiary
+                      const benName = ben?.full_name || ben?.email || null
+                      const callerUsed  = usageData.sessions_used ?? 0
+                      const callerLimit = usageData.session_limit!
+                      const callerPct   = callerLimit ? callerUsed / callerLimit : 0
+                      const callerColor = callerPct >= 0.85 ? 'bg-red-400' : callerPct >= 0.6 ? 'bg-amber-400' : 'bg-sky-400'
                       return (
                     <>
+                      {/* Caller's own pool — always visible */}
                       <div className="flex justify-between items-center mb-1">
                         <span className="text-[10px] uppercase tracking-widest text-slate-600">
-                          {beneficiaryName
-                            ? <>Sessions for <span className="normal-case tracking-normal text-slate-400">{beneficiaryName}</span></>
-                            : 'Research sessions'}
+                          Your sessions
                         </span>
                         <span className="text-[10px] text-slate-500">
-                          {usageData.sessions_used ?? 0} / {usageData.session_limit}
+                          {callerUsed} / {callerLimit}
                         </span>
                       </div>
                       <div className="w-full bg-white/10 rounded-full h-1">
                         <div
-                          className={`h-1 rounded-full transition-all ${
-                            ((usageData.sessions_used ?? 0) / usageData.session_limit) >= 0.85
-                              ? 'bg-red-400'
-                              : ((usageData.sessions_used ?? 0) / usageData.session_limit) >= 0.6
-                              ? 'bg-amber-400'
-                              : 'bg-sky-400'
-                          }`}
-                          style={{ width: `${Math.min(((usageData.sessions_used ?? 0) / usageData.session_limit) * 100, 100)}%` }}
+                          className={`h-1 rounded-full transition-all ${callerColor}`}
+                          style={{ width: `${Math.min(callerPct * 100, 100)}%` }}
                         />
                       </div>
+
+                      {/* Beneficiary pool — only when researching for a student */}
+                      {ben && (() => {
+                        const benPct   = ben.session_limit ? ben.sessions_used / ben.session_limit : 0
+                        const benColor = benPct >= 0.85 ? 'bg-red-400' : benPct >= 0.6 ? 'bg-amber-400' : 'bg-sky-400'
+                        return (
+                          <>
+                            <div className="flex justify-between items-center mb-1 mt-3">
+                              <span className="text-[10px] uppercase tracking-widest text-slate-600">
+                                {benName ? `${benName.split(' ')[0]}'s pool` : "Student pool"}
+                              </span>
+                              <span className="text-[10px] text-slate-500">
+                                {ben.sessions_used} / {ben.session_limit}
+                              </span>
+                            </div>
+                            <div className="w-full bg-white/10 rounded-full h-1">
+                              <div
+                                className={`h-1 rounded-full transition-all ${benColor}`}
+                                style={{ width: `${Math.min(benPct * 100, 100)}%` }}
+                              />
+                            </div>
+                            <p className="text-[9px] text-slate-500 mt-1 leading-snug">
+                              Shared between {benName || 'the student'}, parents, and counselors
+                            </p>
+                          </>
+                        )
+                      })()}
+
+                      <button
+                        type="button"
+                        onClick={() => setShowSessionsHelp(true)}
+                        className="text-[10px] text-sky-400 hover:text-sky-300 underline mt-2 text-left"
+                      >
+                        How are sessions counted?
+                      </button>
                     </>
                       )
                     })()
@@ -1331,6 +1392,14 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Sessions help modal */}
+      {showSessionsHelp && usageData && (
+        <SessionsHelpModal
+          usageData={usageData}
+          onClose={() => setShowSessionsHelp(false)}
+        />
       )}
 
       {/* Limit modal */}
