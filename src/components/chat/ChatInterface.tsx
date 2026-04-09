@@ -104,6 +104,8 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
   const [limitModalData, setLimitModalData] = useState<LimitReachedData | null>(null)
   const [currentResearchSessionId, setCurrentResearchSessionId] = useState<number | null>(null)
   const [showNewSessionBanner, setShowNewSessionBanner] = useState(false)
+  const [generatingSummary, setGeneratingSummary] = useState(false)
+  const [summaryToast, setSummaryToast] = useState<{ kind: 'success' | 'error'; text: string } | null>(null)
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
   const [sessions, setSessions] = useState<Session[]>([])
   const [activeSessionId, setActiveSessionId] = useState<number | null>(null)
@@ -354,6 +356,30 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
     setStreamingMessageId(null)
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
   }, [])
+
+  const handleGenerateSummary = useCallback(async () => {
+    if (!currentResearchSessionId || generatingSummary) return
+    setGeneratingSummary(true)
+    setSummaryToast(null)
+    try {
+      const token = await getToken()
+      const res = await fetch(`${apiUrl}/research-sessions/${currentResearchSessionId}/generate-summary`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) {
+        const detail = await res.json().catch(() => ({ detail: 'Failed to generate summary' }))
+        setSummaryToast({ kind: 'error', text: detail.detail || 'Failed to generate summary' })
+      } else {
+        setSummaryToast({ kind: 'success', text: 'Summary generated ✓' })
+      }
+    } catch {
+      setSummaryToast({ kind: 'error', text: 'Network error generating summary' })
+    } finally {
+      setGeneratingSummary(false)
+      setTimeout(() => setSummaryToast(null), 4000)
+    }
+  }, [currentResearchSessionId, generatingSummary, getToken, apiUrl])
 
   const loadSession = useCallback(async (sessionId: number) => {
     try {
@@ -685,10 +711,22 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
         </div>
       )}
 
+      {/* Summary toast */}
+      {summaryToast && (
+        <div className={`flex items-center justify-between text-white text-sm px-4 py-2 flex-shrink-0 z-40 ${
+          summaryToast.kind === 'success' ? 'bg-emerald-600' : 'bg-red-600'
+        }`}>
+          <span>{summaryToast.text}</span>
+          <button onClick={() => setSummaryToast(null)} className="text-white/70 hover:text-white ml-4">✕</button>
+        </div>
+      )}
+
       <ChatHeader
         userId={userId}
         onNewConversation={handleNewConversation}
         onToggleSidebar={() => setSidebarOpen((v) => !v)}
+        sessionsUsed={usageData?.sessions_used}
+        sessionLimit={usageData?.session_limit ?? null}
         messagesUsed={usageData?.messages_used}
         effectiveLimit={usageData?.effective_limit ?? null}
         botName={tenantBranding.botName}
@@ -1092,6 +1130,22 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
           {/* Messages area */}
           <div className="flex-1 overflow-y-auto px-3 sm:px-4 md:px-6 py-6 pb-safe flex flex-col gap-4">
             <div className="max-w-3xl mx-auto w-full flex flex-col gap-4 flex-1">
+            {/* Generate summary action — visible when a research session is active with messages */}
+            {userId && currentResearchSessionId && messages.length > 0 && (
+              <div className="flex justify-end -mb-2">
+                <button
+                  onClick={handleGenerateSummary}
+                  disabled={generatingSummary}
+                  className="text-xs text-slate-500 hover:text-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
+                  title="Generate or regenerate a summary for the current research session"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  {generatingSummary ? 'Generating…' : 'Generate summary'}
+                </button>
+              </div>
+            )}
             {/* Parent with multiple students — block until one is selected */}
             {isParent && myStudents.length > 1 && !forStudentId ? (
               <div className="flex flex-col items-center justify-center flex-1 h-full text-center px-6 py-16">

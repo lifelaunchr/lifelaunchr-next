@@ -41,6 +41,8 @@ interface ChatHeaderProps {
   userId: string | null
   onNewConversation: () => void
   onToggleSidebar: () => void
+  sessionsUsed?: number
+  sessionLimit?: number | null
   messagesUsed?: number
   effectiveLimit?: number | null
   botName?: string
@@ -52,12 +54,19 @@ export function ChatHeader({
   userId,
   onNewConversation,
   onToggleSidebar,
+  sessionsUsed,
+  sessionLimit,
   messagesUsed,
   effectiveLimit,
   botName = 'Soar',
   tagline = 'Your AI-powered college advisor',
   logoUrl,
 }: ChatHeaderProps) {
+  // Prefer session counter (new model); fall back to messages if unavailable.
+  const useSessions = sessionLimit != null
+  const badgeUsed = useSessions ? (sessionsUsed ?? 0) : (messagesUsed ?? 0)
+  const badgeLimit = useSessions ? sessionLimit : effectiveLimit
+  const badgeUnit = useSessions ? 'sessions' : 'msgs'
   return (
     <header className="bg-[#1a1a2e] text-white px-3 sm:px-4 py-3 flex items-center justify-between gap-3 flex-shrink-0 border-b border-white/10">
       {/* Left side */}
@@ -106,12 +115,12 @@ export function ChatHeader({
       {/* Right side */}
       <div className="flex items-center gap-2 flex-shrink-0 flex-nowrap">
         {/* Database badge / upgrade CTA */}
-        {userId && effectiveLimit != null ? (
+        {userId && badgeLimit != null ? (
           <a
             href="/upgrade"
             className="hidden sm:inline-flex items-center gap-1 bg-amber-500/20 text-amber-300 text-xs px-3 py-1 rounded-full border border-amber-500/30 whitespace-nowrap hover:bg-amber-500/30 transition-colors"
           >
-            {messagesUsed ?? 0} / {effectiveLimit} msgs · Upgrade →
+            {badgeUsed} / {badgeLimit} {badgeUnit} · Upgrade →
           </a>
         ) : !userId ? (
           <a
