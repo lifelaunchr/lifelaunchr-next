@@ -363,17 +363,37 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
     )
   }, [])
 
-  const handleNewConversation = useCallback(() => {
+  const handleNewConversation = useCallback(async () => {
     if (abortControllerRef.current) abortControllerRef.current.abort()
+    // Force-end the current chat's research session so the next message
+    // opens a fresh one (and increments the counter), bypassing the
+    // 60-minute rolling window. Idempotent on the server.
+    const chatToEnd = serverSessionId
+    if (chatToEnd && userId) {
+      try {
+        const token = await getToken()
+        await fetch(`${apiUrl}/research-sessions/end-current`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ chat_session_id: chatToEnd }),
+        })
+      } catch {
+        // Non-fatal — backend will fall through to chat-scoped detection on the new chat anyway.
+      }
+    }
     setMessages([])
     setConversationHistory([])
     setServerSessionId(null)
     setActiveSessionId(null)
+    setCurrentResearchSessionId(null)
     setInput('')
     setIsStreaming(false)
     setStreamingMessageId(null)
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
-  }, [])
+  }, [serverSessionId, userId, getToken, apiUrl])
 
   const handleGenerateSummary = useCallback(async () => {
     if (!currentResearchSessionId || generatingSummary) return
