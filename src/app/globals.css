@@ -128,3 +128,17 @@
     @apply font-sans;
   }
 }
+
+/* Markdown rendering for reports/briefs */
+.report-markdown h1 { font-size: 1.25rem; font-weight: 700; margin: 1.2em 0 0.4em; color: #111827; }
+.report-markdown h2 { font-size: 1.05rem; font-weight: 700; margin: 1.2em 0 0.4em; color: #1f2937; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; }
+.report-markdown h3 { font-size: 0.95rem; font-weight: 600; margin: 1em 0 0.3em; color: #374151; }
+.report-markdown p { margin: 0.5em 0; }
+.report-markdown ul, .report-markdown ol { margin: 0.4em 0; padding-left: 1.5em; }
+.report-markdown li { margin: 0.2em 0; }
+.report-markdown strong { font-weight: 700; color: #111827; }
+.report-markdown hr { border: none; border-top: 1px solid #e5e7eb; margin: 1em 0; }
+.report-markdown table { border-collapse: collapse; width: 100%; margin: 0.5em 0; font-size: 0.82rem; }
+.report-markdown th { background: #f9fafb; font-weight: 600; text-align: left; padding: 6px 10px; border: 1px solid #e5e7eb; }
+.report-markdown td { padding: 6px 10px; border: 1px solid #e5e7eb; }
+.report-markdown code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 0.85em; }

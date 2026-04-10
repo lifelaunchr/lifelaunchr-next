@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useAuth, useUser } from '@clerk/nextjs'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -1137,8 +1139,8 @@ function ReportsContent() {
                 </div>
               ) : briefText && (
                 <div style={sectionSt}>
-                  <div style={{ fontSize: '0.875rem', color: '#374151', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
-                    {briefText}
+                  <div className="report-markdown" style={{ fontSize: '0.875rem', color: '#374151', lineHeight: 1.7 }}>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{briefText}</ReactMarkdown>
                   </div>
                 </div>
               )}
@@ -1223,8 +1225,8 @@ function ReportsContent() {
                 {/* Summary content */}
                 <div style={sectionSt}>
                   <div style={labelSt}>Summary</div>
-                  <div style={{ fontSize: '0.875rem', color: '#374151', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
-                    {rs.summary}
+                  <div className="report-markdown" style={{ fontSize: '0.875rem', color: '#374151', lineHeight: 1.7 }}>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{rs.summary}</ReactMarkdown>
                   </div>
                 </div>
 
