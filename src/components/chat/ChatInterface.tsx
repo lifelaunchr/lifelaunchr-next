@@ -98,8 +98,10 @@ function formatSessionDate(iso: string): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-export function ChatInterface({ userId }: ChatInterfaceProps) {
-  const { getToken } = useAuth()
+export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
+  const { getToken, userId: clerkUserId } = useAuth()
+  // Prefer client-side Clerk state over server prop — reacts immediately to sign-out
+  const userId = clerkUserId ?? serverUserId
   const { user: clerkUser } = useUser()
   const searchParams = useSearchParams()
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
