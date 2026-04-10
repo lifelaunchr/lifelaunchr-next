@@ -84,7 +84,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <ClerkProvider>
+    <ClerkProvider afterSignOutUrl="/chat">
       <html lang="en" suppressHydrationWarning>
         <body className={inter.className}>
           {children}
