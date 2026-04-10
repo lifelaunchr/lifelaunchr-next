@@ -113,17 +113,14 @@ export default function OnboardingPage() {
   const needsOrg = accountType === 'iec' || accountType === 'admissions_coach'
   const isStudent = accountType === 'student'
 
-  // ── Pre-created user detection: skip role picker if account type is known ────
-  // Covers two cases:
-  //   1. Migration invite: sessionStorage has 'migration_invite_token'
-  //   2. Family invite: sessionStorage has 'pending_invite_code' (user was
-  //      pre-created as a student/parent by a counselor via Add Family)
-  // In both cases, /auth/sync claims the pre-created row by email match and
-  // returns the account_type. If it's 'student', skip straight to step 2.
+  // ── Migration / family invite: skip role picker if account type is known ─────
+  // When a user arrives via /accept-invite (migration or family invite), the
+  // token is stored in sessionStorage. We call /auth/sync to claim the
+  // pre-created row by email match, then skip the role picker if the account
+  // type is already set (e.g. student created by a counselor via Add Family).
   useEffect(() => {
-    const migrationToken = sessionStorage.getItem('migration_invite_token')
-    const pendingInvite = sessionStorage.getItem('pending_invite_code')
-    if ((!migrationToken && !pendingInvite) || !clerkUser) return
+    const token = sessionStorage.getItem('migration_invite_token')
+    if (!token || !clerkUser) return
 
     setMigrationLinking(true)
     ;(async () => {
@@ -143,16 +140,13 @@ export default function OnboardingPage() {
           }),
         })
 
-        // Legacy migration invite — call accept-invite endpoint
-        if (migrationToken) {
-          await fetch(`${apiUrl}/accept-invite`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token: migrationToken, clerk_user_id: clerkUser.id, email }),
-          })
-        }
+        await fetch(`${apiUrl}/accept-invite`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, clerk_user_id: clerkUser.id, email }),
+        })
 
-        // Students/parents already have a known role — skip role picker
+        // Students already have a known role — skip role picker and go to profile step
         if (syncRes.ok) {
           const syncData = await syncRes.json()
           if (syncData.account_type === 'student') {
@@ -161,9 +155,9 @@ export default function OnboardingPage() {
             return
           }
           if (syncData.account_type === 'parent') {
-            // Parents don't need the student profile steps — go straight to chat
-            // The pending_invite_code will be processed after onboarding submit
-            setAccountType('parent')
+            // Parents don't need the student profile steps — skip to chat
+            router.push('/chat')
+            return
           }
           // Counselors: fall through to show step 1 normally
         }
