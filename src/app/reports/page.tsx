@@ -18,6 +18,7 @@ interface Student {
 
 interface SessionReport {
   id: number
+  type: 'session_report'
   coach_id: number
   appointment_timezone?: string
   coach_name?: string   // present in team-view and student/parent view (joined from users)
@@ -41,6 +42,22 @@ interface SessionReport {
   created_at: string
   updated_at: string
 }
+
+interface ResearchSummary {
+  id: number
+  type: 'research_summary'
+  title?: string
+  summary: string
+  coach_name?: string
+  student_name?: string
+  student_id?: number
+  researcher_user_id?: number
+  started_at: string
+  ended_at?: string
+  created_at: string
+}
+
+type UnifiedItem = SessionReport | ResearchSummary
 
 const APPOINTMENT_TYPES = [
   'College Admissions Coaching',
@@ -105,9 +122,10 @@ function reportLabel(r: SessionReport) {
 
 const badgeStyle = (type: string): React.CSSProperties => {
   const colors: Record<string, { bg: string; color: string }> = {
-    single:   { bg: '#ede9fe', color: '#5b21b6' },
-    multiple: { bg: '#dbeafe', color: '#1e40af' },
-    note:     { bg: '#fce7f3', color: '#9d174d' },
+    single:           { bg: '#ede9fe', color: '#5b21b6' },
+    multiple:         { bg: '#dbeafe', color: '#1e40af' },
+    note:             { bg: '#fce7f3', color: '#9d174d' },
+    research_summary: { bg: '#d1fae5', color: '#065f46' },
   }
   const c = colors[type] || { bg: '#f3f4f6', color: '#374151' }
   return {
@@ -130,11 +148,13 @@ function ReportsContent() {
   const searchParams = useSearchParams()
 
   const [students, setStudents] = useState<Student[]>([])
-  const [reports, setReports] = useState<SessionReport[]>([])
+  const [reports, setReports] = useState<UnifiedItem[]>([])
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(
     searchParams.get('student_id') ? parseInt(searchParams.get('student_id')!, 10) : null
   )
-  const [selectedReport, setSelectedReport] = useState<SessionReport | null>(null)
+  const [selectedReport, setSelectedReport] = useState<UnifiedItem | null>(null)
+  const [typeFilter, setTypeFilter] = useState<'all' | 'session_report' | 'research_summary'>('all')
+  const [copied, setCopied] = useState(false)
   const [mobileShowDetail, setMobileShowDetail] = useState(false)
   const [listPage, setListPage] = useState(0)
   const LIST_PAGE_SIZE = 20
@@ -152,7 +172,7 @@ function ReportsContent() {
   // Tenant admin state
   const [isTenantAdmin, setIsTenantAdmin] = useState(false)
   const [teamView, setTeamView] = useState(false)
-  const [teamReports, setTeamReports] = useState<SessionReport[]>([])
+  const [teamReports, setTeamReports] = useState<UnifiedItem[]>([])
   const [teamReportsLoading, setTeamReportsLoading] = useState(false)
 
   // Form state
@@ -231,13 +251,13 @@ function ReportsContent() {
         setIsTenantAdmin(Boolean(usage.is_tenant_admin))
 
         if (studentMode) {
-          // Students load their own reports directly — no student picker needed
-          const rRes = await fetch(`${apiUrl}/session-reports`, {
+          // Students/parents load their own reports directly — no student picker needed
+          const rRes = await fetch(`${apiUrl}/reports/unified`, {
             headers: { Authorization: `Bearer ${token}` },
           })
           if (rRes.ok) {
             const data = await rRes.json()
-            setReports(data.reports || [])
+            setReports(data.items || [])
           }
         } else {
           const studRes = await fetch(`${apiUrl}/my-students`, {
@@ -261,19 +281,20 @@ function ReportsContent() {
     if (!studentId) { setReports([]); return }
     try {
       const token = await getToken()
-      const res = await fetch(`${apiUrl}/session-reports?student_id=${studentId}`, {
+      const typeParam = typeFilter !== 'all' ? `&type=${typeFilter}` : ''
+      const res = await fetch(`${apiUrl}/reports/unified?for_student_id=${studentId}${typeParam}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (res.ok) {
         const data = await res.json()
-        setReports(data.reports || [])
+        setReports(data.items || [])
       }
     } catch { /* ignore */ }
-  }, [getToken])
+  }, [getToken, typeFilter])
 
   useEffect(() => {
     loadReports(selectedStudentId)
-  }, [selectedStudentId, loadReports])
+  }, [selectedStudentId, loadReports, typeFilter])
 
   // ── Load team reports (tenant admin view) ─────────────────────────────────
 
@@ -281,26 +302,33 @@ function ReportsContent() {
     setTeamReportsLoading(true)
     try {
       const token = await getToken()
-      const res = await fetch(`${apiUrl}/session-reports?all_team=true`, {
+      const typeParam = typeFilter !== 'all' ? `&type=${typeFilter}` : ''
+      const res = await fetch(`${apiUrl}/reports/unified?all_team=true${typeParam}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (res.ok) {
         const data = await res.json()
-        setTeamReports(data.reports || [])
+        setTeamReports(data.items || [])
       }
     } catch { /* ignore */ } finally {
       setTeamReportsLoading(false)
     }
-  }, [getToken])
+  }, [getToken, typeFilter])
 
   useEffect(() => {
     if (teamView) {
       loadTeamReports()
       setSelectedReport(null)
     }
-  }, [teamView, loadTeamReports])
+  }, [teamView, loadTeamReports, typeFilter])
 
   // ── Populate form when a report is selected ────────────────────────────────
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   const populateForm = (r: SessionReport) => {
     setReportType(r.report_type)
@@ -569,7 +597,7 @@ function ReportsContent() {
 
   // ── Derived view flags ──────────────────────────────────────────────────────
 
-  const isSentReport = !teamView && Boolean(selectedReport?.sent_at)
+  const isSentReport = !teamView && selectedReport?.type === 'session_report' && Boolean((selectedReport as SessionReport).sent_at)
   const isReadOnly = isStudent || teamView || (isSentReport && !editResendMode)
 
   // ── Styles ─────────────────────────────────────────────────────────────────
@@ -607,7 +635,7 @@ function ReportsContent() {
           <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>🔒</div>
           <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827', marginBottom: 8 }}>Access Restricted</h1>
           <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
-            Session Reports are not available for your account type.
+            Session &amp; Research Summaries are not available for your account type.
           </p>
           <Link href="/chat" style={{ display: 'inline-block', marginTop: 20, color: '#4f46e5', textDecoration: 'none', fontSize: '0.875rem' }}>
             ← Back to Soar
@@ -689,7 +717,7 @@ function ReportsContent() {
           {/* Panel header */}
           <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid #f3f4f6' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <h1 style={{ fontSize: '1rem', fontWeight: 700, color: '#0c1b33', margin: 0 }}>Session Reports</h1>
+              <h1 style={{ fontSize: '1rem', fontWeight: 700, color: '#0c1b33', margin: 0 }}>Session &amp; Research Summaries</h1>
               {!teamView && !isStudent && (
                 <button
                   onClick={() => { resetForm(); setMobileShowDetail(true) }}
@@ -778,6 +806,29 @@ function ReportsContent() {
                 ))}
               </select>
             )}
+
+            {/* Type filter: All / Session Reports / Research Summaries */}
+            <div style={{ display: 'flex', gap: 0, marginTop: 8, border: '1px solid #e5e7eb', borderRadius: 8, overflow: 'hidden' }}>
+              {([
+                { value: 'all', label: 'All' },
+                { value: 'session_report', label: 'Reports' },
+                { value: 'research_summary', label: 'Research' },
+              ] as const).map((opt, i) => (
+                <button
+                  key={opt.value}
+                  onClick={() => { setTypeFilter(opt.value); setListPage(0); setSelectedReport(null) }}
+                  style={{
+                    flex: 1, padding: '6px 0', fontSize: '0.78rem', fontWeight: 600,
+                    border: 'none', cursor: 'pointer',
+                    background: typeFilter === opt.value ? '#4f46e5' : '#f9fafb',
+                    color: typeFilter === opt.value ? '#fff' : '#6b7280',
+                    borderLeft: i > 0 ? '1px solid #e5e7eb' : 'none',
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Report list */}
@@ -799,17 +850,23 @@ function ReportsContent() {
             ) : (
               pagedReports.map((r) => {
                 const student = students.find((s) => s.id === r.student_id)
-                const isSelected = selectedReport?.id === r.id
-                const isSent = Boolean(r.sent_at)
+                const isSelected = selectedReport?.id === r.id && selectedReport?.type === r.type
+                const isResearch = r.type === 'research_summary'
+                const sr = r as SessionReport
+                const rs = r as ResearchSummary
                 return (
                   <button
-                    key={r.id}
-                    onClick={() => { setSelectedReport(r); populateForm(r); setMobileShowDetail(true) }}
+                    key={`${r.type}-${r.id}`}
+                    onClick={() => {
+                      setSelectedReport(r)
+                      if (!isResearch) populateForm(sr)
+                      setMobileShowDetail(true)
+                    }}
                     style={{
                       display: 'block', width: '100%', textAlign: 'left',
                       padding: '12px 16px', border: 'none', borderBottom: '1px solid #f3f4f6',
-                      borderLeft: isSelected ? '3px solid #4f46e5' : '3px solid transparent',
-                      background: isSelected ? '#eef2ff' : 'transparent', cursor: 'pointer',
+                      borderLeft: isSelected ? `3px solid ${isResearch ? '#059669' : '#4f46e5'}` : '3px solid transparent',
+                      background: isSelected ? (isResearch ? '#ecfdf5' : '#eef2ff') : 'transparent', cursor: 'pointer',
                       transition: 'background 0.1s',
                     }}
                     onMouseOver={(e) => { if (!isSelected) e.currentTarget.style.background = '#f9fafb' }}
@@ -818,7 +875,7 @@ function ReportsContent() {
                     {/* Student name — shown for counselors (team view) and parents */}
                     {!isStudent && (
                       <div style={{ fontWeight: 700, fontSize: '0.875rem', color: '#111827', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {r.student_name || student?.full_name || student?.email || `Student #${r.student_id}`}
+                        {r.student_name || student?.full_name || student?.email || (r.student_id ? `Student #${r.student_id}` : 'Own research')}
                       </div>
                     )}
                     {/* Coach name */}
@@ -827,32 +884,45 @@ function ReportsContent() {
                         {r.coach_name}
                       </div>
                     )}
-                    {/* Date */}
-                    <div style={{ fontSize: '0.78rem', color: '#6b7280', marginBottom: 4 }}>
-                      {reportLabel(r)}
+                    {/* Title (research) or Date (session report) */}
+                    <div style={{ fontSize: '0.78rem', color: '#6b7280', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {isResearch
+                        ? (rs.title || fmtDate(rs.started_at?.slice(0, 10)))
+                        : reportLabel(sr)}
                     </div>
                     {/* Type + status row */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-                      <span style={{ fontSize: '0.7rem', color: '#6b7280' }}>
-                        {REPORT_TYPE_LABELS[r.report_type]}
-                        {r.appointment_type ? ` · ${r.appointment_type}` : ''}
-                      </span>
-                      {isSent ? (
-                        <span style={{
-                          fontSize: '0.68rem', fontWeight: 700, color: '#15803d',
-                          background: '#dcfce7', borderRadius: 20, padding: '2px 8px',
-                          flexShrink: 0,
-                        }}>
-                          Sent
-                        </span>
+                      {isResearch ? (
+                        <>
+                          <span style={badgeStyle('research_summary')}>Research Summary</span>
+                          <span style={{ fontSize: '0.68rem', color: '#6b7280' }}>
+                            {fmtDate(rs.started_at?.slice(0, 10))}
+                          </span>
+                        </>
                       ) : (
-                        <span style={{
-                          fontSize: '0.68rem', fontWeight: 600, color: '#6b7280',
-                          background: '#f3f4f6', borderRadius: 20, padding: '2px 8px',
-                          flexShrink: 0,
-                        }}>
-                          Draft
-                        </span>
+                        <>
+                          <span style={{ fontSize: '0.7rem', color: '#6b7280' }}>
+                            {REPORT_TYPE_LABELS[sr.report_type]}
+                            {sr.appointment_type ? ` · ${sr.appointment_type}` : ''}
+                          </span>
+                          {sr.sent_at ? (
+                            <span style={{
+                              fontSize: '0.68rem', fontWeight: 700, color: '#15803d',
+                              background: '#dcfce7', borderRadius: 20, padding: '2px 8px',
+                              flexShrink: 0,
+                            }}>
+                              Sent
+                            </span>
+                          ) : (
+                            <span style={{
+                              fontSize: '0.68rem', fontWeight: 600, color: '#6b7280',
+                              background: '#f3f4f6', borderRadius: 20, padding: '2px 8px',
+                              flexShrink: 0,
+                            }}>
+                              Draft
+                            </span>
+                          )}
+                        </>
                       )}
                     </div>
                   </button>
@@ -911,15 +981,95 @@ function ReportsContent() {
               ← Back to list
             </button>
           )}
-          {/* ── Student / Parent read-only view ─────────────────────────────── */}
-          {isStudent && (
+          {/* ── Research Summary read-only view (all roles) ───────────────── */}
+          {selectedReport?.type === 'research_summary' && (() => {
+            const rs = selectedReport as ResearchSummary
+            return (
+              <div style={{ width: '100%', maxWidth: 760, margin: '0 auto' }}>
+                {/* Header with badge */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                  <span style={badgeStyle('research_summary')}>Research Summary</span>
+                  <button
+                    onClick={() => copyToClipboard(rs.summary)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      background: copied ? '#dcfce7' : '#f3f4f6', border: 'none',
+                      borderRadius: 6, padding: '6px 12px', fontSize: '0.78rem',
+                      fontWeight: 600, cursor: 'pointer', transition: 'background 0.15s',
+                      color: copied ? '#15803d' : '#374151',
+                    }}
+                  >
+                    {copied ? (
+                      <>
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" /></svg>
+                        Copy summary
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Meta card */}
+                <div style={sectionSt}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+                    {rs.title && (
+                      <div style={{ gridColumn: '1 / -1' }}>
+                        <div style={labelSt}>Title</div>
+                        <div style={{ fontSize: '0.95rem', color: '#111827', fontWeight: 700 }}>{rs.title}</div>
+                      </div>
+                    )}
+                    {rs.student_name && (
+                      <div>
+                        <div style={labelSt}>Student</div>
+                        <div style={{ fontSize: '0.875rem', color: '#111827', fontWeight: 600 }}>{rs.student_name}</div>
+                      </div>
+                    )}
+                    {rs.coach_name && (
+                      <div>
+                        <div style={labelSt}>Researcher</div>
+                        <div style={{ fontSize: '0.875rem', color: '#111827' }}>{rs.coach_name}</div>
+                      </div>
+                    )}
+                    <div>
+                      <div style={labelSt}>Date</div>
+                      <div style={{ fontSize: '0.875rem', color: '#111827' }}>{fmtDate(rs.started_at?.slice(0, 10))}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Summary content */}
+                <div style={sectionSt}>
+                  <div style={labelSt}>Summary</div>
+                  <div style={{ fontSize: '0.875rem', color: '#374151', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+                    {rs.summary}
+                  </div>
+                </div>
+
+                {/* Counselor helper text */}
+                {!isStudent && (
+                  <p style={{ fontSize: '0.78rem', color: '#9ca3af', fontStyle: 'italic', marginTop: 8, textAlign: 'center' }}>
+                    Copy and paste into your own email to customize before sending.
+                  </p>
+                )}
+              </div>
+            )
+          })()}
+
+          {/* ── Student / Parent read-only view (session reports only) ──────── */}
+          {isStudent && selectedReport?.type !== 'research_summary' && (
             <div style={{ width: '100%', maxWidth: 760, margin: '0 auto' }}>
               {!selectedReport ? (
                 <div style={{ textAlign: 'center', color: '#9ca3af', padding: '64px 0' }}>
                   <div style={{ fontSize: '2rem', marginBottom: 12 }}>📋</div>
-                  <p style={{ fontSize: '0.875rem' }}>Select a report from the list to view it.</p>
+                  <p style={{ fontSize: '0.875rem' }}>Select a report or summary from the list to view it.</p>
                 </div>
-              ) : (
+              ) : (() => {
+                const sr = selectedReport as SessionReport
+                return (
                 <div>
                   {/* Sent badge */}
                   <div style={{ marginBottom: 20 }}>
@@ -927,7 +1077,7 @@ function ReportsContent() {
                       background: '#dcfce7', color: '#15803d', borderRadius: 20,
                       padding: '4px 14px', fontSize: '0.78rem', fontWeight: 700,
                     }}>
-                      Sent {fmtDate(selectedReport.sent_at?.slice(0, 10))}
+                      Sent {fmtDate(sr.sent_at?.slice(0, 10))}
                     </span>
                   </div>
 
@@ -936,94 +1086,95 @@ function ReportsContent() {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
 
                       {/* Student name — parents only */}
-                      {selectedReport.student_name && (
+                      {sr.student_name && (
                         <div style={{ gridColumn: '1 / -1' }}>
                           <div style={labelSt}>Student</div>
-                          <div style={{ fontSize: '0.875rem', color: '#111827', fontWeight: 600 }}>{selectedReport.student_name}</div>
+                          <div style={{ fontSize: '0.875rem', color: '#111827', fontWeight: 600 }}>{sr.student_name}</div>
                         </div>
                       )}
 
                       {/* Coach — always shown */}
                       <div style={{ gridColumn: '1 / -1' }}>
                         <div style={labelSt}>Coach</div>
-                        <div style={{ fontSize: '0.875rem', color: '#111827' }}>{selectedReport.coach_name || '—'}</div>
+                        <div style={{ fontSize: '0.875rem', color: '#111827' }}>{sr.coach_name || '—'}</div>
                       </div>
 
                       {/* Report type */}
                       <div>
                         <div style={labelSt}>Session type</div>
                         <div style={{ fontSize: '0.875rem', color: '#111827' }}>
-                          <span style={badgeStyle(selectedReport.report_type)}>{REPORT_TYPE_LABELS[selectedReport.report_type]}</span>
+                          <span style={badgeStyle(sr.report_type)}>{REPORT_TYPE_LABELS[sr.report_type]}</span>
                         </div>
                       </div>
 
                       {/* Appointment type */}
-                      {selectedReport.report_type !== 'note' && selectedReport.appointment_type && (
+                      {sr.report_type !== 'note' && sr.appointment_type && (
                         <div>
                           <div style={labelSt}>Appointment type</div>
-                          <div style={{ fontSize: '0.875rem', color: '#111827' }}>{selectedReport.appointment_type}</div>
+                          <div style={{ fontSize: '0.875rem', color: '#111827' }}>{sr.appointment_type}</div>
                         </div>
                       )}
 
                       {/* Date / time — single session */}
-                      {selectedReport.report_type === 'single' && selectedReport.appointment_date && (
+                      {sr.report_type === 'single' && sr.appointment_date && (
                         <div>
                           <div style={labelSt}>Date</div>
                           <div style={{ fontSize: '0.875rem', color: '#111827' }}>
-                            {fmtDate(selectedReport.appointment_date)}{fmtTime(selectedReport.appointment_time, selectedReport.appointment_timezone, selectedReport.appointment_date)}
+                            {fmtDate(sr.appointment_date)}{fmtTime(sr.appointment_time, sr.appointment_timezone, sr.appointment_date)}
                           </div>
                         </div>
                       )}
 
                       {/* Duration */}
-                      {selectedReport.report_type === 'single' && selectedReport.appointment_duration && (
+                      {sr.report_type === 'single' && sr.appointment_duration && (
                         <div>
                           <div style={labelSt}>Duration</div>
-                          <div style={{ fontSize: '0.875rem', color: '#111827' }}>{selectedReport.appointment_duration} min</div>
+                          <div style={{ fontSize: '0.875rem', color: '#111827' }}>{sr.appointment_duration} min</div>
                         </div>
                       )}
 
                       {/* Date range — multiple sessions */}
-                      {selectedReport.report_type === 'multiple' && (
+                      {sr.report_type === 'multiple' && (
                         <div style={{ gridColumn: '1 / -1' }}>
                           <div style={labelSt}>Period</div>
                           <div style={{ fontSize: '0.875rem', color: '#111827' }}>
-                            {fmtDate(selectedReport.start_date)} – {fmtDate(selectedReport.end_date)}
+                            {fmtDate(sr.start_date)} – {fmtDate(sr.end_date)}
                           </div>
                         </div>
                       )}
 
                       {/* Attended */}
-                      {selectedReport.report_type !== 'note' && selectedReport.attended && (
+                      {sr.report_type !== 'note' && sr.attended && (
                         <div>
                           <div style={labelSt}>Attended</div>
-                          <div style={{ fontSize: '0.875rem', color: '#111827' }}>{selectedReport.attended}</div>
+                          <div style={{ fontSize: '0.875rem', color: '#111827' }}>{sr.attended}</div>
                         </div>
                       )}
                     </div>
                   </div>
 
                   {/* Shared notes */}
-                  {selectedReport.shared_notes && (
+                  {sr.shared_notes && (
                     <div style={sectionSt}>
                       <div style={labelSt}>Session notes</div>
                       <div style={{ fontSize: '0.875rem', color: '#374151', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
-                        {selectedReport.shared_notes}
+                        {sr.shared_notes}
                       </div>
                     </div>
                   )}
-                  {!selectedReport.shared_notes && (
+                  {!sr.shared_notes && (
                     <p style={{ fontSize: '0.82rem', color: '#9ca3af', textAlign: 'center', padding: '24px 0' }}>
                       No notes were included with this report.
                     </p>
                   )}
                 </div>
-              )}
+                )
+              })()}
             </div>
           )}
 
-          {/* ── Counselor / Admin form view ──────────────────────────────────── */}
-          {!isStudent && <div style={{ width: '100%', maxWidth: 760, margin: '0 auto' }}>
+          {/* ── Counselor / Admin form view (session reports only) ──────────── */}
+          {!isStudent && selectedReport?.type !== 'research_summary' && <div style={{ width: '100%', maxWidth: 760, margin: '0 auto' }}>
 
             {/* Post-send green banner */}
             {sentBanner && (

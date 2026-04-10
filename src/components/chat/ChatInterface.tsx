@@ -1096,10 +1096,10 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                 </Link>
               )}
 
-              {/* Session Reports link — all roles */}
+              {/* Session & Research Summaries link — all roles */}
               <Link href="/reports" className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all">
                 <span className="text-base leading-none">📝</span>
-                <span>Session Reports</span>
+                <span>Session &amp; Research Summaries</span>
               </Link>
 
               {/* Essays link — essays module enabled; counselors must have a student selected */}
@@ -1415,7 +1415,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                   )}
                 </p>
                 <p className="text-sm text-gray-500 mt-3 leading-relaxed">
-                  You can find all summaries later in <strong className="text-gray-700">Session Reports</strong>.
+                  You can find all summaries later in <strong className="text-gray-700">Session &amp; Research Summaries</strong>.
                 </p>
               </div>
             </div>
