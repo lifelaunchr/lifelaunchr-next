@@ -80,6 +80,9 @@ export default function AddFamilyModal({ open, onClose, onSuccess }: Props) {
       })
       if (!res.ok) {
         const d = await res.json().catch(() => ({}))
+        if (d.detail === 'COUNSELOR_AT_CAPACITY') {
+          throw new Error("You've reached your student limit. Upgrade your plan or archive inactive students to add more.")
+        }
         throw new Error(d.detail || 'Error ' + res.status)
       }
       const data: FamilyResult = await res.json()
