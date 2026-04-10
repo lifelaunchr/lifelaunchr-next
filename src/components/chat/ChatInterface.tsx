@@ -1408,8 +1408,8 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                   Generate session summary?
                 </h2>
                 <p className="text-sm text-gray-600 leading-relaxed">
-                  We&apos;ll create a 3–5 bullet recap of what was discussed — colleges,
-                  key findings, and recommended next steps.
+                  We&apos;ll create a structured summary covering key findings,
+                  relevant facts, what it means for you, and suggested next steps.
                   {isCounselor && forStudentId && (
                     <> If you&apos;re researching for a student, we&apos;ll also draft a follow-up email.</>
                   )}
