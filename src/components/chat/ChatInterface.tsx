@@ -242,13 +242,13 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
     try {
       const token = await getToken()
       // Counselors: use /sessions?for_student_id=X to see their OWN sessions tagged for a student.
-      // Parents: use /student-sessions/{id} to see the student's own sessions.
-      // Students: always /sessions — never use student-sessions (stale ll_for_student_id guard).
-      const url = forStudentId && isCounselor
+      // Sidebar sessions are scoped by student selection:
+      // - Student selected: show caller's sessions tagged for that student
+      // - No student selected: show caller's unscoped sessions only
+      // Works for counselors AND parents — both use the same endpoint.
+      const url = forStudentId
         ? `${apiUrl}/sessions?for_student_id=${forStudentId}`
-        : forStudentId && isParent
-        ? `${apiUrl}/student-sessions/${forStudentId}`
-        : `${apiUrl}/sessions`
+        : `${apiUrl}/sessions?unscoped=1`
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -257,7 +257,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
         setSessions(data)
       }
     } catch { /* silently ignore */ }
-  }, [userId, getToken, apiUrl, forStudentId, isCounselor, isParent])
+  }, [userId, getToken, apiUrl, forStudentId])
 
   // Auth sync — ensure user exists in our DB so profile/lists work.
   // Also claims any guest sessions from localStorage so history/usage carry over.
