@@ -52,6 +52,7 @@ interface ResearchSummary {
   student_name?: string
   student_id?: number
   researcher_user_id?: number
+  chat_session_id?: number
   started_at: string
   ended_at?: string
   created_at: string
@@ -1048,6 +1049,23 @@ function ReportsContent() {
                     {rs.summary}
                   </div>
                 </div>
+
+                {/* View chat transcript link */}
+                {rs.chat_session_id && (
+                  <div style={{ marginTop: 12, textAlign: 'center' }}>
+                    <Link
+                      href={`/chat?session=${rs.chat_session_id}`}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                        fontSize: '0.82rem', fontWeight: 600, color: '#4f46e5',
+                        textDecoration: 'none',
+                      }}
+                    >
+                      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+                      View chat transcript
+                    </Link>
+                  </div>
+                )}
 
                 {/* Counselor helper text */}
                 {!isStudent && (

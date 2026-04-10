@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth, useUser } from '@clerk/nextjs'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { ChatHeader } from './ChatHeader'
 import { ChatMessage } from './ChatMessage'
@@ -99,6 +100,7 @@ function formatSessionDate(iso: string): string {
 export function ChatInterface({ userId }: ChatInterfaceProps) {
   const { getToken } = useAuth()
   const { user: clerkUser } = useUser()
+  const searchParams = useSearchParams()
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
   // Strip any DB-only fields (created_at etc.) — Claude API only accepts {role, content}
@@ -458,6 +460,17 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
       if (textareaRef.current) textareaRef.current.style.height = 'auto'
     } catch { /* silently ignore */ }
   }, [userId, getToken, guestToken, apiUrl])
+
+  // Auto-load a session from ?session=X query param (e.g. from reports page)
+  useEffect(() => {
+    const sessionParam = searchParams.get('session')
+    if (sessionParam && userId) {
+      const sid = parseInt(sessionParam, 10)
+      if (!isNaN(sid)) {
+        loadSession(sid)
+      }
+    }
+  }, [searchParams, userId, loadSession])
 
   const sendMessage = useCallback(
     async (text: string) => {
