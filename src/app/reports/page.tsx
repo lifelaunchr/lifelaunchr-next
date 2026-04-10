@@ -1050,9 +1050,16 @@ function ReportsContent() {
                   </div>
                 </div>
 
+                {/* Counselor helper text — right after summary */}
+                {!isStudent && (
+                  <p style={{ fontSize: '0.78rem', color: '#9ca3af', fontStyle: 'italic', marginTop: 4, textAlign: 'center' }}>
+                    Copy and paste into your own email to customize before sending.
+                  </p>
+                )}
+
                 {/* View chat transcript link */}
                 {rs.chat_session_id && (
-                  <div style={{ marginTop: 12, textAlign: 'center' }}>
+                  <div style={{ marginTop: 16, textAlign: 'center' }}>
                     <Link
                       href={`/chat?session=${rs.chat_session_id}`}
                       style={{
@@ -1065,13 +1072,6 @@ function ReportsContent() {
                       View chat transcript
                     </Link>
                   </div>
-                )}
-
-                {/* Counselor helper text */}
-                {!isStudent && (
-                  <p style={{ fontSize: '0.78rem', color: '#9ca3af', fontStyle: 'italic', marginTop: 8, textAlign: 'center' }}>
-                    Copy and paste into your own email to customize before sending.
-                  </p>
                 )}
               </div>
             )
