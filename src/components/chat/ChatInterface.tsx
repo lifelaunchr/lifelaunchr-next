@@ -53,6 +53,7 @@ interface UsageData {
   sessions_used?: number          // caller's own pool — always present
   session_limit?: number | null
   session_reset_date?: string | null
+  first_session_completed?: boolean
   beneficiary?: {
     user_id: number
     full_name?: string | null
@@ -618,6 +619,16 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                     // Banner stays until dismissed or next message — don't auto-hide
                   }
                 }
+                // Mark first session as completed (fire-and-forget)
+                if (userId && usageData && !usageData.first_session_completed) {
+                  getToken().then(t =>
+                    fetch(`${apiUrl}/users/me/first-session-completed`, {
+                      method: 'POST',
+                      headers: { Authorization: `Bearer ${t}` },
+                    })
+                  ).catch(() => {})
+                  setUsageData(prev => prev ? { ...prev, first_session_completed: true } : prev)
+                }
                 // Refresh session list after each message
                 fetchSessions()
               } else if (data.type === 'session_limit_reached') {
@@ -679,7 +690,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
         abortControllerRef.current = null
       }
     },
-    [isStreaming, userId, getToken, serverSessionId, conversationHistory, guestToken, activeModules, apiUrl, fetchSessions, forStudentId]
+    [isStreaming, userId, getToken, serverSessionId, conversationHistory, guestToken, activeModules, apiUrl, fetchSessions, forStudentId, usageData]
   )
 
   const handleAddToList = useCallback(async (collegeName: string) => {
@@ -1305,6 +1316,7 @@ export function ChatInterface({ userId }: ChatInterfaceProps) {
                 onSendMessage={sendMessage}
                 accountType={isCounselor ? 'counselor' : isParent ? 'parent' : 'student'}
                 isFreeTier={!!(usageData?.effective_limit && usageData.effective_limit <= 30)}
+                isFirstSession={!!(userId && usageData && !usageData.first_session_completed)}
               />
             ) : (
               messages.map((msg) => (

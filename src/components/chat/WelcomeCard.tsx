@@ -4,6 +4,7 @@ interface WelcomeCardProps {
   onSendMessage: (text: string) => void
   accountType?: 'student' | 'counselor' | 'parent'
   isFreeTier?: boolean
+  isFirstSession?: boolean
 }
 
 const STARTERS = [
@@ -12,6 +13,27 @@ const STARTERS = [
   'How does financial aid work?',
   'Compare safety, match, and reach schools',
 ]
+
+const FIRST_SESSION_STARTERS: Record<string, string[]> = {
+  student: [
+    "I'm starting my college search — help me figure out where to begin",
+    'What kind of information should I gather before researching schools?',
+    'Help me understand the different types of colleges',
+    "I know my GPA and test scores — what colleges should I consider?",
+  ],
+  parent: [
+    "Help me understand the college admissions process",
+    "What should I know about financial aid and scholarships?",
+    "How can I support my child's college search?",
+    "What's a realistic college budget, and how do we plan for it?",
+  ],
+  counselor: [
+    'Show me what Soar can do for my students',
+    "Research colleges strong in computer science for a student with a 3.8 GPA",
+    "What financial aid options exist for a middle-income family?",
+    "Help me compare liberal arts colleges in the Northeast",
+  ],
+}
 
 const VALUE_PROPS = [
   {
@@ -51,7 +73,23 @@ function getHowDoesThisWorkMessage(accountType?: 'student' | 'counselor' | 'pare
   return 'How does Soar work, and what can it help me with as a student applying to colleges?'
 }
 
-export function WelcomeCard({ onSendMessage, accountType, isFreeTier }: WelcomeCardProps) {
+export function WelcomeCard({ onSendMessage, accountType, isFreeTier, isFirstSession }: WelcomeCardProps) {
+  const starters = isFirstSession
+    ? FIRST_SESSION_STARTERS[accountType || 'student'] || FIRST_SESSION_STARTERS.student
+    : STARTERS
+
+  const heading = isFirstSession
+    ? 'Welcome! Let\u2019s get started.'
+    : 'Welcome to Soar by LifeLaunchr'
+
+  const subtitle = isFirstSession
+    ? accountType === 'counselor'
+      ? 'Soar is your AI-powered research assistant. Ask anything about colleges, financial aid, or admissions \u2014 and tag research to specific students.'
+      : accountType === 'parent'
+        ? 'Soar helps you research colleges, scholarships, and financial aid on your child\u2019s behalf. Everything you find is shared with their planning team.'
+        : 'Soar is your personal college planning assistant. Tell me about yourself and what you\u2019re looking for \u2014 the more I know, the better I can help.'
+    : 'The college and career planning assistant that knows you, remembers everything, and gets smarter the more you use it.'
+
   return (
     <div className="flex-1 flex items-start justify-center pt-8 pb-4 px-4">
       <div className="max-w-2xl w-full text-center">
@@ -69,15 +107,15 @@ export function WelcomeCard({ onSendMessage, accountType, isFreeTier }: WelcomeC
             </svg>
           </div>
           <h2 className="text-2xl font-bold text-gray-800 mb-2">
-            Welcome to Soar by LifeLaunchr
+            {heading}
           </h2>
           <p className="text-gray-500 text-sm max-w-lg mx-auto">
-            The college and career planning assistant that knows you, remembers everything, and gets smarter the more you use it.
+            {subtitle}
           </p>
         </div>
 
-        {/* Value props */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6 text-left">
+        {/* Value props — shown to returning users, hidden on first session to keep focus on starters */}
+        {!isFirstSession && <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6 text-left">
           {VALUE_PROPS.map((vp) => (
             <div
               key={vp.title}
@@ -92,11 +130,11 @@ export function WelcomeCard({ onSendMessage, accountType, isFreeTier }: WelcomeC
               </div>
             </div>
           ))}
-        </div>
+        </div>}
 
         {/* Starter questions */}
         <div className="flex flex-wrap gap-2 justify-center mb-4">
-          {STARTERS.map((s) => (
+          {starters.map((s) => (
             <button
               key={s}
               onClick={() => onSendMessage(s)}
