@@ -165,7 +165,7 @@ export function ChatHeader({
 
         {/* Auth section */}
         {userId ? (
-          <UserButton />
+          <UserButton afterSignOutUrl="/chat" />
         ) : (
           <>
             <Link
