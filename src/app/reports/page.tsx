@@ -170,6 +170,12 @@ function ReportsContent() {
   const [coachName, setCoachName] = useState('')
   const [myUserId, setMyUserId] = useState<number | null>(null)
 
+  // Meeting brief state
+  const [briefLoading, setBriefLoading] = useState(false)
+  const [briefText, setBriefText] = useState<string | null>(null)
+  const [briefStudentName, setBriefStudentName] = useState('')
+  const [briefCopied, setBriefCopied] = useState(false)
+
   // Tenant admin state
   const [isTenantAdmin, setIsTenantAdmin] = useState(false)
   const [teamView, setTeamView] = useState(false)
@@ -377,6 +383,73 @@ function ReportsContent() {
     setEditResendMode(false)
     setResendConfirm(null)
   }
+
+  // ── Meeting Brief ──────────────────────────────────────────────────────────
+
+  const generateBrief = useCallback(async (studentId: number) => {
+    setBriefLoading(true)
+    setBriefText(null)
+    setSelectedReport(null)
+    setMobileShowDetail(true)
+    try {
+      const token = await getToken()
+      const res = await fetch(`${apiUrl}/meeting-brief`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ student_id: studentId }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setBriefText(data.brief)
+        setBriefStudentName(data.student_name || '')
+      } else {
+        const err = await res.json().catch(() => ({ detail: 'Unknown error' }))
+        setBriefText(`Error generating brief: ${err.detail || 'Unknown error'}`)
+      }
+    } catch {
+      setBriefText('Network error generating brief. Please try again.')
+    } finally {
+      setBriefLoading(false)
+    }
+  }, [getToken])
+
+  const saveBriefToReport = useCallback(async () => {
+    if (!briefText || !selectedStudentId) return
+    try {
+      const token = await getToken()
+      const today = new Date().toISOString().slice(0, 10)
+      const res = await fetch(`${apiUrl}/session-reports`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          student_id: selectedStudentId,
+          report_type: 'single',
+          appointment_type: 'College Admissions Coaching',
+          appointment_date: today,
+          raw_notes: briefText,
+          attended: 'Attended',
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setBriefText(null)
+        // Reload reports and select the new one
+        await loadReports(selectedStudentId)
+        if (data.id) {
+          // Fetch and select the new report
+          const rRes = await fetch(`${apiUrl}/session-reports/${data.id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          if (rRes.ok) {
+            const report = await rRes.json()
+            report.type = 'session_report'
+            setSelectedReport(report)
+            populateForm(report)
+          }
+        }
+      }
+    } catch { /* ignore */ }
+  }, [briefText, selectedStudentId, getToken, loadReports, populateForm])
 
   // ── AI Draft ───────────────────────────────────────────────────────────────
 
@@ -720,16 +793,32 @@ function ReportsContent() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <h1 style={{ fontSize: '1rem', fontWeight: 700, color: '#0c1b33', margin: 0 }}>Session &amp; Research Summaries</h1>
               {!teamView && !isStudent && (
-                <button
-                  onClick={() => { resetForm(); setMobileShowDetail(true) }}
-                  style={{
-                    background: '#4f46e5', color: '#fff', border: 'none',
-                    borderRadius: 8, padding: '6px 12px', fontSize: '0.78rem',
-                    fontWeight: 600, cursor: 'pointer',
-                  }}
-                >
-                  + New Report
-                </button>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {selectedStudentId && (
+                    <button
+                      onClick={() => generateBrief(selectedStudentId)}
+                      disabled={briefLoading}
+                      style={{
+                        background: briefLoading ? '#d1d5db' : '#059669', color: '#fff', border: 'none',
+                        borderRadius: 8, padding: '6px 10px', fontSize: '0.72rem',
+                        fontWeight: 600, cursor: briefLoading ? 'default' : 'pointer',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {briefLoading ? 'Generating…' : 'Meeting Brief'}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => { resetForm(); setBriefText(null); setMobileShowDetail(true) }}
+                    style={{
+                      background: '#4f46e5', color: '#fff', border: 'none',
+                      borderRadius: 8, padding: '6px 12px', fontSize: '0.78rem',
+                      fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+                    }}
+                  >
+                    + New Report
+                  </button>
+                </div>
               )}
             </div>
 
@@ -982,8 +1071,97 @@ function ReportsContent() {
               ← Back to list
             </button>
           )}
+          {/* ── Meeting Brief view ──────────────────────────────────────────── */}
+          {(briefLoading || briefText) && (
+            <div style={{ width: '100%', maxWidth: 760, margin: '0 auto' }}>
+              {/* Header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                <div>
+                  <span style={{
+                    display: 'inline-block', background: '#d1fae5', color: '#065f46',
+                    borderRadius: 4, padding: '2px 8px', fontSize: '0.7rem', fontWeight: 600,
+                    letterSpacing: '0.03em', marginBottom: 6,
+                  }}>
+                    Meeting Brief
+                  </span>
+                  {briefStudentName && (
+                    <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#111827', margin: '4px 0 0' }}>
+                      {briefStudentName}
+                    </h2>
+                  )}
+                </div>
+                {briefText && !briefLoading && (
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(briefText)
+                        setBriefCopied(true)
+                        setTimeout(() => setBriefCopied(false), 2000)
+                      }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        background: briefCopied ? '#dcfce7' : '#f3f4f6', border: 'none',
+                        borderRadius: 6, padding: '6px 12px', fontSize: '0.78rem',
+                        fontWeight: 600, cursor: 'pointer',
+                        color: briefCopied ? '#15803d' : '#374151',
+                      }}
+                    >
+                      {briefCopied ? '✓ Copied' : 'Copy'}
+                    </button>
+                    <button
+                      onClick={saveBriefToReport}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        background: '#4f46e5', border: 'none',
+                        borderRadius: 6, padding: '6px 12px', fontSize: '0.78rem',
+                        fontWeight: 600, cursor: 'pointer', color: '#fff',
+                      }}
+                    >
+                      Save to new report
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Content */}
+              {briefLoading ? (
+                <div style={{ textAlign: 'center', padding: '64px 0', color: '#9ca3af' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, fontSize: '0.875rem' }}>
+                    <svg className="animate-spin" style={{ width: 20, height: 20 }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Generating meeting brief…
+                  </div>
+                  <p style={{ fontSize: '0.78rem', marginTop: 8 }}>This may take a few seconds.</p>
+                </div>
+              ) : briefText && (
+                <div style={sectionSt}>
+                  <div style={{ fontSize: '0.875rem', color: '#374151', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+                    {briefText}
+                  </div>
+                </div>
+              )}
+
+              {/* Dismiss */}
+              {!briefLoading && (
+                <div style={{ textAlign: 'center', marginTop: 12 }}>
+                  <button
+                    onClick={() => setBriefText(null)}
+                    style={{
+                      fontSize: '0.78rem', color: '#9ca3af', background: 'none',
+                      border: 'none', cursor: 'pointer', textDecoration: 'underline',
+                    }}
+                  >
+                    Dismiss brief
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* ── Research Summary read-only view (all roles) ───────────────── */}
-          {selectedReport?.type === 'research_summary' && (() => {
+          {!briefLoading && !briefText && selectedReport?.type === 'research_summary' && (() => {
             const rs = selectedReport as ResearchSummary
             return (
               <div style={{ width: '100%', maxWidth: 760, margin: '0 auto' }}>
@@ -1078,7 +1256,7 @@ function ReportsContent() {
           })()}
 
           {/* ── Student / Parent read-only view (session reports only) ──────── */}
-          {isStudent && selectedReport?.type !== 'research_summary' && (
+          {!briefLoading && !briefText && isStudent && selectedReport?.type !== 'research_summary' && (
             <div style={{ width: '100%', maxWidth: 760, margin: '0 auto' }}>
               {!selectedReport ? (
                 <div style={{ textAlign: 'center', color: '#9ca3af', padding: '64px 0' }}>
@@ -1192,7 +1370,7 @@ function ReportsContent() {
           )}
 
           {/* ── Counselor / Admin form view (session reports only) ──────────── */}
-          {!isStudent && selectedReport?.type !== 'research_summary' && <div style={{ width: '100%', maxWidth: 760, margin: '0 auto' }}>
+          {!briefLoading && !briefText && !isStudent && selectedReport?.type !== 'research_summary' && <div style={{ width: '100%', maxWidth: 760, margin: '0 auto' }}>
 
             {/* Post-send green banner */}
             {sentBanner && (
