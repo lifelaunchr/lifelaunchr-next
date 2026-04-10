@@ -268,10 +268,10 @@ function JoinContent() {
                 </>
               )}
               <Link
-                href={arrivedSignedIn ? '/chat' : '/onboarding'}
+                href="/chat"
                 className="block w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl transition-colors text-sm"
               >
-                {arrivedSignedIn ? 'Go to Soar →' : 'Start using Soar →'}
+                Start using Soar →
               </Link>
             </>
           )}
