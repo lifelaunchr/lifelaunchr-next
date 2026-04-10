@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import Link from 'next/link'
 import SafetyEventModal from '@/components/safety/SafetyEventModal'
+import AddFamilyModal from '@/components/counselor/AddFamilyModal'
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -40,6 +41,7 @@ interface DashboardStudent {
   college_list_count: number
   last_login?: string
   has_safety_flag?: boolean
+  clerk_user_id?: string | null
 }
 
 // ── Label maps ────────────────────────────────────────────────────────────────
@@ -438,6 +440,7 @@ export default function DashboardPage() {
   const [safetyStudent, setSafetyStudent] = useState<DashboardStudent | null>(null)
   const [archiveConfirm, setArchiveConfirm] = useState(false)
   const [archiving, setArchiving]   = useState(false)
+  const [addFamilyOpen, setAddFamilyOpen] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -602,6 +605,14 @@ export default function DashboardPage() {
             className="flex-1 min-w-0 border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
 
+          {/* Add Family */}
+          <button
+            onClick={() => setAddFamilyOpen(true)}
+            className="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            + Add Family
+          </button>
+
           {/* Bulk archive */}
           {selected.size > 0 && (
             <button
@@ -652,6 +663,9 @@ export default function DashboardPage() {
                             <span>{s.full_name}</span>
                             {s.preferred_name && s.preferred_name !== s.full_name.split(' ')[0] && (
                               <span className="text-gray-400 font-normal text-sm">({s.preferred_name})</span>
+                            )}
+                            {!s.clerk_user_id && (
+                              <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-500">Invited</span>
                             )}
                           </div>
                           <div className="text-xs text-gray-400 mt-0.5">{s.high_school_name || s.email}</div>
@@ -739,6 +753,9 @@ export default function DashboardPage() {
                             {s.full_name}
                             {s.preferred_name && s.preferred_name !== s.full_name.split(' ')[0] && (
                               <span className="text-gray-400 font-normal"> ({s.preferred_name})</span>
+                            )}
+                            {!s.clerk_user_id && (
+                              <span className="inline-flex ml-1.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-500">Invited</span>
                             )}
                           </div>
                           <div className="text-xs text-gray-400">{s.email}</div>
@@ -863,6 +880,13 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Add Family modal */}
+      <AddFamilyModal
+        open={addFamilyOpen}
+        onClose={() => setAddFamilyOpen(false)}
+        onSuccess={load}
+      />
     </div>
   )
 }
