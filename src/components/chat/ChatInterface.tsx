@@ -1356,11 +1356,11 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                   key={msg.id}
                   message={msg}
                   isStreaming={isStreaming && msg.id === streamingMessageId}
-                  onAddToList={userId ? handleAddToList : undefined}
+                  onAddToList={userId && !isParent ? handleAddToList : undefined}
                   addingToList={addingToList}
-                  onAddToScholarshipList={userId ? handleAddToScholarshipList : undefined}
+                  onAddToScholarshipList={userId && !isParent ? handleAddToScholarshipList : undefined}
                   addingToScholarshipList={addingToScholarshipList}
-                  onAddToEnrichmentList={userId ? handleAddToEnrichmentList : undefined}
+                  onAddToEnrichmentList={userId && !isParent ? handleAddToEnrichmentList : undefined}
                   addingToEnrichmentList={addingToEnrichmentList}
                 />
               ))
