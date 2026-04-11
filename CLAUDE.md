@@ -101,10 +101,12 @@ Chat responses stream from `POST /chat` as Server-Sent Events. Event types: `sta
 When the backend emits a `limit_reached` SSE event, the chat UI shows a modal explaining the limit has been reached and how to get more messages.
 
 **"Want to add X?" Pattern**
-`ChatMessage.tsx` regex-matches specific phrases in Claude's response text to render inline Add buttons. Exact phrases required (case-sensitive):
+`ChatMessage.tsx` regex-matches specific phrases in Claude's response text to render inline Add buttons. Supported patterns (case-insensitive):
 - `Want to add [Name] to your research list?`
-- `Want to add [Name] to your scholarship list?`
-- `Want to add [Name] to your enrichment list?`
+- `Want to add [Name] to [Student Name]'s research list?`
+- Same patterns for `scholarship list` and `enrichment list`
+
+The regex uses `(?:your|.+?'s)` to match both "your" and any possessive name (e.g. "Katheryn's"). This is needed because in counselor research mode, Soar uses the student's name instead of "your."
 
 Do not change these phrases without also updating the regex in ChatMessage.tsx.
 
