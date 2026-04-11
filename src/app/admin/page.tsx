@@ -152,6 +152,7 @@ export default function AdminPage() {
   const [editingTier, setEditingTier] = useState<TierRow | null>(null)
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState('')
+  const [copiedInvite, setCopiedInvite] = useState(false)
 
   // Role flags
   const [isSuperAdmin, setIsSuperAdmin] = useState(false)
@@ -684,7 +685,7 @@ export default function AdminPage() {
                       <td className="px-2 py-2 sm:px-4 sm:py-3">
                         {(isAdmin || isSuperAdmin || isTenantAdmin) ? (
                           <button
-                            onClick={() => setEditingUser({ ...u })}
+                            onClick={() => { setEditingUser({ ...u }); setCopiedInvite(false); }}
                             className="text-xs text-indigo-500 hover:text-indigo-700 font-medium"
                           >
                             Edit
@@ -896,7 +897,7 @@ export default function AdminPage() {
                         </div>
                         {(isAdmin || isSuperAdmin) && (
                           <button
-                            onClick={() => setEditingUser({ ...u })}
+                            onClick={() => { setEditingUser({ ...u }); setCopiedInvite(false); }}
                             className="text-xs text-indigo-500 hover:text-indigo-700 font-medium"
                           >
                             Edit
@@ -1128,10 +1129,10 @@ export default function AdminPage() {
                     {editingUser.invite_url}
                   </div>
                   <button
-                    onClick={() => { navigator.clipboard.writeText(editingUser.invite_url!); }}
+                    onClick={() => { navigator.clipboard.writeText(editingUser.invite_url!); setCopiedInvite(true); setTimeout(() => setCopiedInvite(false), 2000); }}
                     className="px-4 py-2 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
                   >
-                    Copy Invite Link
+                    {copiedInvite ? 'Copied!' : 'Copy Invite Link'}
                   </button>
                 </div>
               )}
