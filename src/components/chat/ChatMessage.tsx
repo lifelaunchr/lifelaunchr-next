@@ -86,7 +86,7 @@ export function ChatMessage({ message, isStreaming, onAddToList, addingToList, o
         ) : (
           <>
             <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
+              remarkPlugins={[[remarkGfm, { singleTilde: false, strikethrough: false }]]}
               components={{
                 h2: ({ children }) => (
                   <h2 className="text-base font-bold mt-3 mb-1.5 first:mt-0">{children}</h2>
