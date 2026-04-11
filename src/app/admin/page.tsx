@@ -489,7 +489,7 @@ export default function AdminPage() {
 
   const filteredUsers = users
     .filter(u =>
-      (typeFilter === 'all' || u.account_type === typeFilter) &&
+      (typeFilter === 'all' || (typeFilter === 'pending' ? !u.clerk_user_id : u.account_type === typeFilter)) &&
       (!search ||
         u.email?.toLowerCase().includes(search.toLowerCase()) ||
         u.full_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -611,6 +611,7 @@ export default function AdminPage() {
                 <option value="student">Students</option>
                 <option value="parent">Parents</option>
                 <option value="counselor">Counselors</option>
+                <option value="pending">Pending invites</option>
               </select>
               <span className="text-sm text-gray-400">{filteredUsers.length} users</span>
             </div>
@@ -1116,6 +1117,22 @@ export default function AdminPage() {
                       </button>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* Invite link — only for pending users */}
+              {!editingUser.clerk_user_id && editingUser.invite_url && (
+                <div className="border-t border-gray-100 pt-4">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Invite Link</p>
+                  <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600 break-all font-mono mb-2">
+                    {editingUser.invite_url}
+                  </div>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(editingUser.invite_url!); }}
+                    className="px-4 py-2 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
+                  >
+                    Copy Invite Link
+                  </button>
                 </div>
               )}
             </div>
