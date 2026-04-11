@@ -46,30 +46,30 @@ interface Tenant {
 // ── "Make the most of Soar" card content ──────────────────────────────────────
 const SOAR_CARDS: Record<string, { tagline: string; cards: { emoji: string; title: string; desc: string }[] }> = {
   student: {
-    tagline: "Soar is your conversation partner for the college journey — not just a more verbose Google.",
+    tagline: "Soar is a conversation partner, not just a more verbose Google. Talk to it like you'd talk to your coach, parent, or friend.",
     cards: [
-      { emoji: '🎯', title: 'Ask me anything about colleges', desc: 'I know about thousands of schools — admission stats, programs, campus life, costs, and more. Just name a school and I\'ll dive in.' },
-      { emoji: '🧩', title: 'I\'ll help you find your fit', desc: 'Tell me your interests, goals, and what matters to you. I\'ll suggest schools that match — not just the famous ones.' },
-      { emoji: '🔬', title: 'Explore majors and careers', desc: 'Not sure what to study? Let\'s explore together. I\'ll connect your interests to majors and career paths.' },
-      { emoji: '✍️', title: 'Essay and application help', desc: 'I\'ll help you brainstorm topics, build structure, and refine your approach. (I won\'t write it for you — that\'s your voice!)' },
+      { emoji: '🔍', title: 'Research any college, major, or career in depth', desc: 'I know about 1,800+ colleges, 6,700 scholarships, and 250+ summer programs. Ask me about any of them — I\'ll help you find your best fits and explore what life will be like at Yale, explore the careers you can pursue after an economics major, or help you find a path to a career in healthcare.' },
+      { emoji: '📊', title: 'See where you stand', desc: 'I calculate your admissions likelihood at every school on your list based on your GPA, test scores, extracurriculars, athletics and the school\'s actual admit data. Add a school and I\'ll tell you if it\'s a Likely, Target, Reach, or Far Reach.' },
+      { emoji: '📝', title: 'Build standout applications', desc: 'I can help you create your UC activities list, brainstorm essay themes, learn to write effectively, find scholarships you qualify for, and research summer programs, all from one conversation.' },
+      { emoji: '🤝', title: 'Stay connected with your team', desc: 'Everything you research here is shared with your counselor and parents. They can track your progress, and you\'ll get session reports and deadline reminders automatically.' },
     ],
   },
   counselor: {
-    tagline: "Soar is a research partner that knows what you know about colleges — and never forgets.",
+    tagline: "Soar is a conversation partner, not just a more verbose Google. Treat it as an assistant who can help you be more effective in your work with students and families. Talk to it like you'd talk to a student or a professional colleague.",
     cards: [
-      { emoji: '🔍', title: 'Research any college instantly', desc: 'I have data on thousands of schools — admissions, outcomes, programs, costs. Ask about any school for any student.' },
-      { emoji: '👤', title: 'Explore fit for your students', desc: 'Select a student from the sidebar and I\'ll tailor my research to their profile, interests, and goals.' },
-      { emoji: '📋', title: 'Build and compare lists', desc: 'I can add schools to a student\'s research list as we discuss them. Review and reorganize on the Lists page.' },
-      { emoji: '📝', title: 'Draft session reports', desc: 'After a session, I can draft a summary report you can review and send to families.' },
+      { emoji: '🔍', title: 'Research on behalf of any student or for yourself', desc: 'Select a student from the sidebar and I load their full profile, GPA, test scores, college list, and activities. All the work you do on their behalf is stored and shared with them, so you\'re all on the same page always. Soar will help you explore each topic in depth and generate research summaries you can share.' },
+      { emoji: '📄', title: 'Meeting prep in one click', desc: 'Generate a pre-session brief that pulls your student\'s profile, recent research, and session history into a structured prep document, so nothing ever gets missed.' },
+      { emoji: '✉️', title: 'AI-drafted, counselor-edited session reports', desc: 'After each appointment, enter your notes or a transcription, and I\'ll draft a professional summary. Review it, edit it, and send it to the family — all from one screen.' },
+      { emoji: '📊', title: 'Track your full caseload', desc: 'Your student dashboard shows status, engagement type, deadlines, essay progress, and notes for every student. Filter, sort, and manage from one view.' },
     ],
   },
   parent: {
-    tagline: "Soar helps you stay informed without stepping on your student's process.",
+    tagline: "Soar is a conversation partner, not just a more verbose Google. Talk to it like you'd talk to your teen, counselor or trusted family member.",
     cards: [
-      { emoji: '🎓', title: 'Ask me anything about colleges', desc: 'I know about thousands of schools — admissions, programs, costs, and more. Ask me anything and I\'ll share what I know.' },
-      { emoji: '📅', title: 'Understand the process', desc: 'Financial aid, deadlines, test requirements, application types — I\'ll help you make sense of it all.' },
-      { emoji: '💡', title: 'Support without taking over', desc: 'I\'ll give you the facts so you can have informed conversations with your student. This is their journey — you\'re the support crew.' },
-      { emoji: '🔒', title: 'Your conversations are private', desc: 'Your chats are separate from your student\'s. You can ask the awkward questions here.' },
+      { emoji: '💬', title: 'Ask anything about the process', desc: 'Financial aid, timelines, what to expect at each stage, how to evaluate schools — I can explain it all in plain English, tailored to your family\'s situation.' },
+      { emoji: '📋', title: 'See your student\'s progress', desc: 'View their college research list, see which schools they\'re considering, and read session reports from their counselor — all in one place.' },
+      { emoji: '💰', title: 'Understand the real cost', desc: 'I can help you estimate net price at specific schools, explore merit and need-based aid options, and find scholarships your student may qualify for.' },
+      { emoji: '🔔', title: 'Never miss a deadline', desc: 'Get reminders for application deadlines, scholarship due dates, and test registration dates so your family stays on track.' },
     ],
   },
 }
@@ -438,65 +438,72 @@ export default function OnboardingPage() {
   }
 
   // ── Generate starter questions based on role and collected data ────────────
+  const getGradeLevel = (): string => {
+    if (!gradYear) return 'high school student'
+    const diff = parseInt(gradYear) - CURRENT_YEAR
+    if (diff <= 0) return 'senior'
+    if (diff === 1) return 'junior'
+    if (diff === 2) return 'sophomore'
+    return 'freshman'
+  }
+
   const getStarterQuestions = (): string[] => {
     if (isStudent) {
       const hasColleges = selectedColleges.length > 0
       const hasMajor = intendedMajors.trim() && !intendedMajors.toLowerCase().includes('help me figure')
-      const hasProfile = !!(gradYear || homeState || gpaWeighted || satTotal || actComposite)
 
-      if (hasProfile && hasColleges) {
+      if (hasColleges) {
         const college = selectedColleges[0].name
         const qs = [
-          `What can you tell me about ${college}?`,
-          `Am I a good fit for ${college}? What are my chances?`,
-          'What other schools should I look at based on my profile?',
+          `Tell me about ${college} — what's it really like there?`,
+          `How competitive am I at ${college}?`,
+          `Find me 5 more schools similar to ${college}`,
         ]
-        if (hasMajor) qs.push(`I'm interested in ${intendedMajors} — what should I know about that field?`)
-        qs.push('Help me start thinking about my college essay')
+        if (hasMajor) qs.push(`What kind of careers can a degree in ${intendedMajors} lead to?`)
+        else qs.push('Help me figure out what I want to study')
         return qs
       }
 
-      if (hasProfile) {
-        const qs = ['What colleges should I be looking at with my GPA and scores?']
-        if (hasMajor) qs.push(`I'm interested in ${intendedMajors} — what schools are strong in that?`)
-        qs.push(
-          "What's the difference between Early Decision and Early Action?",
-          'Help me figure out what I want in a college',
-        )
-        if (!hasMajor) qs.push("I don't know what I want to study — can you help me explore?")
-        return qs
+      if (hasMajor) {
+        return [
+          `Build me a balanced college list for ${intendedMajors}`,
+          `What are the best ${intendedMajors} programs for someone with my profile?`,
+          `I'm interested in ${intendedMajors} — where should I start looking, and what are some alternatives?`,
+          `What scholarships are available for ${intendedMajors} students?`,
+        ]
       }
 
       return [
-        "I'm just starting my college search — where do I begin?",
-        'How do I figure out what I want to study?',
-        'What are the different types of colleges?',
-        'Help me understand financial aid and scholarships',
+        'Help me put together a college research list',
+        "I don't know what I want to major in yet",
+        `What should I be doing right now as a ${getGradeLevel()}?`,
+        'Tell me about some interesting summer programs',
       ]
     }
 
     if (isCounselor) {
       if (invitedStudentName) {
         return [
-          `What can you tell me about ${invitedStudentName}'s profile so far?`,
-          `What colleges might be a good fit for ${invitedStudentName}?`,
+          `Help me create a college research list for ${invitedStudentName} and guide me through the process`,
+          `What can you tell me about ${invitedStudentName}'s profile and where they stand?`,
+          `What schools should ${invitedStudentName} be considering based on their profile?`,
           `Help me prepare for my first meeting with ${invitedStudentName}`,
-          `What should I research before my next session with ${invitedStudentName}?`,
         ]
       }
       return [
-        'Tell me about a college — I want to see what you know',
+        'Tell me about UT Austin — admissions, programs, and what similar schools I should know about',
+        'Which schools have the best direct-entry BSN programs?',
         'How can I use Soar most effectively with my students?',
-        'Walk me through how the student research flow works',
+        'Walk me through how student research sessions work',
       ]
     }
 
     // Parent
     return [
-      'How does financial aid work?',
-      "What's the difference between need-based and merit-based aid?",
-      'How can I support my student without adding stress?',
-      'What questions should I be asking about colleges?',
+      'What should our family be doing right now?',
+      'How do financial aid and scholarships actually work?',
+      'What kind of profile does it take to get into Duke?',
+      'Are we already behind in the process?',
     ]
   }
 
