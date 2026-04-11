@@ -15,21 +15,21 @@ interface ChatMessageProps {
   addingToEnrichmentList?: string | null
 }
 
-// Detect "Want to add [College Name] to your research list?" pattern
+// Detect "Want to add [College Name] to your/[Name]'s research list?" pattern
 function extractResearchListOffer(content: string): string | null {
-  const match = content.match(/Want to add (.+?) to your research list\?/i)
+  const match = content.match(/Want to add (.+?) to (?:your|.+?'s) research list\?/i)
   return match ? match[1].trim() : null
 }
 
-// Detect "Want to add [Scholarship Name] to your scholarship list?" pattern
+// Detect "Want to add [Scholarship Name] to your/[Name]'s scholarship list?" pattern
 function extractScholarshipListOffer(content: string): string | null {
-  const match = content.match(/Want to add (.+?) to your scholarship list\?/i)
+  const match = content.match(/Want to add (.+?) to (?:your|.+?'s) scholarship list\?/i)
   return match ? match[1].trim() : null
 }
 
-// Detect "Want to add [Program Name] to your enrichment list?" pattern
+// Detect "Want to add [Program Name] to your/[Name]'s enrichment list?" pattern
 function extractEnrichmentListOffer(content: string): string | null {
-  const match = content.match(/Want to add (.+?) to your enrichment list\?/i)
+  const match = content.match(/Want to add (.+?) to (?:your|.+?'s) enrichment list\?/i)
   return match ? match[1].trim() : null
 }
 
