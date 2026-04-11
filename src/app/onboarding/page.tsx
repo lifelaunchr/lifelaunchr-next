@@ -522,7 +522,7 @@ export default function OnboardingPage() {
 
   // ── Header text varies by step ──────────────────────────────────────────────
   const headerTitle = step <= 3 ? 'Welcome to Soar'
-    : step === 4 ? 'Make the most of Soar'
+    : step === 4 ? 'Make the Most of Soar'
     : step === 5 ? 'Invite your first student'
     : 'What would you like to explore first?'
 
