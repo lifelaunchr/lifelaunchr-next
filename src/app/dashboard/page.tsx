@@ -102,7 +102,7 @@ function fmtDate(d?: string) {
 function relativeTime(d?: string) {
   if (!d) return '—'
   const diff = Math.floor((Date.now() - new Date(d).getTime()) / 86400000)
-  if (diff === 0) return 'Today'
+  if (diff <= 0) return 'Today'
   if (diff === 1) return 'Yesterday'
   if (diff < 7)  return `${diff} days ago`
   if (diff < 30) return `${Math.floor(diff / 7)}w ago`
@@ -121,7 +121,7 @@ function EditPanel({
 }) {
   const [form, setForm] = useState<Partial<DashboardStudent>>({ ...student })
   const [saving, setSaving] = useState(false)
-  const [inviteUrl, setInviteUrl] = useState<string | null>(null)
+  const [inviteUrl, setInviteUrl] = useState<string | null>(student.invite_url ?? null)
   const [inviteExpiry, setInviteExpiry] = useState<string | null>(null)
   const [inviteLoading, setInviteLoading] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -340,7 +340,8 @@ function EditPanel({
             />
           </section>
 
-          {/* Invite */}
+          {/* Invite — only show for pending (not yet signed-up) students */}
+          {!student.clerk_user_id && (
           <section>
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Invite Link</h3>
             {inviteUrl ? (
@@ -348,9 +349,11 @@ function EditPanel({
                 <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600 break-all font-mono">
                   {inviteUrl}
                 </div>
+                {inviteExpiry && (
                 <p className="text-xs text-gray-400">
-                  Expires {inviteExpiry ? fmtDate(inviteExpiry) : '—'}
+                  Expires {fmtDate(inviteExpiry)}
                 </p>
+                )}
                 <div className="flex gap-2">
                   <button
                     onClick={copyInvite}
@@ -377,6 +380,7 @@ function EditPanel({
               </button>
             )}
           </section>
+          )}
         </div>
 
         {/* Footer */}
