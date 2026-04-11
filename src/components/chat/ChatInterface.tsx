@@ -162,6 +162,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
+  const onboardingAutoSentRef = useRef(false)
 
   // Fetch tenant branding on mount (public endpoint, no auth required)
   useEffect(() => {
@@ -346,6 +347,18 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
       }
     }
   }, [isParent, myStudents, forStudentId])
+
+  // ── Onboarding auto-select: if counselor just invited a student, select them ──
+  useEffect(() => {
+    const studentId = sessionStorage.getItem('onboarding_for_student_id')
+    if (!studentId) return
+    sessionStorage.removeItem('onboarding_for_student_id')
+    const id = parseInt(studentId, 10)
+    if (!isNaN(id)) {
+      setForStudentId(id)
+      localStorage.setItem('ll_for_student_id', String(id))
+    }
+  }, [])
 
   // Auto-scroll to bottom (only when there are messages — don't scroll the welcome card)
   useEffect(() => {
@@ -694,6 +707,23 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
     },
     [isStreaming, userId, getToken, serverSessionId, conversationHistory, guestToken, activeModules, apiUrl, fetchSessions, forStudentId, usageData]
   )
+
+  // ── Onboarding auto-send: fire the first question from the question picker ──
+  useEffect(() => {
+    if (onboardingAutoSentRef.current || !userId) return
+    const question = sessionStorage.getItem('onboarding_first_question')
+    if (!question) return
+
+    // Delay to let forStudentId settle and UI render the welcome state
+    const timer = setTimeout(() => {
+      if (onboardingAutoSentRef.current) return
+      onboardingAutoSentRef.current = true
+      sessionStorage.removeItem('onboarding_first_question')
+      sendMessage(question)
+    }, 800)
+
+    return () => clearTimeout(timer)
+  }, [userId, sendMessage])
 
   const handleAddToList = useCallback(async (collegeName: string) => {
     if (!userId) return

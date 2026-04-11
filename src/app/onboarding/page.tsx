@@ -43,7 +43,38 @@ interface Tenant {
   display_name: string
 }
 
-// Step dots indicator for the 3-step student flow
+// ── "Make the most of Soar" card content ──────────────────────────────────────
+const SOAR_CARDS: Record<string, { tagline: string; cards: { emoji: string; title: string; desc: string }[] }> = {
+  student: {
+    tagline: "Soar is your conversation partner for the college journey — not just a more verbose Google.",
+    cards: [
+      { emoji: '🎯', title: 'Ask me anything about colleges', desc: 'I know about thousands of schools — admission stats, programs, campus life, costs, and more. Just name a school and I\'ll dive in.' },
+      { emoji: '🧩', title: 'I\'ll help you find your fit', desc: 'Tell me your interests, goals, and what matters to you. I\'ll suggest schools that match — not just the famous ones.' },
+      { emoji: '🔬', title: 'Explore majors and careers', desc: 'Not sure what to study? Let\'s explore together. I\'ll connect your interests to majors and career paths.' },
+      { emoji: '✍️', title: 'Essay and application help', desc: 'I\'ll help you brainstorm topics, build structure, and refine your approach. (I won\'t write it for you — that\'s your voice!)' },
+    ],
+  },
+  counselor: {
+    tagline: "Soar is a research partner that knows what you know about colleges — and never forgets.",
+    cards: [
+      { emoji: '🔍', title: 'Research any college instantly', desc: 'I have data on thousands of schools — admissions, outcomes, programs, costs. Ask about any school for any student.' },
+      { emoji: '👤', title: 'Explore fit for your students', desc: 'Select a student from the sidebar and I\'ll tailor my research to their profile, interests, and goals.' },
+      { emoji: '📋', title: 'Build and compare lists', desc: 'I can add schools to a student\'s research list as we discuss them. Review and reorganize on the Lists page.' },
+      { emoji: '📝', title: 'Draft session reports', desc: 'After a session, I can draft a summary report you can review and send to families.' },
+    ],
+  },
+  parent: {
+    tagline: "Soar helps you stay informed without stepping on your student's process.",
+    cards: [
+      { emoji: '🎓', title: 'Ask me anything about colleges', desc: 'I know about thousands of schools — admissions, programs, costs, and more. Ask me anything and I\'ll share what I know.' },
+      { emoji: '📅', title: 'Understand the process', desc: 'Financial aid, deadlines, test requirements, application types — I\'ll help you make sense of it all.' },
+      { emoji: '💡', title: 'Support without taking over', desc: 'I\'ll give you the facts so you can have informed conversations with your student. This is their journey — you\'re the support crew.' },
+      { emoji: '🔒', title: 'Your conversations are private', desc: 'Your chats are separate from your student\'s. You can ask the awkward questions here.' },
+    ],
+  },
+}
+
+// Step dots indicator for the 3-step student profile flow (steps 1–3)
 function StepDots({ step }: { step: number }) {
   return (
     <div className="flex items-center gap-2 justify-center mb-6">
@@ -69,8 +100,8 @@ export default function OnboardingPage() {
   const router = useRouter()
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
-  // Step: 1 = role, 2 = student profile, 3 = college wishlist
-  const [step, setStep] = useState<1 | 2 | 3>(1)
+  // Steps: 1=role, 2=student profile, 3=college wishlist, 4=Make the most of Soar, 5=invite family (counselor), 6=question picker
+  const [step, setStep] = useState<number>(1)
 
   // Role / org
   const [accountType, setAccountType] = useState<string>('')
@@ -108,16 +139,26 @@ export default function OnboardingPage() {
   const [error, setError] = useState('')
   const [migrationLinking, setMigrationLinking] = useState(false)
 
+  // Invite family (step 5 — counselors only)
+  const [invStudentName, setInvStudentName] = useState('')
+  const [invStudentEmail, setInvStudentEmail] = useState('')
+  const [invParentName, setInvParentName] = useState('')
+  const [invParentEmail, setInvParentEmail] = useState('')
+  const [invSubmitting, setInvSubmitting] = useState(false)
+  const [invError, setInvError] = useState('')
+  const [invitedStudentId, setInvitedStudentId] = useState<number | null>(null)
+  const [invitedStudentName, setInvitedStudentName] = useState('')
+
+  // Question picker (step 6)
+  const [customQuestion, setCustomQuestion] = useState('')
+
   const isCounselor = ['school_counselor', 'iec', 'admissions_coach'].includes(accountType)
   const isSchoolCounselor = accountType === 'school_counselor'
   const needsOrg = accountType === 'iec' || accountType === 'admissions_coach'
   const isStudent = accountType === 'student'
+  const isParent = accountType === 'parent'
 
   // ── Migration / family invite: skip role picker if account type is known ─────
-  // When a user arrives via /accept-invite (migration or family invite), the
-  // token is stored in sessionStorage. We call /auth/sync to claim the
-  // pre-created row by email match, then skip the role picker if the account
-  // type is already set (e.g. student created by a counselor via Add Family).
   useEffect(() => {
     const token = sessionStorage.getItem('migration_invite_token')
     if (!token || !clerkUser) return
@@ -234,7 +275,7 @@ export default function OnboardingPage() {
     if (isStudent) {
       setStep(2)
     } else {
-      handleFinalSubmit()
+      handleSaveData()
     }
   }
 
@@ -244,8 +285,8 @@ export default function OnboardingPage() {
     setStep(3)
   }
 
-  // ── Final submit ────────────────────────────────────────────────────────────
-  const handleFinalSubmit = async () => {
+  // ── Save account data, then advance to step 4 ─────────────────────────────
+  const handleSaveData = async () => {
     setSubmitting(true)
     setError('')
     try {
@@ -321,19 +362,146 @@ export default function OnboardingPage() {
         }
       }
 
-      // If the user arrived via an invite link before signing up, process it now
-      const pendingInviteCode = sessionStorage.getItem('pending_invite_code')
-      if (pendingInviteCode) {
-        sessionStorage.removeItem('pending_invite_code')
-        router.push(`/join?code=${pendingInviteCode}`)
-      } else {
-        router.push('/chat')
-      }
+      // Advance to "Make the most of Soar" cards
+      setStep(4)
     } catch {
       setError('Something went wrong. Please try again.')
+    } finally {
       setSubmitting(false)
     }
   }
+
+  // ── Invite family submit (step 5) ──────────────────────────────────────────
+  const handleInviteSubmit = async () => {
+    setInvError('')
+    if (!invStudentName.trim()) { setInvError('Student name is required.'); return }
+    if (!invStudentEmail.trim()) { setInvError('Student email is required.'); return }
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!re.test(invStudentEmail.trim())) { setInvError('Please enter a valid email address.'); return }
+    if (invParentEmail.trim() && !re.test(invParentEmail.trim())) { setInvError('Please enter a valid parent email.'); return }
+    if (invParentEmail.trim() && !invParentName.trim()) { setInvError('Parent name is required when email is provided.'); return }
+
+    setInvSubmitting(true)
+    try {
+      const token = await getToken()
+      const parents = invParentName.trim() && invParentEmail.trim()
+        ? [{ full_name: invParentName.trim(), email: invParentEmail.trim() }]
+        : []
+
+      const res = await fetch(`${apiUrl}/counselors/me/families`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          student: { full_name: invStudentName.trim(), email: invStudentEmail.trim() },
+          parents,
+        }),
+      })
+
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        if (d.detail === 'COUNSELOR_AT_CAPACITY') {
+          throw new Error("You've reached your student limit. You can add students later from your dashboard.")
+        }
+        throw new Error(d.detail || 'Something went wrong.')
+      }
+
+      const data = await res.json()
+      setInvitedStudentId(data.student.id)
+      setInvitedStudentName(invStudentName.trim())
+      setStep(6)
+    } catch (e: unknown) {
+      setInvError(e instanceof Error ? e.message : 'Something went wrong.')
+    } finally {
+      setInvSubmitting(false)
+    }
+  }
+
+  // ── Start chat with selected question (step 6) ────────────────────────────
+  const handleStartChat = (question: string) => {
+    if (!question.trim()) return
+    sessionStorage.setItem('onboarding_first_question', question.trim())
+
+    // If counselor invited a student, auto-select them in chat
+    if (invitedStudentId) {
+      sessionStorage.setItem('onboarding_for_student_id', String(invitedStudentId))
+    }
+
+    // If the user arrived via an invite link before signing up, process it now
+    const pendingInviteCode = sessionStorage.getItem('pending_invite_code')
+    if (pendingInviteCode) {
+      sessionStorage.removeItem('pending_invite_code')
+      router.push(`/join?code=${pendingInviteCode}`)
+    } else {
+      router.push('/chat')
+    }
+  }
+
+  // ── Generate starter questions based on role and collected data ────────────
+  const getStarterQuestions = (): string[] => {
+    if (isStudent) {
+      const hasColleges = selectedColleges.length > 0
+      const hasMajor = intendedMajors.trim() && !intendedMajors.toLowerCase().includes('help me figure')
+      const hasProfile = !!(gradYear || homeState || gpaWeighted || satTotal || actComposite)
+
+      if (hasProfile && hasColleges) {
+        const college = selectedColleges[0].name
+        const qs = [
+          `What can you tell me about ${college}?`,
+          `Am I a good fit for ${college}? What are my chances?`,
+          'What other schools should I look at based on my profile?',
+        ]
+        if (hasMajor) qs.push(`I'm interested in ${intendedMajors} — what should I know about that field?`)
+        qs.push('Help me start thinking about my college essay')
+        return qs
+      }
+
+      if (hasProfile) {
+        const qs = ['What colleges should I be looking at with my GPA and scores?']
+        if (hasMajor) qs.push(`I'm interested in ${intendedMajors} — what schools are strong in that?`)
+        qs.push(
+          "What's the difference between Early Decision and Early Action?",
+          'Help me figure out what I want in a college',
+        )
+        if (!hasMajor) qs.push("I don't know what I want to study — can you help me explore?")
+        return qs
+      }
+
+      return [
+        "I'm just starting my college search — where do I begin?",
+        'How do I figure out what I want to study?',
+        'What are the different types of colleges?',
+        'Help me understand financial aid and scholarships',
+      ]
+    }
+
+    if (isCounselor) {
+      if (invitedStudentName) {
+        return [
+          `What can you tell me about ${invitedStudentName}'s profile so far?`,
+          `What colleges might be a good fit for ${invitedStudentName}?`,
+          `Help me prepare for my first meeting with ${invitedStudentName}`,
+          `What should I research before my next session with ${invitedStudentName}?`,
+        ]
+      }
+      return [
+        'Tell me about a college — I want to see what you know',
+        'How can I use Soar most effectively with my students?',
+        'Walk me through how the student research flow works',
+      ]
+    }
+
+    // Parent
+    return [
+      'How does financial aid work?',
+      "What's the difference between need-based and merit-based aid?",
+      'How can I support my student without adding stress?',
+      'What questions should I be asking about colleges?',
+    ]
+  }
+
+  // ── Get role key for card content ──────────────────────────────────────────
+  const roleKey = isCounselor ? 'counselor' : isParent ? 'parent' : 'student'
+  const soarContent = SOAR_CARDS[roleKey]
 
   // ── Migration linking screen ─────────────────────────────────────────────────
   if (migrationLinking) {
@@ -343,6 +511,19 @@ export default function OnboardingPage() {
       </main>
     )
   }
+
+  // ── Header text varies by step ──────────────────────────────────────────────
+  const headerTitle = step <= 3 ? 'Welcome to Soar'
+    : step === 4 ? 'Make the most of Soar'
+    : step === 5 ? 'Invite your first student'
+    : 'What would you like to explore first?'
+
+  const headerSubtitle = step === 1 ? 'Tell us a bit about yourself so we can personalize your experience.'
+    : step === 2 ? 'Give us a little info so we can help you better — no worries if you\'re not sure yet.'
+    : step === 3 ? 'Any colleges already on your radar? We\'ll add them to your research list.'
+    : step === 4 ? soarContent.tagline
+    : step === 5 ? 'Add a student so you can start researching together. You can always do this later from your dashboard.'
+    : 'Pick a question to get started, or type your own.'
 
   // ── Shared card wrapper ──────────────────────────────────────────────────────
   return (
@@ -356,12 +537,8 @@ export default function OnboardingPage() {
               <path d="M11.7 2.805a.75.75 0 01.6 0A60.65 60.65 0 0122.83 8.72a.75.75 0 01-.231 1.337 49.949 49.949 0 00-9.902 3.912l-.003.002-.34.18a.75.75 0 01-.707 0A50.009 50.009 0 007.5 12.174v-.224c0-.131.067-.248.172-.311a54.614 54.614 0 014.653-2.52.75.75 0 00-.65-1.352 56.129 56.129 0 00-4.78 2.589 1.858 1.858 0 00-.859 1.228 49.803 49.803 0 00-4.634-1.527.75.75 0 01-.231-1.337A60.653 60.653 0 0111.7 2.805z" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-white mb-1">Welcome to Soar</h1>
-          <p className="text-slate-400 text-sm">
-            {step === 1 && 'Tell us a bit about yourself so we can personalize your experience.'}
-            {step === 2 && 'Give us a little info so we can help you better — no worries if you\'re not sure yet.'}
-            {step === 3 && 'Any colleges already on your radar? We\'ll add them to your research list.'}
-          </p>
+          <h1 className="text-2xl font-bold text-white mb-1">{headerTitle}</h1>
+          <p className="text-slate-400 text-sm">{headerSubtitle}</p>
         </div>
 
         {/* ── STEP 1: Role picker ──────────────────────────────────────────── */}
@@ -527,7 +704,7 @@ export default function OnboardingPage() {
               disabled={submitting || !accountType}
               className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-300 text-white font-semibold py-3 rounded-xl transition-colors text-sm disabled:cursor-not-allowed"
             >
-              {submitting ? 'Setting up your account…' : isStudent ? 'Next →' : 'Get started →'}
+              {submitting ? 'Setting up your account…' : 'Next →'}
             </button>
 
             <p className="text-center text-xs text-gray-400 mt-3">
@@ -745,28 +922,154 @@ export default function OnboardingPage() {
                 ← Back
               </button>
               <button
-                onClick={handleFinalSubmit}
+                onClick={handleSaveData}
                 disabled={submitting}
                 className="flex-1 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-300 text-white font-semibold py-2.5 rounded-xl transition-colors text-sm disabled:cursor-not-allowed"
               >
-                {submitting
-                  ? 'Setting up your account…'
-                  : selectedColleges.length > 0
-                  ? `Let's go! →`
-                  : `Get started →`}
+                {submitting ? 'Setting up your account…' : 'Next →'}
               </button>
             </div>
 
             {!submitting && (
               <div className="text-center mt-3">
                 <button
-                  onClick={handleFinalSubmit}
+                  onClick={handleSaveData}
                   className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2"
                 >
-                  Skip and let Soar help me build my list
+                  Skip — Soar can help me build my list
                 </button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── STEP 4: Make the most of Soar ───────────────────────────────── */}
+        {step === 4 && (
+          <div className="bg-white rounded-2xl p-6 shadow-xl">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {soarContent.cards.map((card, i) => (
+                <div
+                  key={i}
+                  className="rounded-xl border border-gray-100 bg-gray-50 p-4 hover:border-indigo-200 hover:bg-indigo-50/30 transition-colors"
+                >
+                  <span className="text-2xl block mb-2">{card.emoji}</span>
+                  <p className="text-sm font-semibold text-gray-800 mb-1">{card.title}</p>
+                  <p className="text-xs text-gray-500 leading-relaxed">{card.desc}</p>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setStep(isCounselor ? 5 : 6)}
+              className="w-full mt-6 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl transition-colors text-sm"
+            >
+              Next →
+            </button>
+          </div>
+        )}
+
+        {/* ── STEP 5: Invite a family (counselors only) ───────────────────── */}
+        {step === 5 && isCounselor && (
+          <div className="bg-white rounded-2xl p-6 shadow-xl">
+            {invError && (
+              <div className="mb-4 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{invError}</div>
+            )}
+
+            <div className="mb-5">
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Student</label>
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  placeholder="Full name"
+                  value={invStudentName}
+                  onChange={(e) => setInvStudentName(e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <input
+                  type="email"
+                  placeholder="Email address"
+                  value={invStudentEmail}
+                  onChange={(e) => setInvStudentEmail(e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+            </div>
+
+            <div className="mb-5">
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                Parent / Guardian <span className="font-normal normal-case">(optional)</span>
+              </label>
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  placeholder="Full name"
+                  value={invParentName}
+                  onChange={(e) => setInvParentName(e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <input
+                  type="email"
+                  placeholder="Email address"
+                  value={invParentEmail}
+                  onChange={(e) => setInvParentEmail(e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={handleInviteSubmit}
+              disabled={invSubmitting}
+              className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-300 text-white font-semibold py-3 rounded-xl transition-colors text-sm disabled:cursor-not-allowed"
+            >
+              {invSubmitting ? 'Adding…' : 'Add student & continue →'}
+            </button>
+
+            <div className="text-center mt-3">
+              <button
+                onClick={() => setStep(6)}
+                className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2"
+              >
+                Skip for now — I&apos;ll do this from my dashboard
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── STEP 6: Question picker ─────────────────────────────────────── */}
+        {step === 6 && (
+          <div className="bg-white rounded-2xl p-6 shadow-xl">
+            <div className="flex flex-col gap-2 mb-4">
+              {getStarterQuestions().map((q, i) => (
+                <button
+                  key={i}
+                  onClick={() => handleStartChat(q)}
+                  className="text-left px-4 py-3 rounded-xl border-2 border-gray-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all text-sm text-gray-700"
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
+
+            <div className="border-t border-gray-100 pt-4">
+              <p className="text-xs text-gray-400 mb-2">Or type your own question…</p>
+              <div className="flex gap-2">
+                <input
+                  value={customQuestion}
+                  onChange={(e) => setCustomQuestion(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && customQuestion.trim()) handleStartChat(customQuestion) }}
+                  placeholder="Ask anything…"
+                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                />
+                <button
+                  onClick={() => handleStartChat(customQuestion)}
+                  disabled={!customQuestion.trim()}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-300 text-white font-medium rounded-lg text-sm transition-colors disabled:cursor-not-allowed"
+                >
+                  Go →
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
