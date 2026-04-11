@@ -196,8 +196,9 @@ export default function OnboardingPage() {
             return
           }
           if (syncData.account_type === 'parent') {
-            // Parents don't need the student profile steps — skip to chat
-            router.push('/chat')
+            // Parents skip profile steps but still see Soar intro + question picker
+            setAccountType('parent')
+            setStep(4)
             return
           }
           // Counselors: fall through to show step 1 normally
