@@ -57,6 +57,10 @@ interface FormState {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
+// UC_CATEGORIES maps to the `category` DB column (UC category).
+// CA_CATEGORIES maps to the `common_app_category` DB column (Common App category).
+// These are stored and edited independently. (issue #57)
+
 const UC_CATEGORIES = [
   'Award or Honor',
   'Educational preparation program',
@@ -71,6 +75,7 @@ const CA_CATEGORIES = [
   'Art',
   'Athletics: Club',
   'Athletics: JV/Varsity',
+  'Award or Honor',
   'Career-Oriented',
   'Community Service (Volunteer)',
   'Computer/Technology',
