@@ -22,7 +22,7 @@ interface Profile {
   graduation_year?: number | null
   home_state?: string
   citizenship?: string
-  residence?: string
+  country_of_residence?: string
   high_school_name?: string
   high_school_city?: string
   high_school_state?: string
@@ -32,7 +32,7 @@ interface Profile {
   intended_majors?: string
   college_preferences?: string
   family_income_tier?: string
-  expected_family_contribution?: number
+  student_aid_index?: string
   budget_max?: number
   personal_statement_draft?: string
   testing_status?: string
@@ -629,24 +629,24 @@ function ProfileContent() {
                 style={selectStyle()}
               >
                 <option value="">— Select —</option>
-                <option value="us_citizen">US Citizen</option>
-                <option value="international">International Student</option>
+                <option value="us_citizen">U.S. Citizen</option>
+                <option value="international_student">International Student</option>
                 <option value="other">Other</option>
               </select>
             </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: 4 }}>Residence</label>
-              <select
-                value={profile.residence ?? ''}
-                onChange={(e) => canWrite && setProfile((p) => ({ ...p, residence: e.target.value || undefined }))}
-                disabled={!canWrite}
-                style={selectStyle()}
-              >
-                <option value="">— Select —</option>
-                <option value="us">U.S. Resident</option>
-                <option value="international">International Resident</option>
-              </select>
-            </div>
+            {(profile.citizenship === 'international_student' || profile.citizenship === 'other') && (
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: 4 }}>Country of Residence</label>
+                <input
+                  type="text"
+                  value={profile.country_of_residence ?? ''}
+                  onChange={(e) => canWrite && setProfile((p) => ({ ...p, country_of_residence: e.target.value || undefined }))}
+                  placeholder="e.g. Canada, India, South Korea"
+                  readOnly={!canWrite}
+                  style={inputStyle()}
+                />
+              </div>
+            )}
           </div>
         </div>
 
@@ -854,12 +854,12 @@ function ProfileContent() {
               </select>
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: 4 }}>Student Aid Index / Expected Family Contribution ($)</label>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: 4 }}>Student Aid Index (SAI / EFC)</label>
               <input
-                type="number"
-                value={profile.expected_family_contribution ?? ''}
-                onChange={(e) => canWrite && setProfile((p) => ({ ...p, expected_family_contribution: e.target.value === '' ? undefined : Number(e.target.value) }))}
-                placeholder="15000"
+                type="text"
+                value={profile.student_aid_index ?? ''}
+                onChange={(e) => canWrite && setProfile((p) => ({ ...p, student_aid_index: e.target.value || undefined }))}
+                placeholder="e.g. 12500 or -1500"
                 readOnly={!canWrite}
                 style={inputStyle()}
               />
