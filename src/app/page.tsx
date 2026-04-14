@@ -95,7 +95,7 @@ export default function Home() {
             For IECs and school counselors, that means more than efficiency. Soar keeps you
             connected with your students between sessions, helps them make real progress on their
             own, and prepares you for every meeting — so you&apos;re not just faster,
-            you&apos;re more effective.
+            you&apos;re more effective. It&apos;s free to get started, and you can do real work.
           </p>
           {/* Privacy callout */}
           <div className="inline-block bg-blue-50 border border-blue-100 rounded-lg px-5 py-3 text-sm text-blue-800 max-w-xl text-left">
