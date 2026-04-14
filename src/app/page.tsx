@@ -68,11 +68,16 @@ export default function Home() {
           <span className="text-lg font-semibold text-gray-900 tracking-tight">
             Soar <span className="text-sm font-normal text-gray-400">by LifeLaunchr</span>
           </span>
-          <SignInButton mode="modal">
-            <button className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
-              Sign in
-            </button>
-          </SignInButton>
+          <nav className="flex items-center gap-5">
+            <Link href="/upgrade" className="text-sm text-gray-500 hover:text-gray-800 transition-colors">
+              Plans &amp; Pricing
+            </Link>
+            <SignInButton mode="modal">
+              <button className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
+                Sign in
+              </button>
+            </SignInButton>
+          </nav>
         </div>
       </header>
 

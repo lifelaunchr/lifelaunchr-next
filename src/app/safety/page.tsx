@@ -68,7 +68,7 @@ export default function SafetyPage() {
           <span style={{ color: '#7dd3fc' }}>Soar</span> by LifeLaunchr
         </Link>
         <Link href="/chat" style={{ fontSize: '0.82rem', color: '#8888aa', textDecoration: 'none', border: '1px solid #444466', padding: '4px 12px', borderRadius: 6 }}>
-          ← Back to Soar
+          Go to Soar →
         </Link>
       </header>
 
@@ -141,11 +141,6 @@ export default function SafetyPage() {
         </div>
 
       </div>
-
-      {/* Footer */}
-      <footer style={{ textAlign: 'center', padding: 24, fontSize: '0.8rem', color: '#94a3b8', borderTop: '1px solid #e2e8f0' }}>
-        <p>Soar by <a href="https://lifelaunchr.com" target="_blank" rel="noopener noreferrer" style={{ color: '#0369a1', textDecoration: 'none' }}>LifeLaunchr</a> · <Link href="/chat" style={{ color: '#0369a1', textDecoration: 'none' }}>Back to Soar</Link></p>
-      </footer>
 
     </div>
   )
