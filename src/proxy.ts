@@ -1,16 +1,24 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 
-const isProtectedRoute = createRouteMatcher([
-  // /chat is intentionally NOT protected — guests can access it without signing in
-  '/onboarding(.*)',
-  '/profile(.*)',
-  '/lists(.*)',
-  '/admin(.*)',
-  '/counselor(.*)',
+/**
+ * Public routes — accessible without signing in.
+ * Everything else is protected: unauthenticated users are redirected to sign-in.
+ */
+const isPublicRoute = createRouteMatcher([
+  '/',
+  '/faq',
+  '/terms',
+  '/privacy',
+  '/safety',            // public "How we keep teens safe" info page
+  '/upgrade',           // public upsell page
+  '/join(.*)',          // counselor invite acceptance landing
+  '/accept-invite(.*)', // migration invite claim
+  '/sign-in(.*)',
+  '/sign-up(.*)',
 ])
 
 export default clerkMiddleware(async (auth, req) => {
-  if (isProtectedRoute(req)) {
+  if (!isPublicRoute(req)) {
     await auth.protect()
   }
 })
