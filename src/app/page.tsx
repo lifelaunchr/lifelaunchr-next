@@ -86,20 +86,21 @@ export default function Home() {
             Built by a counselor. Powered by AI.
           </p>
           <p className="text-lg text-gray-600 leading-relaxed mb-5 max-w-2xl mx-auto">
-            Most college planning tools give students a search engine. Soar gives them a
-            thinking partner — one that knows their profile, remembers what they&apos;ve
-            researched, and helps them go deeper on the schools, scholarships, and opportunities
-            that actually fit.
+            Most AI tools give students a smarter search engine. Soar&trade; gives them a college
+            and career research assistant, armed with authoritative data on thousands of colleges
+            and scholarships, hundreds of majors and enrichment programs, and the process
+            knowledge to guide students, parents, and counselors toward the right decisions.
           </p>
           <p className="text-lg text-gray-600 leading-relaxed mb-8 max-w-2xl mx-auto">
-            Whether you&apos;re a student figuring out where to apply, a parent trying to
-            understand the process, or a counselor supporting a full caseload — Soar meets you
-            where you are and grows with you over time.
+            For IECs and school counselors, that means more than efficiency. Soar keeps you
+            connected with your students between sessions, helps them make real progress on their
+            own, and prepares you for every meeting — so you&apos;re not just faster,
+            you&apos;re more effective.
           </p>
           {/* Privacy callout */}
           <div className="inline-block bg-blue-50 border border-blue-100 rounded-lg px-5 py-3 text-sm text-blue-800 max-w-xl text-left">
-            <strong>Your data stays yours.</strong> Soar never sells your information or uses
-            your conversations to train AI models. What you share stays private.
+            Soar won&apos;t write essays for students, and won&apos;t sell your data or use your
+            conversations to train AI models. What you share stays private.
           </div>
         </section>
 
