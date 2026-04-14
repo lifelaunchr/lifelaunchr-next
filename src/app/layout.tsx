@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import { ClerkProvider } from '@clerk/nextjs'
 import Script from 'next/script'
+import Footer from '@/components/Footer'
+import CookieBanner from '@/components/CookieBanner'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -88,6 +90,8 @@ export default function RootLayout({
       <html lang="en" suppressHydrationWarning>
         <body className={inter.className}>
           {children}
+          <Footer />
+          <CookieBanner />
 
           {GA_ID && (
             <>
