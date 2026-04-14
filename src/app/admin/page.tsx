@@ -108,7 +108,20 @@ const BLANK_TENANT: TenantFormData = {
 
 const STARTER_PROMPT = `I run a college counseling practice called [PRACTICE NAME]. Help me write a 2–3 paragraph context description for an AI college and career planning assistant that will work with my students. It should capture: our counseling philosophy, the types of students we work with, any geographic or school-type focus, and anything that makes our practice distinctive. Keep it concise and written in second person addressed to the AI ("You are a college research assistant for…"). Ask me questions first to help create it.`
 
-type TabType = 'users' | 'tiers' | 'tenants' | 'tenant'
+interface InviteRequestRow {
+  id: number
+  name: string
+  email: string
+  practice_name: string | null
+  user_type: string | null
+  message: string | null
+  status: string
+  created_at: string
+  invited_at: string | null
+  invited_user_id: number | null
+}
+
+type TabType = 'users' | 'tiers' | 'tenants' | 'tenant' | 'requests'
 
 const PAGE_SIZE = 25
 
@@ -140,6 +153,9 @@ export default function AdminPage() {
   const [users, setUsers] = useState<UserRow[]>([])
   const [tiers, setTiers] = useState<TierRow[]>([])
   const [tenants, setTenants] = useState<TenantRow[]>([])
+  const [requests, setRequests] = useState<InviteRequestRow[]>([])
+  const [requestsLoading, setRequestsLoading] = useState(false)
+  const [approvingId, setApprovingId] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<TabType>('users')
@@ -254,6 +270,58 @@ export default function AdminPage() {
   }
 
   useEffect(() => { load() }, [])
+
+  const loadRequests = async () => {
+    setRequestsLoading(true)
+    try {
+      const token = await getToken()
+      const res = await fetch(`${apiUrl}/admin/invite-requests`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setRequests(data.requests || [])
+      }
+    } catch (e) {
+      console.error('[admin] invite-requests load failed:', e)
+    }
+    setRequestsLoading(false)
+  }
+
+  useEffect(() => {
+    if (tab === 'requests') loadRequests()
+  }, [tab])
+
+  const approveRequest = async (id: number) => {
+    setApprovingId(id)
+    try {
+      const token = await getToken()
+      const res = await fetch(`${apiUrl}/admin/invite-requests/${id}/approve`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        await loadRequests()
+      }
+    } catch (e) {
+      console.error('[admin] approve failed:', e)
+    }
+    setApprovingId(null)
+  }
+
+  const declineRequest = async (id: number) => {
+    try {
+      const token = await getToken()
+      await fetch(`${apiUrl}/admin/invite-requests/${id}`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'declined' }),
+      })
+      await loadRequests()
+    } catch (e) {
+      console.error('[admin] decline failed:', e)
+    }
+  }
 
   // Reset to page 1 when search or filter changes
   useEffect(() => { setUserPage(1) }, [search, typeFilter])
@@ -585,6 +653,12 @@ export default function AdminPage() {
               {isTenantAdmin && !isAdmin && !isSuperAdmin ? 'My Practice' : 'Tenant Settings'}
             </button>
           )}
+          {(isAdmin || isSuperAdmin) && (
+            <button onClick={() => setTab('requests')}
+              className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${tab === 'requests' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+              Access Requests{requests.filter(r => r.status === 'new').length > 0 ? ` (${requests.filter(r => r.status === 'new').length})` : ''}
+            </button>
+          )}
         </div>
 
         {/* ── Users tab ── */}
@@ -832,6 +906,75 @@ export default function AdminPage() {
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+
+        {/* ── Access Requests tab ── */}
+        {tab === 'requests' && (
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-semibold text-gray-800">Access Requests</h2>
+              <button onClick={loadRequests} className="text-xs text-indigo-500 hover:underline">Refresh</button>
+            </div>
+            {requestsLoading ? (
+              <p className="text-sm text-gray-400">Loading…</p>
+            ) : requests.length === 0 ? (
+              <p className="text-sm text-gray-400">No access requests yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {requests.map(req => {
+                  const statusColor = req.status === 'new' ? 'bg-amber-100 text-amber-700' : req.status === 'invited' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                  const userTypeLabel: Record<string, string> = {
+                    independent_counselor: 'IEC',
+                    school_counselor: 'School counselor',
+                    student: 'Student',
+                    parent: 'Parent',
+                    other: 'Other',
+                  }
+                  return (
+                    <div key={req.id} className="bg-white border border-gray-200 rounded-xl p-4">
+                      <div className="flex items-start justify-between gap-3 flex-wrap">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-sm text-gray-900">{req.name}</span>
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColor}`}>{req.status}</span>
+                            {req.user_type && (
+                              <span className="text-xs text-gray-400">{userTypeLabel[req.user_type] || req.user_type}</span>
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-500 mt-0.5">{req.email}</div>
+                          {req.practice_name && <div className="text-xs text-gray-400 mt-0.5">{req.practice_name}</div>}
+                          {req.message && <div className="text-xs text-gray-500 mt-2 italic">&ldquo;{req.message}&rdquo;</div>}
+                          <div className="text-xs text-gray-300 mt-1">{new Date(req.created_at).toLocaleDateString()}</div>
+                        </div>
+                        <div className="flex gap-2 flex-shrink-0">
+                          {req.status === 'new' && (
+                            <>
+                              <button
+                                onClick={() => approveRequest(req.id)}
+                                disabled={approvingId === req.id}
+                                className="text-xs px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg font-medium transition-colors"
+                              >
+                                {approvingId === req.id ? 'Sending…' : 'Approve & Send Invite'}
+                              </button>
+                              <button
+                                onClick={() => declineRequest(req.id)}
+                                className="text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg font-medium transition-colors"
+                              >
+                                Decline
+                              </button>
+                            </>
+                          )}
+                          {req.status === 'invited' && req.invited_at && (
+                            <span className="text-xs text-gray-400">Invited {new Date(req.invited_at).toLocaleDateString()}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         )}
 
