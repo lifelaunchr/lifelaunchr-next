@@ -64,17 +64,18 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white flex flex-col">
       {/* Nav */}
-      <header className="border-b border-gray-100">
+      <header style={{ background: '#0c1b33' }}>
         <div className="mx-auto max-w-5xl px-6 py-4 flex items-center justify-between">
-          <span className="text-lg font-semibold text-gray-900 tracking-tight">
-            Soar <span className="text-sm font-normal text-gray-400">by LifeLaunchr</span>
+          <span className="text-lg font-semibold tracking-tight" style={{ color: '#fff' }}>
+            <span style={{ color: '#7dd3fc' }}>Soar</span>{' '}
+            <span className="text-sm font-normal" style={{ color: '#8888aa' }}>by LifeLaunchr</span>
           </span>
           <nav className="flex items-center gap-5">
-            <Link href="/upgrade" className="text-sm text-gray-500 hover:text-gray-800 transition-colors">
+            <Link href="/upgrade" className="text-sm transition-colors" style={{ color: '#a0aec0' }}>
               Plans &amp; Pricing
             </Link>
             <SignInButton mode="modal">
-              <button className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
+              <button className="text-sm font-medium transition-colors" style={{ color: '#fff' }}>
                 Sign in
               </button>
             </SignInButton>
@@ -84,34 +85,40 @@ export default function Home() {
 
       <main className="flex-1">
         {/* Hero */}
-        <section className="mx-auto max-w-3xl px-6 pt-20 pb-16 text-center">
-          <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 leading-tight mb-4">
-            Meet Soar™
-          </h1>
-          <p className="text-xl sm:text-2xl text-blue-700 font-medium mb-8">
-            Built by a counselor. Powered by AI.
-          </p>
-          <p className="text-lg text-gray-600 leading-relaxed mb-5 max-w-2xl mx-auto">
-            Most AI tools give students a smarter search engine. Soar&trade; gives them a college
-            and career research assistant, armed with authoritative data on thousands of colleges
-            and scholarships, hundreds of majors and enrichment programs, and the process
-            knowledge to guide students, parents, and counselors toward the right decisions.
-          </p>
-          <p className="text-lg text-gray-600 leading-relaxed mb-8 max-w-2xl mx-auto">
-            For IECs and school counselors, that means more than efficiency. Soar keeps you
-            connected with your students between sessions, helps them make real progress on their
-            own, and prepares you for every meeting — so you&apos;re not just faster,
-            you&apos;re more effective. It&apos;s free to get started, and you can do real work.
-          </p>
-          {/* Privacy callout */}
-          <div className="inline-block bg-blue-50 border border-blue-100 rounded-lg px-5 py-3 text-sm text-blue-800 max-w-xl text-left">
-            Soar won&apos;t write essays for students, and won&apos;t sell your data or use your
-            conversations to train AI models. What you share stays private.
+        <section style={{ background: '#0c1b33' }}>
+          <div className="mx-auto max-w-3xl px-6 pt-16 pb-14 text-center">
+            <h1 className="text-4xl sm:text-5xl font-bold leading-tight mb-4" style={{ color: '#fff' }}>
+              Meet Soar™
+            </h1>
+            <p className="text-xl sm:text-2xl font-medium mb-8" style={{ color: '#7dd3fc' }}>
+              Built by a counselor. Powered by AI.
+            </p>
+            <p className="text-lg leading-relaxed mb-5 max-w-2xl mx-auto" style={{ color: '#cbd5e1' }}>
+              Most AI tools give students a smarter search engine. Soar&trade; gives them a college
+              and career research assistant, armed with authoritative data on thousands of colleges
+              and scholarships, hundreds of majors and enrichment programs, and the process
+              knowledge to guide students, parents, and counselors toward the right decisions.
+            </p>
+            <p className="text-lg leading-relaxed mb-10 max-w-2xl mx-auto" style={{ color: '#cbd5e1' }}>
+              For IECs and school counselors, that means more than efficiency. Soar keeps you
+              connected with your students between sessions, helps them make real progress on their
+              own, and prepares you for every meeting — so you&apos;re not just faster,
+              you&apos;re more effective. It&apos;s free to get started, and you can do meaningful
+              research from day one.
+            </p>
+            {/* Privacy callout */}
+            <div
+              className="inline-block rounded-lg px-5 py-3 text-sm max-w-xl text-left"
+              style={{ background: 'rgba(125,211,252,0.08)', border: '1px solid rgba(125,211,252,0.2)', color: '#93c5fd' }}
+            >
+              Soar won&apos;t write essays for students, and won&apos;t sell your data or use your
+              conversations to train AI models. What you share stays private.
+            </div>
           </div>
         </section>
 
         {/* How it works */}
-        <section className="bg-gray-50 border-y border-gray-100">
+        <section className="bg-gray-50 border-b border-gray-100">
           <div className="mx-auto max-w-3xl px-6 py-14">
             <h2 className="text-2xl font-bold text-gray-900 text-center mb-10">
               How it works
@@ -135,7 +142,10 @@ export default function Home() {
                 },
               ].map(({ step, title, body }) => (
                 <div key={step} className="flex flex-col items-center text-center">
-                  <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-lg font-bold mb-4">
+                  <div
+                    className="w-10 h-10 rounded-full text-white flex items-center justify-center text-lg font-bold mb-4"
+                    style={{ background: '#0c1b33' }}
+                  >
                     {step}
                   </div>
                   <h3 className="font-semibold text-gray-900 mb-2">{title}</h3>
@@ -182,7 +192,7 @@ export default function Home() {
                     value={form.name}
                     onChange={handleChange}
                     required
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"
                     placeholder="Your name"
                   />
                 </div>
@@ -197,7 +207,7 @@ export default function Home() {
                     value={form.email}
                     onChange={handleChange}
                     required
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"
                     placeholder="you@example.com"
                   />
                 </div>
@@ -212,7 +222,7 @@ export default function Home() {
                   name="user_type"
                   value={form.user_type}
                   onChange={handleChange}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white"
                 >
                   <option value="">Select one (optional)</option>
                   <option value="independent_counselor">Independent educational consultant</option>
@@ -233,7 +243,7 @@ export default function Home() {
                   type="text"
                   value={form.practice_name}
                   onChange={handleChange}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"
                   placeholder="Optional"
                 />
               </div>
@@ -248,7 +258,7 @@ export default function Home() {
                   value={form.message}
                   onChange={handleChange}
                   rows={3}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 resize-none"
                   placeholder="Optional"
                 />
               </div>
@@ -258,7 +268,8 @@ export default function Home() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full rounded-md bg-blue-600 text-white py-2.5 text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-60"
+                className="w-full rounded-md text-white py-2.5 text-sm font-medium transition-opacity disabled:opacity-60"
+                style={{ background: '#0c1b33' }}
               >
                 {submitting ? 'Submitting…' : 'Request access'}
               </button>
