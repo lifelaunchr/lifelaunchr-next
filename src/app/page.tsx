@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth, SignInButton } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://lifelaunchr.onrender.com'
 
