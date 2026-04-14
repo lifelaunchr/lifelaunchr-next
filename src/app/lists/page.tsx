@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef, useCallback, Suspense } from 'react'
 import { useAuth, useUser } from '@clerk/nextjs'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -2805,9 +2805,10 @@ function CardView({ entries, canWrite, accountType, onEdit, onDelete, onDrop }: 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 function ListsContent() {
-  const { getToken } = useAuth()
+  const { getToken, isLoaded } = useAuth()
   const { user: clerkUser } = useUser()
   const searchParams = useSearchParams()
+  const router = useRouter()
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
   const forParam = searchParams.get('for')
@@ -2838,7 +2839,8 @@ function ListsContent() {
   const [showAddEnrichment, setShowAddEnrichment] = useState(false)
 
   useEffect(() => {
-    if (!clerkUser) return
+    if (!isLoaded) return
+    if (!clerkUser) { router.replace('/'); return }
     const load = async () => {
       try {
         const token = await getToken()

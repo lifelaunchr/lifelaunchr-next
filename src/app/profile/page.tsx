@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, Suspense } from 'react'
 import { useAuth, useUser } from '@clerk/nextjs'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 interface Profile {
@@ -130,9 +130,10 @@ const ACADEMIC_RIGOR_RATINGS = [
 ]
 
 function ProfileContent() {
-  const { getToken } = useAuth()
+  const { getToken, isLoaded } = useAuth()
   const { user: clerkUser } = useUser()
   const searchParams = useSearchParams()
+  const router = useRouter()
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
   // ?for=<studentId> — set when a counselor/parent navigates from the sidebar
@@ -181,7 +182,8 @@ function ProfileContent() {
   useEffect(() => {
     // Wait for Clerk to finish loading the session before proceeding.
     // clerkUser is null on first render; the effect re-runs once it's available.
-    if (!clerkUser) return
+    if (!isLoaded) return
+    if (!clerkUser) { router.replace('/'); return }
     const load = async () => {
       try {
         const token = await getToken()

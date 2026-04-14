@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useAuth, useUser } from '@clerk/nextjs'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -146,9 +146,10 @@ const badgeStyle = (type: string): React.CSSProperties => {
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 function ReportsContent() {
-  const { getToken } = useAuth()
+  const { getToken, isLoaded } = useAuth()
   const { user: clerkUser } = useUser()
   const searchParams = useSearchParams()
+  const router = useRouter()
 
   const [students, setStudents] = useState<Student[]>([])
   const [reports, setReports] = useState<UnifiedItem[]>([])
@@ -238,7 +239,8 @@ function ReportsContent() {
   // ── Load students + usage ──────────────────────────────────────────────────
 
   useEffect(() => {
-    if (!clerkUser) return
+    if (!isLoaded) return
+    if (!clerkUser) { router.replace('/'); return }
     const init = async () => {
       try {
         const token = await getToken()

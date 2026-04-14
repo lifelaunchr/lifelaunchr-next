@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react'
 import { useAuth, useUser } from '@clerk/nextjs'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -182,9 +182,10 @@ function GradeCheckboxes({ value, onChange, disabled }: {
 // ── Main component ────────────────────────────────────────────────────────────
 
 function ActivitiesContent() {
-  const { getToken } = useAuth()
+  const { getToken, isLoaded } = useAuth()
   const { user: clerkUser } = useUser()
   const searchParams = useSearchParams()
+  const router = useRouter()
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
   const forParam = searchParams.get('for')
@@ -211,7 +212,8 @@ function ActivitiesContent() {
   // ── Load ────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    if (!clerkUser) return
+    if (!isLoaded) return
+    if (!clerkUser) { router.replace('/'); return }
     const load = async () => {
       try {
         const token = await getToken()
