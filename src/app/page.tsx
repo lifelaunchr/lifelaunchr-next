@@ -114,18 +114,18 @@ export default function Home() {
               {[
                 {
                   step: '1',
-                  title: 'Build your profile',
-                  body: 'Share your GPA, test scores, interests, and college wishlist. Soar uses this to personalize every conversation.',
+                  title: 'Invite your families',
+                  body: "Connect with your students and their families. Soar uses each student's information — GPA, test scores, college lists, activities — to personalize every conversation.",
                 },
                 {
                   step: '2',
                   title: 'Research with AI',
-                  body: 'Ask anything — fit, cost, deadlines, essays, scholarships. Soar pulls real data and remembers what you\'ve discussed.',
+                  body: "Research anything for a student — fit, cost, deadlines, scholarships. Soar pulls real data, remembers what you've discussed, and guides the conversation with thoughtful follow-up questions.",
                 },
                 {
                   step: '3',
                   title: 'Stay organized',
-                  body: 'Track colleges, scholarships, and activities in one place. Your counselor stays in the loop the whole way.',
+                  body: "Track each student's colleges, scholarships, summer plans, and activities in one place. Parents, students, and you collaborate and share — everyone on one team.",
                 },
               ].map(({ step, title, body }) => (
                 <div key={step} className="flex flex-col items-center text-center">
