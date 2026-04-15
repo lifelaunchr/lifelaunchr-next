@@ -90,8 +90,9 @@ export default clerkMiddleware(async (auth, req) => {
         const redirect = params.get('redirect') || '/'
 
         if (submitted === ACCESS_PASSWORD) {
-          // Correct — set cookie and send to intended destination
-          const res = NextResponse.redirect(new URL(redirect, req.url))
+          // Correct — set cookie and send to intended destination.
+          // 303 See Other converts POST → GET so the destination isn't hit as a POST.
+          const res = NextResponse.redirect(new URL(redirect, req.url), { status: 303 })
           res.cookies.set(COOKIE_NAME, ACCESS_PASSWORD, {
             httpOnly: true,
             sameSite: 'lax',
@@ -106,7 +107,7 @@ export default clerkMiddleware(async (auth, req) => {
         const loginUrl = new URL(LOGIN_PATH, req.url)
         loginUrl.searchParams.set('redirect', redirect)
         loginUrl.searchParams.set('error', '1')
-        return NextResponse.redirect(loginUrl)
+        return NextResponse.redirect(loginUrl, { status: 303 })
       }
 
       // GET /__soar_login — serve the login page
