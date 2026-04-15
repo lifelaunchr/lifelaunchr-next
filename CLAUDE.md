@@ -24,6 +24,7 @@
 | v0.9.6.3 | 2026-04-10 | Family onboarding (#38, #39): AddFamilyModal, Invited badges with copy-link on dashboard and admin; WelcomeCard first-session starters (#48 partial) |
 | v0.9.6.5 | 2026-04-11 | Extended onboarding suite (#48): 6-step flow (role picker → profile → colleges → Soar intro cards → counselor invite → question picker); auto-send first question to chat via sessionStorage; role-specific card content and taglines; parent onboarding flow; migration invite routing; strikethrough rendering fix; add-to-list buttons hidden for parents |
 | v0.9.6.7 | 2026-04-14 | Backend-only: complete data migration (#61, #60) — no frontend changes |
+| v0.9.7 | 2026-04-15 | Backend-only: production deployment infrastructure + Clerk allowlist (#69) — schema fixes, tiers seeding, invite-only allowlist gate — no frontend changes |
 
 ## Repository Structure
 - **Backend:** `lifelaunchr-app-3/` — Python/FastAPI, deployed on Render
