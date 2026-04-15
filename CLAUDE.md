@@ -25,6 +25,7 @@
 | v0.9.6.5 | 2026-04-11 | Extended onboarding suite (#48): 6-step flow (role picker → profile → colleges → Soar intro cards → counselor invite → question picker); auto-send first question to chat via sessionStorage; role-specific card content and taglines; parent onboarding flow; migration invite routing; strikethrough rendering fix; add-to-list buttons hidden for parents |
 | v0.9.6.7 | 2026-04-14 | Backend-only: complete data migration (#61, #60) — no frontend changes |
 | v0.9.7 | 2026-04-15 | Backend-only: production deployment infrastructure + Clerk allowlist (#69) — schema fixes, tiers seeding, invite-only allowlist gate — no frontend changes |
+| v0.9.7.1 | 2026-04-15 | Backend-only: scholarship search overhaul (#54, #24) — coaching intake approach, eligibility scoring, filter fixes, merit-first framing, strategy guide auto-load — no frontend changes |
 
 ## Repository Structure
 - **Backend:** `lifelaunchr-app-3/` — Python/FastAPI, deployed on Render
@@ -34,19 +35,16 @@
 
 | Branch | Backend (Render) | Frontend (Vercel) | Notes |
 |---|---|---|---|
-| `main` | Staging (`lifelaunchr.onrender.com`) | **Production** (temporary — see below) | Active development |
-| `production` | Production (`lifelaunchr-prod.onrender.com`) | Production (future) | Stable live code |
+| `main` | Staging (`lifelaunchr.onrender.com`) | Preview/staging | Active development |
+| `production` | Production (`lifelaunchr-prod.onrender.com`) | Production (`soar.lifelaunchr.com`) | Stable live code |
 
-### ⚠️ Temporary exception
-Vercel is currently deploying the `main` branch to **Production** (not Preview). This is because Preview deployments caused issues. Once stable, this will flip: `main` → Preview/staging, `production` → Vercel Production.
-
-**Practical rule: push to `main` to deploy to staging backend AND Vercel Production (currently the same users).**
+**Practical rule: push to `main` for staging. Merge `main` → `production` to deploy to live users.**
 
 ## Key URLs
 | Environment | Frontend | Backend API |
 |---|---|---|
-| Staging/dev | Vercel Production (main branch) | `https://lifelaunchr.onrender.com` |
-| Production | TBD (`soar.lifelaunchr.com` after DNS cutover) | `https://lifelaunchr-prod.onrender.com` |
+| Staging/dev | Vercel Preview (main branch) | `https://lifelaunchr.onrender.com` |
+| Production | `https://soar.lifelaunchr.com` | `https://lifelaunchr-prod.onrender.com` |
 
 ## Local Development
 - `NEXT_PUBLIC_API_URL` is set to the Render staging URL in `.env.local`
