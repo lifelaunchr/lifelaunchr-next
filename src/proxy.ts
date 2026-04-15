@@ -22,9 +22,13 @@ const isPublicRoute = createRouteMatcher([
 
 const ACCESS_PASSWORD = process.env.ACCESS_PASSWORD
 const COOKIE_NAME = 'soar_access'
+const LOGIN_PATH = '/__soar_login'
 
-// Minimal inline login page served when ACCESS_PASSWORD is set and cookie is missing
-function accessLoginPage(req: Request, error = false): NextResponse {
+// Minimal inline login page. `redirect` is the path to send the user after
+// a successful password entry; it is preserved across wrong-password attempts
+// via a hidden form field + query param.
+function accessLoginPage(redirect: string, error = false): NextResponse {
+  const safeRedirect = redirect.startsWith('/') ? redirect : '/'
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -55,8 +59,8 @@ function accessLoginPage(req: Request, error = false): NextResponse {
     <h1>Soar</h1>
     <p>This environment is restricted. Enter the access password to continue.</p>
     ${error ? '<p class="error">Incorrect password — try again.</p>' : ''}
-    <form method="POST" action="/__soar_access">
-      <input type="hidden" name="redirect" value="${new URL(req.url).pathname}" />
+    <form method="POST" action="${LOGIN_PATH}">
+      <input type="hidden" name="redirect" value="${safeRedirect}" />
       <input type="password" name="password" placeholder="Password" autofocus />
       <button type="submit">Continue</button>
     </form>
@@ -64,7 +68,7 @@ function accessLoginPage(req: Request, error = false): NextResponse {
 </body>
 </html>`
   return new NextResponse(html, {
-    status: error ? 401 : 200,
+    status: 200,
     headers: { 'Content-Type': 'text/html' },
   })
 }
@@ -73,29 +77,45 @@ export default clerkMiddleware(async (auth, req) => {
   const url = new URL(req.url)
 
   // ── ACCESS_PASSWORD gate ──────────────────────────────────────────────────
-  // If ACCESS_PASSWORD is set, require a cookie before allowing any request.
+  // If ACCESS_PASSWORD is set, require a valid cookie before allowing access.
+  // Uses a dedicated login route (/__soar_login) with POST-Redirect-GET so
+  // wrong-password errors never cause redirect loops.
   if (ACCESS_PASSWORD) {
-    // Handle the login form POST
-    if (req.method === 'POST' && url.pathname === '/__soar_access') {
-      const body = await req.text()
-      const params = new URLSearchParams(body)
-      const submitted = params.get('password') ?? ''
-      const redirect = params.get('redirect') || '/'
+    if (url.pathname === LOGIN_PATH) {
+      if (req.method === 'POST') {
+        // Process password submission
+        const body = await req.text()
+        const params = new URLSearchParams(body)
+        const submitted = params.get('password') ?? ''
+        const redirect = params.get('redirect') || '/'
 
-      if (submitted === ACCESS_PASSWORD) {
-        const res = NextResponse.redirect(new URL(redirect, req.url))
-        res.cookies.set(COOKIE_NAME, ACCESS_PASSWORD, {
-          httpOnly: true,
-          sameSite: 'lax',
-          path: '/',
-          maxAge: 60 * 60 * 24 * 30, // 30 days
-        })
-        return res
+        if (submitted === ACCESS_PASSWORD) {
+          // Correct — set cookie and send to intended destination
+          const res = NextResponse.redirect(new URL(redirect, req.url))
+          res.cookies.set(COOKIE_NAME, ACCESS_PASSWORD, {
+            httpOnly: true,
+            sameSite: 'lax',
+            path: '/',
+            maxAge: 60 * 60 * 24 * 30, // 30 days
+          })
+          return res
+        }
+
+        // Wrong password — PRG: redirect back to login page with error flag,
+        // preserving the original redirect target
+        const loginUrl = new URL(LOGIN_PATH, req.url)
+        loginUrl.searchParams.set('redirect', redirect)
+        loginUrl.searchParams.set('error', '1')
+        return NextResponse.redirect(loginUrl)
       }
-      return accessLoginPage(req, true)
+
+      // GET /__soar_login — serve the login page
+      const error = url.searchParams.get('error') === '1'
+      const redirect = url.searchParams.get('redirect') || '/'
+      return accessLoginPage(redirect, error)
     }
 
-    // Check cookie on all other requests
+    // All other routes: check for valid cookie
     const cookie = req.headers.get('cookie') ?? ''
     const cookieValue = cookie
       .split(';')
@@ -104,7 +124,9 @@ export default clerkMiddleware(async (auth, req) => {
       ?.split('=')[1]
 
     if (cookieValue !== ACCESS_PASSWORD) {
-      return accessLoginPage(req)
+      const loginUrl = new URL(LOGIN_PATH, req.url)
+      loginUrl.searchParams.set('redirect', url.pathname)
+      return NextResponse.redirect(loginUrl)
     }
   }
   // ── end ACCESS_PASSWORD gate ──────────────────────────────────────────────
