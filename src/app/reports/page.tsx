@@ -289,11 +289,13 @@ function ReportsContent() {
   // ── Load reports when student filter changes ───────────────────────────────
 
   const loadReports = useCallback(async (studentId: number | null) => {
-    if (!studentId) { setReports([]); return }
     try {
       const token = await getToken()
-      const typeParam = typeFilter !== 'all' ? `&type=${typeFilter}` : ''
-      const res = await fetch(`${apiUrl}/reports/unified?for_student_id=${studentId}${typeParam}`, {
+      const params = new URLSearchParams()
+      if (studentId) params.set('for_student_id', String(studentId))
+      if (typeFilter !== 'all') params.set('type', typeFilter)
+      const qs = params.toString() ? `?${params.toString()}` : ''
+      const res = await fetch(`${apiUrl}/reports/unified${qs}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (res.ok) {
