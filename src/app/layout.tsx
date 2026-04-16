@@ -4,6 +4,7 @@ import { ClerkProvider } from '@clerk/nextjs'
 import Script from 'next/script'
 import Footer from '@/components/Footer'
 import CookieBanner from '@/components/CookieBanner'
+import BetaBanner from '@/components/BetaBanner'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -89,6 +90,7 @@ export default function RootLayout({
     <ClerkProvider afterSignOutUrl="/chat">
       <html lang="en" suppressHydrationWarning>
         <body className={inter.className}>
+          <BetaBanner />
           {children}
           <Footer />
           <CookieBanner />
