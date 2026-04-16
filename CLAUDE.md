@@ -27,6 +27,7 @@
 | v0.9.7 | 2026-04-15 | Backend-only: production deployment infrastructure + Clerk allowlist (#69) — schema fixes, tiers seeding, invite-only allowlist gate — no frontend changes |
 | v0.9.7.1 | 2026-04-15 | Backend-only: scholarship search overhaul (#54, #24) — coaching intake approach, eligibility scoring, filter fixes, merit-first framing, strategy guide auto-load — no frontend changes |
 | v0.9.7.2 | 2026-04-16 | Fix research summaries not showing on Reports page (#70): loadReports() in reports/page.tsx was bailing early with setReports([]) when studentId was null instead of calling /reports/unified; fixed to always call the API and pass for_student_id only when a student is selected |
+| v0.9.7.3 | 2026-04-16 | Production config only (#71): Essays module enabled, Editate credentials set on production tenant, essay lazy-fetch confirmed working — no frontend code changes |
 
 ## Repository Structure
 - **Backend:** `lifelaunchr-app-3/` — Python/FastAPI, deployed on Render
