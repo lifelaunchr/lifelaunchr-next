@@ -39,32 +39,32 @@ const VALUE_PROPS = [
   {
     icon: '🎓',
     title: 'College, major & career research',
-    desc: 'Real data on admissions, costs, and programs — matched to your academics, interests, and budget.',
+    desc: 'Explore admissions, costs, and programs \u2013 matched to your academics, interests, and budget.',
   },
   {
     icon: '💰',
-    title: 'Scholarship search',
-    desc: 'Find scholarships you\'re actually eligible for, based on your background, heritage, interests, and activities.',
+    title: 'Scholarships and aid',
+    desc: 'Find scholarships you\u2019re actually eligible for, based on your background, heritage, interests, and activities.',
   },
   {
     icon: '🗺️',
     title: 'Know what to do next',
-    desc: 'Built on decades of counseling experience — Soar knows what to ask, what matters, and when.',
+    desc: 'Built on decades of counseling experience \u2014 Soar knows what to ask, what matters, and when.',
   },
   {
     icon: '👥',
-    title: 'Your whole team, one place',
-    desc: 'Student, counselor, and parent all see the same research — no one is out of the loop.',
+    title: 'A unified team',
+    desc: 'Student, counselor, and parent all see the same research, so no one is out of the loop.',
   },
   {
     icon: '📋',
-    title: 'Come prepared to every meeting',
+    title: 'Make the most of meetings',
     desc: 'Students make progress between sessions; counselors arrive knowing exactly what was explored.',
   },
   {
     icon: '📊',
     title: 'Real data, not guesses',
-    desc: '1,800+ colleges and 6,700+ scholarships — not AI training cutoffs.',
+    desc: '1,800+ colleges, 6,700+ scholarships, 250+ summer & enrichment programs.',
   },
 ]
 
