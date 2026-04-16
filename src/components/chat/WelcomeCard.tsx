@@ -93,7 +93,7 @@ export function WelcomeCard({ onSendMessage, accountType, isFreeTier, isFirstSes
       : accountType === 'parent'
         ? 'Soar helps you research colleges, scholarships, and financial aid on your child\u2019s behalf. Everything you find is shared with their planning team.'
         : 'Soar is your personal college planning assistant. Tell me about yourself and what you\u2019re looking for \u2014 the more I know, the better I can help.'
-    : 'Research colleges, explore majors, find scholarships, and prepare for every meeting \u2014 all in one place.'
+    : 'The college and career planning assistant that knows you, remembers everything, and gets smarter the more you use it.'
 
   return (
     <div className="flex-1 flex items-start justify-center pt-8 pb-4 px-4">
