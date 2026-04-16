@@ -29,6 +29,7 @@
 | v0.9.7.2 | 2026-04-16 | Fix research summaries not showing on Reports page (#70): loadReports() in reports/page.tsx was bailing early with setReports([]) when studentId was null instead of calling /reports/unified; fixed to always call the API and pass for_student_id only when a student is selected |
 | v0.9.7.3 | 2026-04-16 | Production config only (#71): Essays module enabled, Editate credentials set on production tenant, essay lazy-fetch confirmed working — no frontend code changes |
 | v0.9.7.4 | 2026-04-16 | Beta banner + Render cleanup (#36, #22, #23): BetaBanner component added (dismissible, signed-in users only, 7-day reappear); Render now API-only with 302 redirects to SOAR_BASE_URL — no longer serves static/index.html |
+| v0.9.7.5 | 2026-04-16 | WelcomeCard copy refresh (#75): 6 value prop cards (up from 5), updated starter chips (removed "safety/match/reach" terminology), tagline kept as original personalization-focused line |
 
 ## Repository Structure
 - **Backend:** `lifelaunchr-app-3/` — Python/FastAPI, deployed on Render
@@ -90,7 +91,7 @@
 |-----------|------|---------|
 | `ChatInterface` | `app/chat/components/ChatInterface.tsx` | Main chat UI; SSE streaming; sidebar drawer; for_student_id mode; first-session detection and flag flip |
 | `ChatMessage` | `app/chat/components/ChatMessage.tsx` | Renders a single message; detects "Want to add X?" patterns and renders inline Add buttons; renders file_ready download buttons |
-| `WelcomeCard` | `components/chat/WelcomeCard.tsx` | Welcome screen with starter chips; switches between normal and first-session modes (`isFirstSession` prop); role-specific starters via `FIRST_SESSION_STARTERS` |
+| `WelcomeCard` | `components/chat/WelcomeCard.tsx` | Welcome screen with starter chips; switches between normal and first-session modes (`isFirstSession` prop); role-specific starters via `FIRST_SESSION_STARTERS`; returning-user view shows 6 value prop cards (`VALUE_PROPS`) and 4 starter chips (`STARTERS`); tagline: "The college and career planning assistant that knows you, remembers everything, and gets smarter the more you use it." |
 | `AddFamilyModal` | `components/counselor/AddFamilyModal.tsx` | Modal for counselors to add student + parents as a family; validates emails, handles capacity errors, shows invite results |
 | `ModuleChips` | `components/chat/ModuleChips.tsx` | Topic pills below chat input ("Load extra guidance for: Athletics, Religious life, ..."); toggles active_topics sent to backend |
 
