@@ -39,32 +39,32 @@ const VALUE_PROPS = [
   {
     icon: '🎓',
     title: 'College, major & career research',
-    desc: 'Guided exploration to fit a student\'s academics, interests, and budget — with real data on admissions, costs, and programs.',
+    desc: 'Real data on admissions, costs, and programs — matched to your academics, interests, and budget.',
   },
   {
     icon: '💰',
     title: 'Scholarship search',
-    desc: 'Understand how financial aid and scholarships really work, and find scholarships you\'re actually eligible for based on your background, heritage, interests, and activities.',
+    desc: 'Find scholarships you\'re actually eligible for, based on your background, heritage, interests, and activities.',
   },
   {
     icon: '🗺️',
     title: 'Know what to do next',
-    desc: 'Soar guides the process based on decades of counseling experience — it knows what to ask, what to look for, and when.',
+    desc: 'Built on decades of counseling experience — Soar knows what to ask, what matters, and when.',
   },
   {
     icon: '👥',
     title: 'Your whole team, one place',
-    desc: 'Student, counselor, and parent all see the same research, so everyone stays on the same page.',
+    desc: 'Student, counselor, and parent all see the same research — no one is out of the loop.',
   },
   {
     icon: '📋',
     title: 'Come prepared to every meeting',
-    desc: 'Students make real progress between meetings, and counselors get a research record of what was explored — so meetings go deeper.',
+    desc: 'Students make progress between sessions; counselors arrive knowing exactly what was explored.',
   },
   {
     icon: '📊',
     title: 'Real data, not guesses',
-    desc: 'Answers grounded in data on 1,800+ colleges and 6,700+ scholarships — not AI training cutoffs.',
+    desc: '1,800+ colleges and 6,700+ scholarships — not AI training cutoffs.',
   },
 ]
 
