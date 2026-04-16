@@ -9,9 +9,9 @@ interface WelcomeCardProps {
 
 const STARTERS = [
   'Help me find colleges that fit my profile',
-  'What factors should I consider when choosing a college?',
+  'What scholarships might I qualify for?',
   'How does financial aid work?',
-  'Compare safety, match, and reach schools',
+  'Help me explore majors and careers',
 ]
 
 const FIRST_SESSION_STARTERS: Record<string, string[]> = {
@@ -37,29 +37,34 @@ const FIRST_SESSION_STARTERS: Record<string, string[]> = {
 
 const VALUE_PROPS = [
   {
-    icon: '🧑‍🏫',
-    title: 'Counselor-guided',
-    desc: 'Student, counselor, and parent in one shared workspace — everyone sees the same research.',
+    icon: '🎓',
+    title: 'College, major & career research',
+    desc: 'Guided exploration to fit a student\'s academics, interests, and budget — with real data on admissions, costs, and programs.',
   },
   {
-    icon: '✅',
-    title: 'Fewer hallucinations',
-    desc: 'Answers grounded in authoritative college and career databases, not internet guesswork.',
+    icon: '💰',
+    title: 'Scholarship search',
+    desc: 'Understand how financial aid and scholarships really work, and find scholarships you\'re actually eligible for based on your background, heritage, interests, and activities.',
   },
   {
-    icon: '🧭',
-    title: 'Process guidance',
-    desc: 'Helps you know what to ask, what to look for, and when — at every stage of the journey.',
+    icon: '🗺️',
+    title: 'Know what to do next',
+    desc: 'Soar guides the process based on decades of counseling experience — it knows what to ask, what to look for, and when.',
   },
   {
-    icon: '👤',
-    title: 'Knows you',
-    desc: 'Your profile plus real data equals advice that actually fits your situation and goals.',
+    icon: '👥',
+    title: 'Your whole team, one place',
+    desc: 'Student, counselor, and parent all see the same research, so everyone stays on the same page.',
   },
   {
-    icon: '📈',
-    title: 'Gets smarter',
-    desc: 'Builds a personalized research record over months, not just one chat session.',
+    icon: '📋',
+    title: 'Come prepared to every meeting',
+    desc: 'Students make real progress between meetings, and counselors get a research record of what was explored — so meetings go deeper.',
+  },
+  {
+    icon: '📊',
+    title: 'Real data, not guesses',
+    desc: 'Answers grounded in data on 1,800+ colleges and 6,700+ scholarships — not AI training cutoffs.',
   },
 ]
 
@@ -88,7 +93,7 @@ export function WelcomeCard({ onSendMessage, accountType, isFreeTier, isFirstSes
       : accountType === 'parent'
         ? 'Soar helps you research colleges, scholarships, and financial aid on your child\u2019s behalf. Everything you find is shared with their planning team.'
         : 'Soar is your personal college planning assistant. Tell me about yourself and what you\u2019re looking for \u2014 the more I know, the better I can help.'
-    : 'The college and career planning assistant that knows you, remembers everything, and gets smarter the more you use it.'
+    : 'Research colleges, explore majors, find scholarships, and prepare for every meeting \u2014 all in one place.'
 
   return (
     <div className="flex-1 flex items-start justify-center pt-8 pb-4 px-4">
