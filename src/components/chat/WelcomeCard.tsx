@@ -9,9 +9,9 @@ interface WelcomeCardProps {
 
 const STARTERS = [
   'Help me find colleges that fit my profile',
-  'What factors should I consider when choosing a college?',
+  'What scholarships might I qualify for?',
   'How does financial aid work?',
-  'Compare safety, match, and reach schools',
+  'Help me explore majors and careers',
 ]
 
 const FIRST_SESSION_STARTERS: Record<string, string[]> = {
@@ -37,29 +37,34 @@ const FIRST_SESSION_STARTERS: Record<string, string[]> = {
 
 const VALUE_PROPS = [
   {
-    icon: '🧑‍🏫',
-    title: 'Counselor-guided',
-    desc: 'Student, counselor, and parent in one shared workspace — everyone sees the same research.',
+    icon: '🎓',
+    title: 'College, major & career research',
+    desc: 'Explore admissions, costs, and programs \u2013 matched to your academics, interests, and budget.',
   },
   {
-    icon: '✅',
-    title: 'Fewer hallucinations',
-    desc: 'Answers grounded in authoritative college and career databases, not internet guesswork.',
+    icon: '💰',
+    title: 'Scholarships and aid',
+    desc: 'Find scholarships you\u2019re actually eligible for, based on your background, heritage, interests, and activities.',
   },
   {
-    icon: '🧭',
-    title: 'Process guidance',
-    desc: 'Helps you know what to ask, what to look for, and when — at every stage of the journey.',
+    icon: '🗺️',
+    title: 'Know what to do next',
+    desc: 'Built on decades of counseling experience \u2014 Soar knows what to ask, what matters, and when.',
   },
   {
-    icon: '👤',
-    title: 'Knows you',
-    desc: 'Your profile plus real data equals advice that actually fits your situation and goals.',
+    icon: '👥',
+    title: 'A unified team',
+    desc: 'Student, counselor, and parent all see the same research, so no one is out of the loop.',
   },
   {
-    icon: '📈',
-    title: 'Gets smarter',
-    desc: 'Builds a personalized research record over months, not just one chat session.',
+    icon: '📋',
+    title: 'Make the most of meetings',
+    desc: 'Students make progress between sessions; counselors arrive knowing exactly what was explored.',
+  },
+  {
+    icon: '📊',
+    title: 'Real data, not guesses',
+    desc: '1,800+ colleges, 6,700+ scholarships, 250+ summer & enrichment programs.',
   },
 ]
 
