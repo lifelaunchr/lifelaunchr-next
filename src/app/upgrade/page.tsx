@@ -217,10 +217,10 @@ export default function UpgradePage() {
                   <td style={{ ...cell, fontWeight: 600, color: '#374151' }}>Price</td>
                   <td style={{ ...cell, textAlign: 'center', color: '#374151' }}>$0</td>
                   <td style={{ ...cell, textAlign: 'center', background: '#f0f9ff' }}>
-                    <a href={`mailto:${SUPPORT_EMAIL}?subject=Soar Plus beta pricing`} style={{ color: '#0369a1', fontWeight: 600, textDecoration: 'none', fontSize: '0.82rem' }}>Beta pricing — lock it in now</a>
+                    <a href={`mailto:${SUPPORT_EMAIL}?subject=Soar Plus beta pricing`} style={{ color: '#0369a1', fontWeight: 600, textDecoration: 'none', fontSize: '0.82rem' }}>Lock in beta pricing</a>
                   </td>
                   <td style={{ ...cell, textAlign: 'center' }}>
-                    <a href={`mailto:${SUPPORT_EMAIL}?subject=Soar Pro beta pricing`} style={{ color: '#0369a1', fontWeight: 600, textDecoration: 'none', fontSize: '0.82rem' }}>Beta pricing — lock it in now</a>
+                    <a href={`mailto:${SUPPORT_EMAIL}?subject=Soar Pro beta pricing`} style={{ color: '#0369a1', fontWeight: 600, textDecoration: 'none', fontSize: '0.82rem' }}>Lock in beta pricing</a>
                   </td>
                 </tr>
                 {STUDENT_FEATURES.map((row) => (
@@ -256,7 +256,7 @@ export default function UpgradePage() {
                   <td style={{ ...cell, fontWeight: 600, color: '#374151' }}>Price</td>
                   <td style={{ ...cell, textAlign: 'center', color: '#374151' }}>Free</td>
                   <td style={{ ...cell, textAlign: 'center', background: '#f0f9ff' }}>
-                    <a href={`mailto:${SUPPORT_EMAIL}?subject=Soar counselor paid plan`} style={{ color: '#0369a1', fontWeight: 600, textDecoration: 'none', fontSize: '0.82rem' }}>Beta pricing — lock it in now</a>
+                    <a href={`mailto:${SUPPORT_EMAIL}?subject=Soar counselor paid plan`} style={{ color: '#0369a1', fontWeight: 600, textDecoration: 'none', fontSize: '0.82rem' }}>Lock in beta pricing</a>
                   </td>
                   <td style={{ ...cell, textAlign: 'center' }}>
                     <a href={`mailto:${SUPPORT_EMAIL}?subject=Soar Enterprise`} style={{ color: '#0369a1', fontWeight: 600, textDecoration: 'none', fontSize: '0.82rem' }}>Contact us</a>
