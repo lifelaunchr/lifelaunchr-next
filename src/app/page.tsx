@@ -1,16 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useAuth, SignInButton } from '@clerk/nextjs'
-import { useRouter } from 'next/navigation'
+import { useState } from 'react'
+import { SignInButton } from '@clerk/nextjs'
 import Link from 'next/link'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://lifelaunchr.onrender.com'
 
 export default function Home() {
-  const { isSignedIn, isLoaded } = useAuth()
-  const router = useRouter()
-
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -21,16 +17,6 @@ export default function Home() {
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState('')
-
-  useEffect(() => {
-    if (isLoaded && isSignedIn) {
-      router.replace('/chat')
-    }
-  }, [isLoaded, isSignedIn, router])
-
-  // Show nothing while Clerk loads (prevents flash)
-  if (!isLoaded) return null
-  if (isSignedIn) return null
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
