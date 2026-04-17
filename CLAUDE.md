@@ -32,6 +32,7 @@
 | v0.9.7.5 | 2026-04-16 | WelcomeCard copy refresh (#75): 6 value prop cards (up from 5), updated starter chips (removed "safety/match/reach" terminology), tagline kept as original personalization-focused line |
 | v0.9.7.6 | 2026-04-17 | Redirect lifelaunchr-next.vercel.app → soar.lifelaunchr.com (#72): host-based redirect in next.config.ts; preview deployment URLs excluded |
 | v0.9.7.7 | 2026-04-17 | Landing page + upgrade page rewrite (#32): new hero copy on landing page; full upgrade page with fear-first framing, feature cards, tier tables, tools comparison, FAQ; layout.tsx metadata updated; tenant tagline updated to "College and Career Planning, Built for the Whole Team." |
+| v0.9.7.8 | 2026-04-17 | Server-side auth redirect (#77): signed-in users hitting / now redirect to /chat at the edge via proxy.ts (Next.js 16 middleware); deleted conflicting middleware.ts; removed client-side Clerk loading guard from page.tsx to eliminate blank-page flash for non-signed-in users |
 
 ## Repository Structure
 - **Backend:** `lifelaunchr-app-3/` — Python/FastAPI, deployed on Render
