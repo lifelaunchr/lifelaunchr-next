@@ -30,6 +30,7 @@
 | v0.9.7.3 | 2026-04-16 | Production config only (#71): Essays module enabled, Editate credentials set on production tenant, essay lazy-fetch confirmed working — no frontend code changes |
 | v0.9.7.4 | 2026-04-16 | Beta banner + Render cleanup (#36, #22, #23): BetaBanner component added (dismissible, signed-in users only, 7-day reappear); Render now API-only with 302 redirects to SOAR_BASE_URL — no longer serves static/index.html |
 | v0.9.7.5 | 2026-04-16 | WelcomeCard copy refresh (#75): 6 value prop cards (up from 5), updated starter chips (removed "safety/match/reach" terminology), tagline kept as original personalization-focused line |
+| v0.9.7.6 | 2026-04-17 | Redirect lifelaunchr-next.vercel.app → soar.lifelaunchr.com (#72): host-based redirect in next.config.ts; preview deployment URLs excluded |
 
 ## Repository Structure
 - **Backend:** `lifelaunchr-app-3/` — Python/FastAPI, deployed on Render
