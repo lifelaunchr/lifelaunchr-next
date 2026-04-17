@@ -132,8 +132,16 @@ export default clerkMiddleware(async (auth, req) => {
   }
   // ── end ACCESS_PASSWORD gate ──────────────────────────────────────────────
 
+  const { userId } = await auth()
+  const { pathname } = url
+
+  // Signed-in users hitting the landing page get redirected to /chat immediately,
+  // before any HTML is sent to the browser.
+  if (userId && pathname === '/') {
+    return NextResponse.redirect(new URL('/chat', req.url))
+  }
+
   if (!isPublicRoute(req)) {
-    const { userId } = await auth()
     if (!userId) {
       return NextResponse.redirect(new URL('/', req.url))
     }
