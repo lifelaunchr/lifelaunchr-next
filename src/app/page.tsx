@@ -105,7 +105,7 @@ export default function Home() {
               from day one.
             </p>
             <p className="text-base leading-relaxed mb-10 max-w-2xl mx-auto italic" style={{ color: '#7dd3fc' }}>
-              Built by a counselor who has worked with AI long before it became cool.
+              Built by a counselor who has been working with AI since before it was cool.
             </p>
             {/* Privacy callout */}
             <div
