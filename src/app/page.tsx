@@ -87,24 +87,25 @@ export default function Home() {
         {/* Hero */}
         <section style={{ background: '#0c1b33' }}>
           <div className="mx-auto max-w-3xl px-6 pt-16 pb-14 text-center">
-            <h1 className="text-4xl sm:text-5xl font-bold leading-tight mb-4" style={{ color: '#fff' }}>
-              Meet Soar™
+            <h1 className="text-3xl sm:text-4xl font-bold leading-tight mb-8" style={{ color: '#fff' }}>
+              The AI College and Career Counseling Assistant That Transforms Your Practice
             </h1>
-            <p className="text-xl sm:text-2xl font-medium mb-8" style={{ color: '#7dd3fc' }}>
-              Built by a counselor. Powered by AI.
+            <p className="text-lg leading-relaxed mb-5 max-w-2xl mx-auto" style={{ color: '#cbd5e1' }}>
+              Your students are already using AI. Soar helps you guide them. Where most AI tools
+              give students a smarter search engine, Soar&trade; provides a college and career
+              research assistant, armed with authoritative data on thousands of colleges and
+              scholarships, hundreds of majors and enrichment programs, and the process knowledge
+              to guide students, parents, and counselors toward the right decisions.
             </p>
             <p className="text-lg leading-relaxed mb-5 max-w-2xl mx-auto" style={{ color: '#cbd5e1' }}>
-              Most AI tools give students a smarter search engine. Soar&trade; gives them a college
-              and career research assistant, armed with authoritative data on thousands of colleges
-              and scholarships, hundreds of majors and enrichment programs, and the process
-              knowledge to guide students, parents, and counselors toward the right decisions.
-            </p>
-            <p className="text-lg leading-relaxed mb-10 max-w-2xl mx-auto" style={{ color: '#cbd5e1' }}>
               For IECs and school counselors, that means more than efficiency. Soar keeps you
               connected with your students between sessions, helps them make real progress on their
-              own, and prepares you for every meeting — so you&apos;re not just faster,
-              you&apos;re more effective. It&apos;s free to get started, and you can do meaningful
-              research from day one.
+              own, and prepares you for every meeting. So you&apos;re not just faster, you&apos;re
+              more effective. It&apos;s free to get started, and you can do meaningful research
+              from day one.
+            </p>
+            <p className="text-base leading-relaxed mb-10 max-w-2xl mx-auto italic" style={{ color: '#7dd3fc' }}>
+              Built by a counselor who has worked with AI long before it became cool.
             </p>
             {/* Privacy callout */}
             <div

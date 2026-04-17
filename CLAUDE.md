@@ -14,7 +14,7 @@
 
 # LifeLaunchr / Soar — Deployment Reference
 
-> Last updated: 2026-04-14.
+> Last updated: 2026-04-17.
 
 ## Version History
 
@@ -31,6 +31,7 @@
 | v0.9.7.4 | 2026-04-16 | Beta banner + Render cleanup (#36, #22, #23): BetaBanner component added (dismissible, signed-in users only, 7-day reappear); Render now API-only with 302 redirects to SOAR_BASE_URL — no longer serves static/index.html |
 | v0.9.7.5 | 2026-04-16 | WelcomeCard copy refresh (#75): 6 value prop cards (up from 5), updated starter chips (removed "safety/match/reach" terminology), tagline kept as original personalization-focused line |
 | v0.9.7.6 | 2026-04-17 | Redirect lifelaunchr-next.vercel.app → soar.lifelaunchr.com (#72): host-based redirect in next.config.ts; preview deployment URLs excluded |
+| v0.9.7.7 | 2026-04-17 | Landing page + upgrade page rewrite (#32): new hero copy on landing page; full upgrade page with fear-first framing, feature cards, tier tables, tools comparison, FAQ; layout.tsx metadata updated; tenant tagline updated to "College and Career Planning, Built for the Whole Team." |
 
 ## Repository Structure
 - **Backend:** `lifelaunchr-app-3/` — Python/FastAPI, deployed on Render
@@ -64,13 +65,50 @@
 
 ---
 
+## Product Positioning and Messaging
+
+Soar is positioned as **the AI college and career planning assistant built specifically for the counselor-student-parent team**. This framing should be consistent across all pages, copy, and any new UI.
+
+### Core insight (the "TiVo moment")
+Students are already using ChatGPT and Claude for college and career planning — whether their counselor knows it or not. Soar is the version where the counselor is in the loop. Every student conversation builds a shared research record visible to counselors and parents.
+
+### Key differentiators vs. general-purpose AI (Claude, ChatGPT)
+1. **Persistent student profiles** — built automatically from conversation; survives across sessions
+2. **Real college and scholarship data** — 1,800+ colleges, 6,700+ scholarships, 250+ enrichment programs; no hallucinated acceptance rates
+3. **Counseling methodology baked in** — asks the questions students don't know to ask; guides the process step by step rather than just answering queries
+4. **Shared research record** — counselor, student, and parent all see the same research; no one is out of the loop
+5. **Privacy** — uses the Anthropic API; student conversations are not used to train AI models (unlike Claude.ai/ChatGPT direct)
+
+### Positioning vs. other tools
+- **Scoir / Naviance / Maia Learning / College Planner Pro** — complementary; those are CRM/workflow tools; Soar is where the research happens. Key insight: students actually use Soar because it's conversational, not form-based.
+- **NerdApply** — complementary; NerdApply does application strategy analysis; Soar handles earlier-stage research and planning.
+- **Claude / ChatGPT** — "in addition, not instead." General-purpose AI is fine for practice operations (marketing, comms). Soar is the right tool for the student-facing work.
+
+### Tone and framing rules
+- Lead with **counselor fears and opportunities**, not feature lists
+- Use **"college and career"** throughout — Soar covers majors, careers, essays, résumés, scholarships, and financial aid, not just college selection
+- Avoid "safety, match, and reach" — Soar uses "likely, target, and reach"
+- Avoid excessive em-dashes; use periods and colons instead
+- The product is **not a smarter Google** — it guides the process, not just answers questions
+
+### Approved taglines (as of v0.9.7.7)
+| Context | Tagline |
+|---------|---------|
+| Signed-in header (tenant tagline in DB) | College and Career Planning, Built for the Whole Team. |
+| WelcomeCard (returning users) | The college and career planning assistant that knows you, remembers everything, and gets smarter the more you use it. |
+| Landing page hero headline | The AI College and Career Counseling Assistant That Transforms Your Practice |
+| Upgrade page hero headline | Your students are already using AI for college and career planning. Soar helps you guide them as they do. |
+| layout.tsx metadata description | The AI college and career planning assistant that keeps counselors, students, and parents on the same page. Built on real data, deep counseling methodology, and a shared research record. |
+
+---
+
 ## Frontend Pages and Components
 
 ### Pages
 
 | Route | File | Purpose |
 |-------|------|---------|
-| `/` | `app/page.tsx` | Root redirect — sends users to /chat or /sign-in |
+| `/` | `app/page.tsx` | Public landing page — auth-aware; signed-in users redirect to /chat; hero with new headline "The AI College and Career Counseling Assistant That Transforms Your Practice"; body copy positions Soar vs. general AI; italic credential line; privacy callout; "How it works" (3 steps); request access form |
 | `/chat` | `app/chat/page.tsx` | Main AI chat interface; sidebar with sessions, student picker, schedule button |
 | `/profile` | `app/profile/page.tsx` | Student profile (My Info for counselors); GPA, test scores, major, demographics, coach assessment |
 | `/lists` | `app/lists/page.tsx` | College, scholarship, and enrichment lists; spreadsheet and card views; drag-to-reorder |
@@ -79,7 +117,7 @@
 | `/reports` | `app/reports/page.tsx` | Session reports; two-panel layout (list + form); AI draft; send via SendGrid |
 | `/admin` | `app/admin/page.tsx` | Admin panel; tabs: Users, Tiers (super-admin), Tenants (super-admin), Tenant Settings |
 | `/safety` | `app/safety/page.tsx` | Safety event review (admin/counselor only) |
-| `/upgrade` | `app/upgrade/page.tsx` | Upgrade / paywall page |
+| `/upgrade` | `app/upgrade/page.tsx` | Plans & Pricing page — fear-first framing for counselors; hero + case-for-Soar intro; 6 feature cards; student and counselor tier comparison tables; "Works with your tools" section (Scoir/Naviance/Maia/CPP, NerdApply, Claude/ChatGPT); FAQ (9 items); bottom CTA; beta pricing lock-in note |
 | `/onboarding` | `app/onboarding/page.tsx` | 6-step post-signup onboarding: (1) role picker, (2) student profile, (3) college wishlist, (4) Make the Most of Soar intro cards, (5) counselor invite (counselors only), (6) question picker → auto-sends to /chat |
 | `/join` | `app/join/page.tsx` | Invite acceptance landing page |
 | `/accept-invite` | `app/accept-invite/page.tsx` | Post-Clerk-auth invite claim page |
