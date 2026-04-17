@@ -446,6 +446,26 @@ export default function DashboardPage() {
   const [archiveConfirm, setArchiveConfirm] = useState(false)
   const [archiving, setArchiving]   = useState(false)
   const [addFamilyOpen, setAddFamilyOpen] = useState(false)
+  const [tenantCounselors, setTenantCounselors] = useState<{id: number; full_name: string}[] | null>(null)
+
+  // Try to load counselors for tenant-admin mode. 403 = regular counselor, ignore.
+  useEffect(() => {
+    async function fetchCounselors() {
+      try {
+        const token = await getToken()
+        const res = await fetch(`${apiUrl}/tenant-admin/counselors`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setTenantCounselors(data.counselors || [])
+        }
+      } catch {
+        // ignore — not a tenant admin
+      }
+    }
+    fetchCounselors()
+  }, [getToken])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -913,6 +933,7 @@ export default function DashboardPage() {
         open={addFamilyOpen}
         onClose={() => setAddFamilyOpen(false)}
         onSuccess={load}
+        counselors={tenantCounselors && tenantCounselors.length > 0 ? tenantCounselors : undefined}
       />
     </div>
   )

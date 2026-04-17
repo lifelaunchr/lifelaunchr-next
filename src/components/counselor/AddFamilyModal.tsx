@@ -6,14 +6,26 @@ import { useAuth } from '@clerk/nextjs'
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 interface ParentEntry { full_name: string; email: string }
+type PersonStatus = 'created' | 'linked' | 'reinvited' | 'reactivated' | 'connected'
+interface PersonResult { id: number; status: PersonStatus; invite_url: string | null }
 interface FamilyResult {
-  student: { id: number; status: 'created' | 'linked'; invite_url: string | null }
-  parents: { id: number; status: 'created' | 'linked'; invite_url: string | null }[]
+  student: PersonResult
+  parents: PersonResult[]
 }
-interface Props { open: boolean; onClose: () => void; onSuccess: () => void }
+interface CounselorOption { id: number; full_name: string }
+interface Props {
+  open: boolean
+  onClose: () => void
+  onSuccess: () => void
+  counselors?: CounselorOption[]
+}
 
-export default function AddFamilyModal({ open, onClose, onSuccess }: Props) {
+export default function AddFamilyModal({ open, onClose, onSuccess, counselors }: Props) {
   const { getToken } = useAuth()
+  const isTenantAdmin = counselors !== undefined && counselors.length > 0
+  const [selectedCounselorId, setSelectedCounselorId] = useState<number | null>(
+    isTenantAdmin ? counselors[0].id : null
+  )
   const [studentName, setStudentName] = useState('')
   const [studentEmail, setStudentEmail] = useState('')
   const [parents, setParents] = useState<ParentEntry[]>([{ full_name: '', email: '' }])
@@ -29,6 +41,7 @@ export default function AddFamilyModal({ open, onClose, onSuccess }: Props) {
     setError('')
     setResult(null)
     setResultNames({ studentName: '', parentNames: [] })
+    if (isTenantAdmin && counselors) setSelectedCounselorId(counselors[0].id)
   }
 
   const addParent = () => {
@@ -44,6 +57,7 @@ export default function AddFamilyModal({ open, onClose, onSuccess }: Props) {
   }
 
   const validate = (): string | null => {
+    if (isTenantAdmin && !selectedCounselorId) return 'Please select a counselor'
     if (!studentName.trim()) return 'Student name is required'
     if (!studentEmail.trim()) return 'Student email is required'
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -70,13 +84,21 @@ export default function AddFamilyModal({ open, onClose, onSuccess }: Props) {
     try {
       const token = await getToken()
       const fp = parents.filter(p => p.full_name.trim() && p.email.trim())
-      const res = await fetch(API + '/counselors/me/families', {
+      const endpoint = isTenantAdmin ? '/tenant-admin/families' : '/counselors/me/families'
+      const body = isTenantAdmin
+        ? {
+            counselor_id: selectedCounselorId,
+            student: { full_name: studentName.trim(), email: studentEmail.trim() },
+            parents: fp.map(p => ({ full_name: p.full_name.trim(), email: p.email.trim() })),
+          }
+        : {
+            student: { full_name: studentName.trim(), email: studentEmail.trim() },
+            parents: fp.map(p => ({ full_name: p.full_name.trim(), email: p.email.trim() })),
+          }
+      const res = await fetch(API + endpoint, {
         method: 'POST',
         headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          student: { full_name: studentName.trim(), email: studentEmail.trim() },
-          parents: fp.map(p => ({ full_name: p.full_name.trim(), email: p.email.trim() })),
-        }),
+        body: JSON.stringify(body),
       })
       if (!res.ok) {
         const d = await res.json().catch(() => ({}))
@@ -114,27 +136,35 @@ export default function AddFamilyModal({ open, onClose, onSuccess }: Props) {
             <div>
               <div className="mb-4 space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className={'inline-flex px-2 py-0.5 rounded-full text-xs font-medium ' + (result.student.status === 'created' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700')}>
-                    {result.student.status === 'created' ? 'Invited' : 'Linked'}
+                  <span className={'inline-flex px-2 py-0.5 rounded-full text-xs font-medium ' + (['created','reinvited','reactivated'].includes(result.student.status) ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700')}>
+                    {result.student.status === 'connected' || result.student.status === 'linked' ? 'Connected' : 'Invited'}
                   </span>
                   <span className="text-sm text-gray-800">{resultNames.studentName}</span>
                   <span className="text-xs text-gray-400">(student)</span>
                 </div>
                 {result.parents.map((pr, i) => (
                   <div key={i} className="flex items-center gap-2">
-                    <span className={'inline-flex px-2 py-0.5 rounded-full text-xs font-medium ' + (pr.status === 'created' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700')}>
-                      {pr.status === 'created' ? 'Invited' : 'Linked'}
+                    <span className={'inline-flex px-2 py-0.5 rounded-full text-xs font-medium ' + (['created','reinvited','reactivated'].includes(pr.status) ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700')}>
+                      {pr.status === 'connected' || pr.status === 'linked' ? 'Connected' : 'Invited'}
                     </span>
                     <span className="text-sm text-gray-800">{resultNames.parentNames[i]}</span>
                     <span className="text-xs text-gray-400">(parent)</span>
                   </div>
                 ))}
               </div>
-              <p className="text-sm text-gray-500 mb-5">
-                {result.student.status === 'created' || result.parents.some(p => p.status === 'created')
-                  ? 'Invite emails have been sent. Connections will be established automatically when they sign up.'
-                  : 'All accounts were already in the system. Connections have been established.'}
-              </p>
+              {(() => {
+                const allPeople = [result.student, ...result.parents]
+                const hasInvited = allPeople.some(p => ['created','reinvited','reactivated'].includes(p.status))
+                const hasConnected = allPeople.some(p => p.status === 'connected' || p.status === 'linked')
+                if (hasInvited && hasConnected) {
+                  return <p className="text-sm text-gray-500 mb-5">Invite emails sent to new members. Existing account holders have been connected and notified.</p>
+                }
+                if (hasInvited) {
+                  return <p className="text-sm text-gray-500 mb-5">Invite emails have been sent. Connections will be established automatically when they sign up.</p>
+                }
+                return <p className="text-sm text-gray-500 mb-5">All accounts were already active. Everyone has been connected and notified.</p>
+              })()}
+
               <div className="flex gap-3">
                 <button onClick={handleAddAnother} className="flex-1 px-4 py-2.5 text-sm font-medium border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50">Add Another Family</button>
                 <button onClick={handleDone} className="flex-1 px-4 py-2.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700">Done</button>
@@ -143,6 +173,20 @@ export default function AddFamilyModal({ open, onClose, onSuccess }: Props) {
           ) : (
             <div>
               {error && <div className="mb-4 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>}
+              {isTenantAdmin && (
+                <div className="mb-5">
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Assign to Counselor</label>
+                  <select
+                    value={selectedCounselorId ?? ''}
+                    onChange={e => setSelectedCounselorId(Number(e.target.value))}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {(counselors ?? []).map(c => (
+                      <option key={c.id} value={c.id}>{c.full_name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div className="mb-5">
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Student</label>
                 <div className="space-y-3">
