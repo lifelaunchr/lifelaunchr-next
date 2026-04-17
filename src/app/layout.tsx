@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     template: '%s | Soar',
   },
   description:
-    'Built by a counselor. Powered by AI. The college planning advisor that knows your student, remembers everything, and gets smarter over time.',
+    'The AI college and career planning assistant that keeps counselors, students, and parents on the same page. Built on real data, deep counseling methodology, and a shared research record.',
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'https://lifelaunchr-next.vercel.app'),
   alternates: {
     canonical: process.env.NEXT_PUBLIC_APP_URL ?? 'https://lifelaunchr-next.vercel.app',
@@ -30,15 +30,17 @@ export const metadata: Metadata = {
   keywords: [
     'college planning',
     'college counseling',
+    'career planning',
     'AI college advisor',
     'college admissions',
+    'IEC tools',
     'LifeLaunchr',
     'Soar',
   ],
   openGraph: {
     title: 'Soar by LifeLaunchr',
     description:
-      'Built by a counselor. Powered by AI. The college planning advisor that knows your student, remembers everything, and gets smarter over time.',
+      'The AI college and career planning assistant that keeps counselors, students, and parents on the same page. Built on real data, deep counseling methodology, and a shared research record.',
     url: process.env.NEXT_PUBLIC_APP_URL ?? 'https://lifelaunchr-next.vercel.app',
     siteName: 'Soar by LifeLaunchr',
     images: [
@@ -55,7 +57,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Soar by LifeLaunchr',
     description:
-      'Built by a counselor. Powered by AI. The college planning advisor that knows your student, remembers everything, and gets smarter over time.',
+      'The AI college and career planning assistant that keeps counselors, students, and parents on the same page. Built on real data, deep counseling methodology, and a shared research record.',
     images: ['/og-image.png'],
   },
   icons: {
