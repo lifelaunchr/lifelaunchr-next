@@ -928,8 +928,9 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Add Family modal */}
+      {/* Add Family modal — key forces remount once counselors load so useState initializes correctly */}
       <AddFamilyModal
+        key={tenantCounselors ? 'ta' : 'c'}
         open={addFamilyOpen}
         onClose={() => setAddFamilyOpen(false)}
         onSuccess={load}
