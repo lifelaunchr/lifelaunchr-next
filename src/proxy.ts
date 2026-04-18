@@ -126,7 +126,7 @@ export default clerkMiddleware(async (auth, req) => {
 
     if (cookieValue !== ACCESS_PASSWORD) {
       const loginUrl = new URL(LOGIN_PATH, req.url)
-      loginUrl.searchParams.set('redirect', url.pathname)
+      loginUrl.searchParams.set('redirect', url.pathname + url.search)
       return NextResponse.redirect(loginUrl)
     }
   }

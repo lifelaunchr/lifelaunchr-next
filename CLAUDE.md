@@ -14,7 +14,7 @@
 
 # LifeLaunchr / Soar — Deployment Reference
 
-> Last updated: 2026-04-17 (v0.9.7.8).
+> Last updated: 2026-04-17 (v0.9.8).
 
 ## Version History
 
@@ -33,6 +33,7 @@
 | v0.9.7.6 | 2026-04-17 | Redirect lifelaunchr-next.vercel.app → soar.lifelaunchr.com (#72): host-based redirect in next.config.ts; preview deployment URLs excluded |
 | v0.9.7.7 | 2026-04-17 | Landing page + upgrade page rewrite (#32): new hero copy on landing page; full upgrade page with fear-first framing, feature cards, tier tables, tools comparison, FAQ; layout.tsx metadata updated; tenant tagline updated to "College and Career Planning, Built for the Whole Team." |
 | v0.9.7.8 | 2026-04-17 | Server-side auth redirect (#77): signed-in users hitting / now redirect to /chat at the edge via proxy.ts (Next.js 16 middleware); deleted conflicting middleware.ts; removed client-side Clerk loading guard from page.tsx to eliminate blank-page flash for non-signed-in users |
+| v0.9.8 | 2026-04-17 | Tenant admin family invite (#80): AddFamilyModal shows counselor dropdown for tenant admins and routes to POST /tenant-admin/families; dashboard/page.tsx fetches counselor list and passes to modal with key-prop remount fix; localStorage token fix (was sessionStorage, lost across Clerk redirects); site password gate query-string fix in proxy.ts (url.pathname + url.search — was dropping ?token= param); parent onboarding routing fix (POST /accept-invite response used as primary account_type source so parents skip role picker and land on Soar intro at step 4) |
 
 ## Repository Structure
 - **Backend:** `lifelaunchr-app-3/` — Python/FastAPI, deployed on Render

@@ -15,7 +15,7 @@ function AcceptInviteInner() {
     const token = searchParams.get('token')
     if (token) {
       // Persist across sign-up redirect
-      sessionStorage.setItem('migration_invite_token', token)
+      localStorage.setItem('migration_invite_token', token)
     }
 
     if (isSignedIn) {

@@ -160,7 +160,7 @@ export default function OnboardingPage() {
 
   // ── Migration / family invite: skip role picker if account type is known ─────
   useEffect(() => {
-    const token = sessionStorage.getItem('migration_invite_token')
+    const token = localStorage.getItem('migration_invite_token')
     if (!token || !clerkUser) return
 
     setMigrationLinking(true)
@@ -181,32 +181,41 @@ export default function OnboardingPage() {
           }),
         })
 
-        await fetch(`${apiUrl}/accept-invite`, {
+        // accept-invite returns the pre-created user record including the real account_type
+        const acceptRes = await fetch(`${apiUrl}/accept-invite`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token, clerk_user_id: clerkUser.id, email }),
         })
 
-        // Students already have a known role — skip role picker and go to profile step
-        if (syncRes.ok) {
-          const syncData = await syncRes.json()
-          if (syncData.account_type === 'student') {
-            setAccountType('student')
-            setStep(2)
-            return
-          }
-          if (syncData.account_type === 'parent') {
-            // Parents skip profile steps but still see Soar intro + question picker
-            setAccountType('parent')
-            setStep(4)
-            return
-          }
-          // Counselors: fall through to show step 1 normally
+        // Prefer account_type from accept-invite (reads directly from pre-created user row).
+        // Fall back to auth/sync result if accept-invite fails (e.g. token already used).
+        let resolvedType: string | null = null
+        if (acceptRes.ok) {
+          const acceptData = await acceptRes.json()
+          resolvedType = acceptData.user?.account_type || null
         }
+        if (!resolvedType && syncRes.ok) {
+          const syncData = await syncRes.json()
+          resolvedType = syncData.account_type || null
+        }
+
+        if (resolvedType === 'student') {
+          setAccountType('student')
+          setStep(2)
+          return
+        }
+        if (resolvedType === 'parent') {
+          // Parents skip profile steps but still see Soar intro + question picker
+          setAccountType('parent')
+          setStep(4)
+          return
+        }
+        // Counselors and unrecognized types: fall through to show step 1 normally
       } catch {
         // Non-fatal — email-match in /auth/sync is what actually links the account
       } finally {
-        sessionStorage.removeItem('migration_invite_token')
+        localStorage.removeItem('migration_invite_token')
         setMigrationLinking(false)
       }
     })()
