@@ -1,12 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { SignInButton } from '@clerk/nextjs'
+import { SignInButton, useAuth } from '@clerk/nextjs'
 import Link from 'next/link'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://lifelaunchr.onrender.com'
 
 export default function Home() {
+  const { isSignedIn } = useAuth()
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -60,11 +61,17 @@ export default function Home() {
             <Link href="/upgrade" className="text-sm transition-colors" style={{ color: '#a0aec0' }}>
               Plans &amp; Pricing
             </Link>
-            <SignInButton mode="modal">
-              <button className="text-sm font-medium transition-colors" style={{ color: '#fff' }}>
-                Sign in
-              </button>
-            </SignInButton>
+            {isSignedIn ? (
+              <Link href="/chat" className="text-sm font-medium transition-colors" style={{ color: '#fff' }}>
+                Open Soar →
+              </Link>
+            ) : (
+              <SignInButton mode="modal">
+                <button className="text-sm font-medium transition-colors" style={{ color: '#fff' }}>
+                  Sign in
+                </button>
+              </SignInButton>
+            )}
           </nav>
         </div>
       </header>
@@ -263,11 +270,17 @@ export default function Home() {
 
               <p className="text-center text-xs text-gray-400">
                 Already have access?{' '}
-                <SignInButton mode="modal">
-                  <button type="button" className="underline hover:text-gray-600">
-                    Sign in
-                  </button>
-                </SignInButton>
+                {isSignedIn ? (
+                  <Link href="/chat" className="underline hover:text-gray-600">
+                    Open Soar →
+                  </Link>
+                ) : (
+                  <SignInButton mode="modal">
+                    <button type="button" className="underline hover:text-gray-600">
+                      Sign in
+                    </button>
+                  </SignInButton>
+                )}
               </p>
             </form>
           )}
