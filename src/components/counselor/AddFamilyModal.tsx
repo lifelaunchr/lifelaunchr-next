@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '@clerk/nextjs'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
@@ -23,9 +23,14 @@ interface Props {
 export default function AddFamilyModal({ open, onClose, onSuccess, counselors }: Props) {
   const { getToken } = useAuth()
   const isTenantAdmin = counselors !== undefined && counselors.length > 0
-  const [selectedCounselorId, setSelectedCounselorId] = useState<number | null>(
-    isTenantAdmin ? counselors[0].id : null
-  )
+  const [selectedCounselorId, setSelectedCounselorId] = useState<number | null>(null)
+
+  // Sync selectedCounselorId when counselors prop first arrives (async fetch on dashboard mount)
+  useEffect(() => {
+    if (counselors && counselors.length > 0 && selectedCounselorId === null) {
+      setSelectedCounselorId(counselors[0].id)
+    }
+  }, [counselors])
   const [studentName, setStudentName] = useState('')
   const [studentEmail, setStudentEmail] = useState('')
   const [parents, setParents] = useState<ParentEntry[]>([{ full_name: '', email: '' }])
