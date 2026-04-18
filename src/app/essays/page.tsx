@@ -695,8 +695,8 @@ function EssaysPageInner() {
             <div style={{ fontSize: '2rem', marginBottom: 12 }}>✏️</div>
             <p style={{ fontSize: '0.875rem' }}>
               {isCounselor
-                ? 'No essay data cached yet. Use the admin panel to refresh schools from Editate.'
-                : 'No essay prompts found for your college list yet.'}
+                ? 'No essay prompts yet. Move colleges from Researching to Applying on the Lists page to see prompts here.'
+                : 'No essay prompts yet. Move colleges from Researching to Applying on the Lists page to see prompts here.'}
             </p>
           </div>
         )}
