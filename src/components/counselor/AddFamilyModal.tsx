@@ -102,10 +102,18 @@ export default function AddFamilyModal({ open, onClose, onSuccess, counselors }:
       })
       if (!res.ok) {
         const d = await res.json().catch(() => ({}))
-        if (d.detail === 'COUNSELOR_AT_CAPACITY') {
+        const detail = d.detail
+        if (detail === 'COUNSELOR_AT_CAPACITY' || detail?.code === 'COUNSELOR_AT_CAPACITY') {
+          if (isTenantAdmin && detail?.code === 'COUNSELOR_AT_CAPACITY') {
+            const name = counselors?.find(c => c.id === selectedCounselorId)?.full_name || 'This counselor'
+            throw new Error(
+              `${name} is at their student limit (${detail.active}/${detail.limit}). ` +
+              `To add more students, upgrade ${name}'s plan or archive inactive students from their roster.`
+            )
+          }
           throw new Error("You've reached your student limit. Upgrade your plan or archive inactive students to add more.")
         }
-        throw new Error(d.detail || 'Error ' + res.status)
+        throw new Error(typeof detail === 'string' ? detail : 'Error ' + res.status)
       }
       const data: FamilyResult = await res.json()
       setResult(data)
