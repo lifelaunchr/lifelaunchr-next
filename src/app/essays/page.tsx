@@ -693,11 +693,21 @@ function EssaysPageInner() {
             background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0',
           }}>
             <div style={{ fontSize: '2rem', marginBottom: 12 }}>✏️</div>
-            <p style={{ fontSize: '0.875rem' }}>
-              {isCounselor
-                ? 'No essay data cached yet. Use the admin panel to refresh schools from Editate.'
-                : 'No essay prompts found for your college list yet.'}
-            </p>
+            {!effectiveEditateAvailable ? (
+              <p style={{ fontSize: '0.875rem' }}>
+                {viewingStudentAs
+                  ? 'This student is not yet authorized to use Editate. Enable it in the admin panel under their user settings.'
+                  : 'Essay review is not enabled for your account. Contact your counselor to get access.'}
+              </p>
+            ) : (
+              <p style={{ fontSize: '0.875rem' }}>
+                No essay prompts yet.{' '}
+                {viewingStudentAs ? 'The student has' : 'You have'} no colleges in Applying or later status.
+                {' '}Move colleges from Researching to Applying on the{' '}
+                <a href="/lists" style={{ color: '#0c1b33', textDecoration: 'underline' }}>Lists page</a>
+                {' '}to see prompts here.
+              </p>
+            )}
           </div>
         )}
 
