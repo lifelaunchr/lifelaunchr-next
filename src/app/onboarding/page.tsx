@@ -160,7 +160,7 @@ export default function OnboardingPage() {
 
   // ── Migration / family invite: skip role picker if account type is known ─────
   useEffect(() => {
-    const token = sessionStorage.getItem('migration_invite_token')
+    const token = localStorage.getItem('migration_invite_token')
     if (!token || !clerkUser) return
 
     setMigrationLinking(true)
@@ -215,7 +215,7 @@ export default function OnboardingPage() {
       } catch {
         // Non-fatal — email-match in /auth/sync is what actually links the account
       } finally {
-        sessionStorage.removeItem('migration_invite_token')
+        localStorage.removeItem('migration_invite_token')
         setMigrationLinking(false)
       }
     })()
