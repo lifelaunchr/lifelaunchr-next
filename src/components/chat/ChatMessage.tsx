@@ -15,25 +15,26 @@ interface ChatMessageProps {
   addingToEnrichmentList?: string | null
 }
 
-// Detect "Want to add [College Name] to your/[Name]'s research list?" pattern.
+// Detect ALL "Want to add [College Name] to your/[Name]'s research list?" patterns.
 // Name must start with a capital letter — rejects generic phrases like "any of these".
-function extractResearchListOffer(content: string): string | null {
-  const match = content.match(/Want to add ([A-Z][^?]+?) to (?:your|.+?'s) research list\?/)
-  return match ? match[1].trim() : null
+// Returns an array so multiple colleges in one response each get their own button.
+function extractResearchListOffers(content: string): string[] {
+  return [...content.matchAll(/Want to add ([A-Z][^?]+?) to (?:your|.+?'s) research list\?/g)]
+    .map(m => m[1].trim())
 }
 
-// Detect "Want to add [Scholarship Name] to your/[Name]'s scholarship list?" pattern.
+// Detect ALL "Want to add [Scholarship Name] to your/[Name]'s scholarship list?" patterns.
 // Name must start with a capital letter — rejects generic phrases like "any of these".
-function extractScholarshipListOffer(content: string): string | null {
-  const match = content.match(/Want to add ([A-Z][^?]+?) to (?:your|.+?'s) scholarship list\?/)
-  return match ? match[1].trim() : null
+function extractScholarshipListOffers(content: string): string[] {
+  return [...content.matchAll(/Want to add ([A-Z][^?]+?) to (?:your|.+?'s) scholarship list\?/g)]
+    .map(m => m[1].trim())
 }
 
-// Detect "Want to add [Program Name] to your/[Name]'s enrichment list?" pattern.
+// Detect ALL "Want to add [Program Name] to your/[Name]'s enrichment list?" patterns.
 // Name must start with a capital letter — rejects generic phrases like "any of these".
-function extractEnrichmentListOffer(content: string): string | null {
-  const match = content.match(/Want to add ([A-Z][^?]+?) to (?:your|.+?'s) enrichment list\?/)
-  return match ? match[1].trim() : null
+function extractEnrichmentListOffers(content: string): string[] {
+  return [...content.matchAll(/Want to add ([A-Z][^?]+?) to (?:your|.+?'s) enrichment list\?/g)]
+    .map(m => m[1].trim())
 }
 
 export function ChatMessage({ message, isStreaming, onAddToList, addingToList, onAddToScholarshipList, addingToScholarshipList, onAddToEnrichmentList, addingToEnrichmentList }: ChatMessageProps) {
@@ -166,101 +167,116 @@ export function ChatMessage({ message, isStreaming, onAddToList, addingToList, o
           </>
         )}
 
-        {/* Add to Research List button — shown when Claude offers it and streaming is done */}
+        {/* Add to Research List buttons — one per college offer, shown when streaming is done */}
         {!isStreaming && onAddToList && (() => {
-          const collegeName = extractResearchListOffer(message.content)
-          if (!collegeName) return null
-          const isAdding = addingToList === collegeName
+          const colleges = extractResearchListOffers(message.content)
+          if (colleges.length === 0) return null
           return (
-            <div className="mt-3">
-              <button
-                onClick={() => onAddToList(collegeName)}
-                disabled={isAdding}
-                className="inline-flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {isAdding ? (
-                  <>
-                    <svg className="w-3.5 h-3.5 animate-spin flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                    </svg>
-                    Adding…
-                  </>
-                ) : (
-                  <>
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 flex-shrink-0">
-                      <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
-                    </svg>
-                    Add {collegeName} to Research List
-                  </>
-                )}
-              </button>
+            <div className="mt-3 flex flex-col gap-2">
+              {colleges.map((collegeName) => {
+                const isAdding = addingToList === collegeName
+                return (
+                  <button
+                    key={collegeName}
+                    onClick={() => onAddToList(collegeName)}
+                    disabled={isAdding}
+                    className="inline-flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed self-start"
+                  >
+                    {isAdding ? (
+                      <>
+                        <svg className="w-3.5 h-3.5 animate-spin flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                        </svg>
+                        Adding…
+                      </>
+                    ) : (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 flex-shrink-0">
+                          <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                        </svg>
+                        Add {collegeName} to Research List
+                      </>
+                    )}
+                  </button>
+                )
+              })}
             </div>
           )
         })()}
 
-        {/* Add to Scholarship List button */}
+        {/* Add to Scholarship List buttons — one per scholarship offer */}
         {!isStreaming && onAddToScholarshipList && (() => {
-          const scholarshipName = extractScholarshipListOffer(message.content)
-          if (!scholarshipName) return null
-          const isAdding = addingToScholarshipList === scholarshipName
+          const scholarships = extractScholarshipListOffers(message.content)
+          if (scholarships.length === 0) return null
           return (
-            <div className="mt-3">
-              <button
-                onClick={() => onAddToScholarshipList(scholarshipName)}
-                disabled={isAdding}
-                className="inline-flex items-center gap-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {isAdding ? (
-                  <>
-                    <svg className="w-3.5 h-3.5 animate-spin flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                    </svg>
-                    Adding…
-                  </>
-                ) : (
-                  <>
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 flex-shrink-0">
-                      <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
-                    </svg>
-                    Add {scholarshipName} to Scholarship List
-                  </>
-                )}
-              </button>
+            <div className="mt-3 flex flex-col gap-2">
+              {scholarships.map((scholarshipName) => {
+                const isAdding = addingToScholarshipList === scholarshipName
+                return (
+                  <button
+                    key={scholarshipName}
+                    onClick={() => onAddToScholarshipList(scholarshipName)}
+                    disabled={isAdding}
+                    className="inline-flex items-center gap-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed self-start"
+                  >
+                    {isAdding ? (
+                      <>
+                        <svg className="w-3.5 h-3.5 animate-spin flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                        </svg>
+                        Adding…
+                      </>
+                    ) : (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 flex-shrink-0">
+                          <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                        </svg>
+                        Add {scholarshipName} to Scholarship List
+                      </>
+                    )}
+                  </button>
+                )
+              })}
             </div>
           )
         })()}
 
-        {/* Add to Enrichment List button */}
+        {/* Add to Enrichment List buttons — one per program offer */}
         {!isStreaming && onAddToEnrichmentList && (() => {
-          const programName = extractEnrichmentListOffer(message.content)
-          if (!programName) return null
-          const isAdding = addingToEnrichmentList === programName
+          const programs = extractEnrichmentListOffers(message.content)
+          if (programs.length === 0) return null
           return (
-            <div className="mt-3">
-              <button
-                onClick={() => onAddToEnrichmentList(programName)}
-                disabled={isAdding}
-                className="inline-flex items-center gap-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {isAdding ? (
-                  <>
-                    <svg className="w-3.5 h-3.5 animate-spin flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                    </svg>
-                    Adding…
-                  </>
-                ) : (
-                  <>
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 flex-shrink-0">
-                      <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
-                    </svg>
-                    Add {programName} to Enrichment List
-                  </>
-                )}
-              </button>
+            <div className="mt-3 flex flex-col gap-2">
+              {programs.map((programName) => {
+                const isAdding = addingToEnrichmentList === programName
+                return (
+                  <button
+                    key={programName}
+                    onClick={() => onAddToEnrichmentList(programName)}
+                    disabled={isAdding}
+                    className="inline-flex items-center gap-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed self-start"
+                  >
+                    {isAdding ? (
+                      <>
+                        <svg className="w-3.5 h-3.5 animate-spin flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                        </svg>
+                        Adding…
+                      </>
+                    ) : (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 flex-shrink-0">
+                          <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                        </svg>
+                        Add {programName} to Enrichment List
+                      </>
+                    )}
+                  </button>
+                )
+              })}
             </div>
           )
         })()}

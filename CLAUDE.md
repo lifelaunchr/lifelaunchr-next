@@ -167,6 +167,10 @@ When the backend emits a `limit_reached` SSE event, the chat UI shows a modal ex
 
 The regex uses `(?:your|.+?'s)` to match both "your" and any possessive name (e.g. "Katheryn's"). This is needed because in counselor research mode, Soar uses the student's name instead of "your."
 
+The name capture group requires an uppercase first letter (`[A-Z]`) — this rejects generic phrases like "any of these" which start lowercase. The `i` (case-insensitive) flag is intentionally absent for this reason.
+
+All three functions (`extractResearchListOffers`, `extractScholarshipListOffers`, `extractEnrichmentListOffers`) use `matchAll` with the `g` flag and return `string[]`, so a response discussing multiple items renders one button per item rather than just the first.
+
 Do not change these phrases without also updating the regex in ChatMessage.tsx.
 
 **Extended Onboarding Flow (v0.9.6.5)**
