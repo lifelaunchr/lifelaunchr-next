@@ -156,6 +156,7 @@ export default function AdminPage() {
   const [requests, setRequests] = useState<InviteRequestRow[]>([])
   const [requestsLoading, setRequestsLoading] = useState(false)
   const [approvingId, setApprovingId] = useState<number | null>(null)
+  const [approveMessage, setApproveMessage] = useState<{ok: boolean, text: string} | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<TabType>('users')
@@ -294,6 +295,7 @@ export default function AdminPage() {
 
   const approveRequest = async (id: number) => {
     setApprovingId(id)
+    setApproveMessage(null)
     try {
       const token = await getToken()
       const res = await fetch(`${apiUrl}/admin/invite-requests/${id}/approve`, {
@@ -301,10 +303,19 @@ export default function AdminPage() {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (res.ok) {
-        await loadRequests()
+        const data = await res.json()
+        if (data.ok === false) {
+          setApproveMessage({ ok: false, text: data.message || 'Could not approve this request.' })
+        } else {
+          setApproveMessage({ ok: true, text: 'Invite sent successfully.' })
+          await loadRequests()
+        }
+      } else {
+        setApproveMessage({ ok: false, text: 'Server error — please try again.' })
       }
     } catch (e) {
       console.error('[admin] approve failed:', e)
+      setApproveMessage({ ok: false, text: 'Request failed — please check your connection.' })
     }
     setApprovingId(null)
   }
@@ -916,6 +927,12 @@ export default function AdminPage() {
               <h2 className="text-base font-semibold text-gray-800">Access Requests</h2>
               <button onClick={loadRequests} className="text-xs text-indigo-500 hover:underline">Refresh</button>
             </div>
+            {approveMessage && (
+              <div className={`flex items-center justify-between text-sm px-4 py-3 rounded-lg mb-4 ${approveMessage.ok ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-amber-50 text-amber-800 border border-amber-200'}`}>
+                <span>{approveMessage.text}</span>
+                <button onClick={() => setApproveMessage(null)} className="ml-4 text-xs opacity-60 hover:opacity-100">✕</button>
+              </div>
+            )}
             {requestsLoading ? (
               <p className="text-sm text-gray-400">Loading…</p>
             ) : requests.length === 0 ? (
