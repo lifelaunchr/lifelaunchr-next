@@ -15,25 +15,25 @@ interface ChatMessageProps {
   addingToEnrichmentList?: string | null
 }
 
-// Detect ALL "Want to add [College Name] to your/[Name]'s research list?" patterns.
-// Name must start with a capital letter — rejects generic phrases like "any of these".
-// Returns an array so multiple colleges in one response each get their own button.
+// Strip markdown bold markers before matching so "**University of X**" is treated
+// the same as "University of X". Name must still start with a capital letter to
+// reject generic phrases like "any of these". Returns all matches so multiple
+// colleges in one response each get their own button.
 function extractResearchListOffers(content: string): string[] {
-  return [...content.matchAll(/Want to add ([A-Z][^?]+?) to (?:your|.+?'s) research list\?/g)]
+  const stripped = content.replace(/\*\*/g, '')
+  return [...stripped.matchAll(/Want to add ([A-Z][^?]+?) to (?:your|.+?'s) research list\?/g)]
     .map(m => m[1].trim())
 }
 
-// Detect ALL "Want to add [Scholarship Name] to your/[Name]'s scholarship list?" patterns.
-// Name must start with a capital letter — rejects generic phrases like "any of these".
 function extractScholarshipListOffers(content: string): string[] {
-  return [...content.matchAll(/Want to add ([A-Z][^?]+?) to (?:your|.+?'s) scholarship list\?/g)]
+  const stripped = content.replace(/\*\*/g, '')
+  return [...stripped.matchAll(/Want to add ([A-Z][^?]+?) to (?:your|.+?'s) scholarship list\?/g)]
     .map(m => m[1].trim())
 }
 
-// Detect ALL "Want to add [Program Name] to your/[Name]'s enrichment list?" patterns.
-// Name must start with a capital letter — rejects generic phrases like "any of these".
 function extractEnrichmentListOffers(content: string): string[] {
-  return [...content.matchAll(/Want to add ([A-Z][^?]+?) to (?:your|.+?'s) enrichment list\?/g)]
+  const stripped = content.replace(/\*\*/g, '')
+  return [...stripped.matchAll(/Want to add ([A-Z][^?]+?) to (?:your|.+?'s) enrichment list\?/g)]
     .map(m => m[1].trim())
 }
 
