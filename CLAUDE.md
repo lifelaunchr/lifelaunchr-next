@@ -14,7 +14,7 @@
 
 # LifeLaunchr / Soar — Deployment Reference
 
-> Last updated: 2026-04-17 (v0.9.8).
+> Last updated: 2026-04-20 (v0.9.10).
 
 ## Version History
 
@@ -35,6 +35,8 @@
 | v0.9.7.8 | 2026-04-17 | Server-side auth redirect (#77): signed-in users hitting / now redirect to /chat at the edge via proxy.ts (Next.js 16 middleware); deleted conflicting middleware.ts; removed client-side Clerk loading guard from page.tsx to eliminate blank-page flash for non-signed-in users |
 | v0.9.8 | 2026-04-17 | Tenant admin family invite (#80): AddFamilyModal shows counselor dropdown for tenant admins and routes to POST /tenant-admin/families; dashboard/page.tsx fetches counselor list and passes to modal with key-prop remount fix; localStorage token fix (was sessionStorage, lost across Clerk redirects); site password gate query-string fix in proxy.ts (url.pathname + url.search — was dropping ?token= param); parent onboarding routing fix (POST /accept-invite response used as primary account_type source so parents skip role picker and land on Soar intro at step 4) |
 | v0.9.9 | 2026-04-18 | Essays empty state contextual messages (#83): three distinct states now shown — Editate not enabled for student (admin instructions), Editate not enabled for own account (contact counselor), Editate enabled but no colleges in Applying+ status (link to Lists page). essays/page.tsx uses effectiveEditateAvailable to branch the message correctly. |
+| v0.9.10 | 2026-04-19 | Backend-only: agentic loop graceful degradation (#45) — friendly error messages on API failures, synthesis nudge + tool_choice=none to guarantee loop termination. No frontend changes. |
+| v0.9.10 | 2026-04-20 | Backend-only: quarterly data refresh wizard (#89) — scripts/quarterly_refresh.py with --dry-run mode; build_colleges_csv.py auto-detects newest Peterson's folder by mtime. No frontend changes. |
 
 ## Repository Structure
 - **Backend:** `lifelaunchr-app-3/` — Python/FastAPI, deployed on Render
