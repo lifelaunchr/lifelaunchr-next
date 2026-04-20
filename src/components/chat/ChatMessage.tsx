@@ -15,21 +15,24 @@ interface ChatMessageProps {
   addingToEnrichmentList?: string | null
 }
 
-// Detect "Want to add [College Name] to your/[Name]'s research list?" pattern
+// Detect "Want to add [College Name] to your/[Name]'s research list?" pattern.
+// Name must start with a capital letter — rejects generic phrases like "any of these".
 function extractResearchListOffer(content: string): string | null {
-  const match = content.match(/Want to add (.+?) to (?:your|.+?'s) research list\?/i)
+  const match = content.match(/Want to add ([A-Z][^?]+?) to (?:your|.+?'s) research list\?/)
   return match ? match[1].trim() : null
 }
 
-// Detect "Want to add [Scholarship Name] to your/[Name]'s scholarship list?" pattern
+// Detect "Want to add [Scholarship Name] to your/[Name]'s scholarship list?" pattern.
+// Name must start with a capital letter — rejects generic phrases like "any of these".
 function extractScholarshipListOffer(content: string): string | null {
-  const match = content.match(/Want to add (.+?) to (?:your|.+?'s) scholarship list\?/i)
+  const match = content.match(/Want to add ([A-Z][^?]+?) to (?:your|.+?'s) scholarship list\?/)
   return match ? match[1].trim() : null
 }
 
-// Detect "Want to add [Program Name] to your/[Name]'s enrichment list?" pattern
+// Detect "Want to add [Program Name] to your/[Name]'s enrichment list?" pattern.
+// Name must start with a capital letter — rejects generic phrases like "any of these".
 function extractEnrichmentListOffer(content: string): string | null {
-  const match = content.match(/Want to add (.+?) to (?:your|.+?'s) enrichment list\?/i)
+  const match = content.match(/Want to add ([A-Z][^?]+?) to (?:your|.+?'s) enrichment list\?/)
   return match ? match[1].trim() : null
 }
 
