@@ -39,6 +39,8 @@
 | v0.9.10 | 2026-04-20 | Backend-only: quarterly data refresh wizard (#89) — scripts/quarterly_refresh.py with --dry-run mode; build_colleges_csv.py auto-detects newest Peterson's folder by mtime. No frontend changes. |
 | v0.9.10 | 2026-04-20 | Invite approval banner (#66): admin/page.tsx shows amber banner when approve returns ok:false (active account), green on success. approveMessage state added; all error paths covered including network failures. Follow-up for inline per-row errors filed as next#16. |
 | v0.9.10 | 2026-04-20 | Onboarding + invite form copy (#17): practice name label on landing page changed to "Company, practice, or school name"; helper text added to onboarding IEC practice field explaining it is the business name with examples. |
+| v0.9.11 | 2026-04-20 | Sidebar nav scroll fix (#18): bottom nav div given overflow-y-auto + max-h-[60vh] so Activities and other items are always reachable on small screens; counselors with a student selected no longer clip the nav. |
+| v0.9.11 | 2026-04-20 | Add-to-list button fixes (#87): ChatMessage.tsx extract functions switched from match() to matchAll()+g flag — multiple colleges in one response now each get their own button. Strip ** before matching so bolded college names produce buttons. Require [A-Z] first char to reject generic phrases like "any of these". Filed next#19 for future hidden-marker redesign. |
 
 ## Repository Structure
 - **Backend:** `lifelaunchr-app-3/` — Python/FastAPI, deployed on Render
