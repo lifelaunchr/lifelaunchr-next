@@ -307,7 +307,8 @@ export default function AdminPage() {
         if (data.ok === false) {
           setApproveMessage({ ok: false, text: data.message || 'Could not approve this request.' })
         } else {
-          setApproveMessage({ ok: true, text: 'Invite sent successfully.' })
+          const text = data.status === 'resent' ? 'Invite resent successfully.' : 'Invite sent successfully.'
+          setApproveMessage({ ok: true, text })
           await loadRequests()
         }
       } else {
@@ -982,8 +983,19 @@ export default function AdminPage() {
                               </button>
                             </>
                           )}
-                          {req.status === 'invited' && req.invited_at && (
-                            <span className="text-xs text-gray-400">Invited {new Date(req.invited_at).toLocaleDateString()}</span>
+                          {req.status === 'invited' && (
+                            <div className="flex items-center gap-2">
+                              {req.invited_at && (
+                                <span className="text-xs text-gray-400">Invited {new Date(req.invited_at).toLocaleDateString()}</span>
+                              )}
+                              <button
+                                onClick={() => approveRequest(req.id)}
+                                disabled={approvingId === req.id}
+                                className="text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-gray-600 rounded-lg font-medium transition-colors"
+                              >
+                                {approvingId === req.id ? 'Sending…' : 'Resend invite'}
+                              </button>
+                            </div>
                           )}
                         </div>
                       </div>
