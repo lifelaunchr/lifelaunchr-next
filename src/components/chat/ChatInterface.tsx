@@ -935,9 +935,9 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
             )}
           </div>
 
-          {/* Bottom nav — pinned */}
+          {/* Bottom nav — pinned but scrollable when tall */}
           {userId && (
-            <div className="border-t border-white/10 p-3 flex-shrink-0 flex flex-col gap-0.5">
+            <div className="border-t border-white/10 p-3 flex-shrink-0 flex flex-col gap-0.5 overflow-y-auto max-h-[60vh]">
               {/* Usage bar — sessions (primary) or messages (fallback) */}
               {userId && usageData && (usageData.session_limit != null || usageData.effective_limit != null) && (
                 <div className="mb-2 px-3">
