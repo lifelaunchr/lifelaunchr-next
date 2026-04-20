@@ -229,7 +229,7 @@ export default function Home() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="practice_name">
-                  Practice or school name
+                  Company, practice, or school name
                 </label>
                 <input
                   id="practice_name"

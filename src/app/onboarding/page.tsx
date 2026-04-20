@@ -668,7 +668,8 @@ export default function OnboardingPage() {
             {/* IEC / coach: practice autocomplete */}
             {needsOrg && (
               <div className="mb-6 border-t border-gray-100 pt-5">
-                <p className="text-sm font-semibold text-gray-700 mb-3">Your practice</p>
+                <p className="text-sm font-semibold text-gray-700 mb-1">Your practice</p>
+                <p className="text-xs text-gray-500 mb-3">Enter the name of your consulting business — e.g. &ldquo;Smith College Consulting&rdquo; or &ldquo;Bright Path Advising&rdquo;. If you work independently without a formal business name, your own name works fine.</p>
                 {selectedTenant ? (
                   <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2">
                     <div className="flex-1">
