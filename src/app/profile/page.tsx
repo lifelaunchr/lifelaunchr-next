@@ -146,6 +146,8 @@ function ProfileContent() {
     user_id?: number
     messages_used: number
     effective_limit: number | null
+    sessions_used?: number
+    session_limit?: number | null
     display_plan?: string
     breakdown?: string
     can_use_essays?: boolean
@@ -443,10 +445,10 @@ function ProfileContent() {
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   <tr>
-                    <td className="py-3 pr-8 font-medium text-gray-800">Messages this month</td>
-                    <td className="py-3 pr-8 text-right text-gray-700">{usageData.messages_used ?? 0}</td>
+                    <td className="py-3 pr-8 font-medium text-gray-800">Sessions this month</td>
+                    <td className="py-3 pr-8 text-right text-gray-700">{usageData.sessions_used ?? 0}</td>
                     <td className="py-3 pr-8 text-right text-gray-700">
-                      {usageData.effective_limit === null || usageData.effective_limit === undefined ? '∞ unlimited' : usageData.effective_limit}
+                      {usageData.session_limit === null || usageData.session_limit === undefined ? 'Unlimited' : usageData.session_limit}
                     </td>
                     <td className="py-3 text-gray-500 text-xs">{usageData.breakdown || usageData.display_plan}</td>
                   </tr>
@@ -455,7 +457,7 @@ function ProfileContent() {
                       <td className="py-3 pr-8 font-medium text-gray-800">Active students</td>
                       <td className="py-3 pr-8 text-right text-gray-700">{usageData.active_students ?? 0}</td>
                       <td className="py-3 pr-8 text-right text-gray-700">
-                        {usageData.student_limit === null || usageData.student_limit === undefined ? '∞ unlimited' : usageData.student_limit}
+                        {usageData.student_limit === null || usageData.student_limit === undefined ? 'Unlimited' : usageData.student_limit}
                       </td>
                       <td className="py-3 text-gray-500 text-xs">Based on your plan</td>
                     </tr>
