@@ -465,16 +465,6 @@ function ProfileContent() {
                   {usageData.account_type !== 'counselor' && (
                     <>
                       <tr>
-                        <td className="py-3 pr-8 font-medium text-gray-800">History retention</td>
-                        <td className="py-3 pr-8 text-right text-gray-400">—</td>
-                        <td className="py-3 pr-8 text-right text-gray-700">
-                          {usageData.history_retention_days === null || usageData.history_retention_days === undefined
-                            ? '∞ unlimited'
-                            : `${usageData.history_retention_days} days`}
-                        </td>
-                        <td className="py-3 text-gray-500 text-xs">Based on your {usageData.display_plan || 'plan'}</td>
-                      </tr>
-                      <tr>
                         <td className="py-3 pr-8 font-medium text-gray-800">Essay assistance</td>
                         <td className="py-3 pr-8 text-right text-gray-400">—</td>
                         <td className="py-3 pr-8 text-right text-gray-700">
@@ -556,8 +546,51 @@ function ProfileContent() {
           </div>
         )}
 
+        {/* Financial Preferences — shown only to parents viewing their own profile */}
+        {accountType === 'parent' && !isViewingStudent && (
+          <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 24, marginBottom: 24 }}>
+            <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0c1b33', marginBottom: 4 }}>Financial Preferences</h2>
+            <p style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: 16 }}>
+              This helps Soar personalize financial aid and cost conversations. You can fill this in yourself or update it anytime.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: 4 }}>Family Income Tier</label>
+                <select
+                  value={profile.family_income_tier ?? ''}
+                  onChange={(e) => setProfile((p) => ({ ...p, family_income_tier: e.target.value }))}
+                  style={selectStyle()}
+                >
+                  <option value="">— Select —</option>
+                  {INCOME_TIERS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: 4 }}>Student Aid Index (SAI / EFC)</label>
+                <input
+                  type="text"
+                  value={profile.student_aid_index ?? ''}
+                  onChange={(e) => setProfile((p) => ({ ...p, student_aid_index: e.target.value || undefined }))}
+                  placeholder="e.g. 12500 or -1500"
+                  style={inputStyle()}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: 4 }}>Max Annual Budget (net price, $)</label>
+                <input
+                  type="number"
+                  value={profile.budget_max ?? ''}
+                  onChange={(e) => setProfile((p) => ({ ...p, budget_max: e.target.value === '' ? undefined : Number(e.target.value) }))}
+                  placeholder="30000"
+                  style={inputStyle()}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Academic info + student sections */}
-        {(accountType !== 'counselor' || isViewingStudent) && (<>
+        {((accountType !== 'counselor' && accountType !== 'parent') || isViewingStudent) && (<>
 
         {/* Academic Information */}
         <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 24, marginBottom: 24 }}>
