@@ -41,6 +41,7 @@
 | v0.9.10 | 2026-04-20 | Onboarding + invite form copy (#17): practice name label on landing page changed to "Company, practice, or school name"; helper text added to onboarding IEC practice field explaining it is the business name with examples. |
 | v0.9.11 | 2026-04-20 | Sidebar nav scroll fix (#18): bottom nav div given overflow-y-auto + max-h-[60vh] so Activities and other items are always reachable on small screens; counselors with a student selected no longer clip the nav. |
 | v0.9.11 | 2026-04-20 | Add-to-list button fixes (#87): ChatMessage.tsx extract functions switched from match() to matchAll()+g flag — multiple colleges in one response now each get their own button. Strip ** before matching so bolded college names produce buttons. Require [A-Z] first char to reject generic phrases like "any of these". Filed next#19 for future hidden-marker redesign. |
+| v0.9.11 | 2026-04-20 | Resend invite button for access requests (#13): admin/page.tsx shows "Resend invite" button on invited rows alongside the invited date. Calls the same approveRequest() function; backend returns status="resent" so banner shows "Invite resent successfully." instead of "Invite sent successfully." |
 
 ## Repository Structure
 - **Backend:** `lifelaunchr-app-3/` — Python/FastAPI, deployed on Render
