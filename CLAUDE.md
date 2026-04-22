@@ -65,31 +65,64 @@
 | `main` | Staging (`lifelaunchr.onrender.com`) | Preview/staging | Active development |
 | `production` | Production (`lifelaunchr-prod.onrender.com`) | Production (`soar.lifelaunchr.com`) | Stable live code |
 
-**Practical rule: push to `main` for staging. Merge `main` → `production` to deploy to live users.**
+**Practical rule: push to `main` for staging, test there first, then push to `production` only when ready. Never tag a version until after it has been pushed to production and verified.**
 
-### Deployment checklist (run before every production push)
+### Step-by-step workflow
 
-1. Confirm no code was accidentally deleted: `git diff origin/main..HEAD --stat`
-2. Update `CLAUDE.md` with all UI/component changes and commit to `main` first.
-3. Deploy both repos to production together (pre-launch: main = production always):
+**Step 1 — Develop and push to `main` (staging)**
+- All code changes are committed and pushed to `main`.
+- Vercel deploys automatically from `main` as a preview/staging build.
+- Test on staging. Confirm the fix works before touching production.
+
+**Step 2 — Decide what to push to production**
+- May be all of `main` (fast-forward) or specific commits (cherry-pick).
+- Confirm no Claude worktree has stranded commits that should land in `main` first.
+- **Do not delete the current Claude worktree** — deleting it ends the active chat session. Only close a worktree when we explicitly decide to wrap up that session.
+
+**Step 3 — Pre-production checklist**
+1. Review what's changing — no accidental deletions:
    ```bash
-   git push origin main
-   git push --force-with-lease origin main:production
+   git diff origin/production..origin/main --stat
+   git diff origin/production..origin/main
    ```
-   **Never use** `git checkout production && git merge origin/main` — creates unnecessary merge commits and causes branch divergence. Always use the `main:production` form.
+2. Update `CLAUDE.md` with all UI/component changes and commit to `main`.
+3. For backend changes, also run `check_wiring.py` and update `FEATURES.md` — see the backend `CLAUDE.md` (`lifelaunchr-app-3`) for the full backend checklist.
 
-4. Post-launch (when main may be ahead of production): cherry-pick specific commits onto production:
-   ```bash
-   git checkout production
-   git cherry-pick <commit-hash>
-   git push origin production
-   git checkout main
-   ```
+**Step 4 — Push to production**
+
+To push all of `main` to production (fast-forward):
+```bash
+git push --force-with-lease origin main:production
+```
+
+To push only specific commits (cherry-pick):
+```bash
+git checkout production
+git cherry-pick <hash1> <hash2>   # in chronological order
+git push origin production
+git checkout main
+```
+
+**Never use** `git checkout production && git merge origin/main` — creates unnecessary merge commits and causes branch divergence. Always use the `main:production` form or cherry-pick.
+
+**Step 5 — Verify the push**
+```bash
+git log --oneline -1 origin/main && git log --oneline -1 origin/production
+```
+Confirm production is at the expected commit. If something looks wrong, stop and investigate before tagging.
+
+**Step 6 — Tag the version**
+
+Only tag after production is verified:
+```bash
+git tag vX.Y.Z
+git push origin vX.Y.Z
+```
+Tag both repos at the same version number when both were updated in the release.
 
 ### Branch rules
 - **All commits go to `main` only.** Never commit directly to `production`.
-- `production` must never be ahead of `main`. At the end of every fix session both branches must be at the same content.
-- **Never run** `git push origin main:production` — this only works when production is a strict ancestor of main and fails confusingly when branches have diverged.
+- `production` may lag behind `main` — that is normal and expected. `main` must never be behind `production`.
 - See the backend `CLAUDE.md` (`lifelaunchr-app-3`) for the full pre-production checklist including `check_wiring.py`.
 
 ## Key URLs
