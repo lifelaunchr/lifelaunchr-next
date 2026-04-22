@@ -1728,11 +1728,12 @@ interface EditDrawerProps {
   canWrite: boolean
   onClose: () => void
   onSave: (entryId: number, updates: Partial<CollegeEntry>) => Promise<void>
+  onUpdateEntry: (entryId: number, updates: Partial<CollegeEntry>) => Promise<void>
   apiUrl: string
   getToken: () => Promise<string | null>
 }
 
-function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, onSave, apiUrl, getToken }: EditDrawerProps) {
+function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, onSave, onUpdateEntry, apiUrl, getToken }: EditDrawerProps) {
   const [form, setForm] = useState<Partial<CollegeEntry>>({ ...entry })
   const [saving, setSaving] = useState(false)
   const [deadlines, setDeadlines] = useState<Array<{ label: string; type: string; month: number; day: number }>>([])
@@ -1815,7 +1816,7 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
       }
       // Update the parent entries array so the summary persists when drawer is reopened
       if (fullText) {
-        await onSave(entry.id, { soar_research_summary: fullText })
+        await onUpdateEntry(entry.id, { soar_research_summary: fullText })
       }
     } catch (e) {
       setSummaryError('Failed to generate summary. Please try again.')
@@ -3395,6 +3396,10 @@ function ListsContent() {
           onSave={async (id, updates) => {
             await updateEntry(id, updates)
             setEditEntry(null)
+          }}
+          onUpdateEntry={async (id, updates) => {
+            await updateEntry(id, updates)
+            setEditEntry((prev) => prev ? { ...prev, ...updates } : prev)
           }}
           apiUrl={apiUrl}
           getToken={getToken}
