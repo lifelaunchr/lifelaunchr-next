@@ -2878,14 +2878,24 @@ function ListsContent() {
           }
         }
 
-        const listRes = await fetch(`${apiUrl}/lists/${targetId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
+        const [listRes, enrichRes] = await Promise.all([
+          fetch(`${apiUrl}/lists/${targetId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch(`${apiUrl}/lists/${targetId}/enrichment`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ])
         if (listRes.ok) {
           const data = await listRes.json()
           setEntries(data.research || [])
           setScholarships(data.scholarships || [])
           if (typeof data.can_write === 'boolean') setCanWrite(data.can_write)
+        }
+        if (enrichRes.ok) {
+          const enrichData = await enrichRes.json()
+          setEnrichmentEntries(enrichData.enrichment || enrichData || [])
+          setEnrichmentLoaded(true)
         }
       } catch { setError('Failed to load lists.') } finally { setLoading(false) }
     }
