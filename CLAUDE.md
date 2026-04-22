@@ -14,7 +14,7 @@
 
 # LifeLaunchr / Soar — Deployment Reference
 
-> Last updated: 2026-04-21 (v0.9.12).
+> Last updated: 2026-04-22 (v0.9.13).
 
 ## Version History
 
@@ -44,6 +44,8 @@
 | v0.9.11 | 2026-04-20 | Resend invite button for access requests (#13): admin/page.tsx shows "Resend invite" button on invited rows alongside the invited date. Calls the same approveRequest() function; backend returns status="resent" so banner shows "Invite resent successfully." instead of "Invite sent successfully." |
 | v0.9.12 | 2026-04-21 | Session counter fix on profile page (#51): profile/page.tsx now shows sessions_used / session_limit from /my-usage instead of the legacy messages_used / effective_limit fields. Students see the correct pool total (e.g. 35) rather than their own tier limit (e.g. 5). |
 | v0.9.12 | 2026-04-21 | Parent profile page cleanup: Academic Information, Background, High School, College Interests, and Preferences & Goals sections now hidden for parents viewing their own profile (gate: accountType !== 'parent' \|\| isViewingStudent). Added a "Financial Preferences" section (income tier, SAI/EFC, budget max) with explanatory note. Removed History retention row from Plan & Usage table — field is not enforced in the backend. Filed next#21 to wire financial prefs into system prompt (post-launch). Stale localStorage forStudentId bug (counselors with no students seeing student nav items) filed as next#20 (post-launch). |
+| v0.9.13 | 2026-04-22 | College drawer tab visibility: tab labels shortened ("Research Notes"→"Research", "People Notes"→"People") and horizontal padding reduced (container 22px→10px, buttons 14px→10px per side) so all 6 tabs fit in the 520px drawer without horizontal scrolling. "Soar Summary" was previously hidden off-screen unless the user scrolled right. (`src/app/lists/page.tsx`) |
+| v0.9.13 | 2026-04-22 | Sidebar nav discoverability: "My Lists" moved to appear immediately after "Profile" for students — was previously after Research Summaries and Activities, hidden below the fold on typical screens. For counselors/parents viewing a student, "Lists" now appears before "Activities". "My Activities" for students is now between "My Lists" and "Research Summaries". (`src/components/chat/ChatInterface.tsx`) |
 
 ## Repository Structure
 - **Backend:** `lifelaunchr-app-3/` — Python/FastAPI, deployed on Render
