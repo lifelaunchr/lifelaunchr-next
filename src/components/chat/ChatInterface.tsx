@@ -1141,6 +1141,20 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                 <span>{isCounselor || isParent ? 'My Info' : 'Profile'}</span>
               </Link>
 
+              {/* My Lists — students only, shown near the top for discoverability */}
+              {!isCounselor && !isParent && (
+                <Link
+                  href="/lists"
+                  className="flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                >
+                  <span className="text-base leading-none flex-shrink-0">📋</span>
+                  <span className="flex flex-col min-w-0">
+                    <span className="text-sm leading-tight">My Lists</span>
+                    <span className="text-[10px] text-slate-500 leading-tight truncate">colleges · scholarships · programs</span>
+                  </span>
+                </Link>
+              )}
+
               {/* Counselor dashboard link */}
               {isCounselor && (
                 <Link
@@ -1157,6 +1171,17 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                 <span className="text-base leading-none">📝</span>
                 <span>Session &amp; Research Summaries</span>
               </Link>
+
+              {/* My Activities — students only */}
+              {!isCounselor && !isParent && (
+                <Link
+                  href="/activities"
+                  className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                >
+                  <span className="text-base leading-none">🏆</span>
+                  <span>My Activities</span>
+                </Link>
+              )}
 
               {/* Essays link — essays module enabled; counselors must have a student selected */}
               {usageData?.essays_module && !(isCounselor && !forStudentId) && (
@@ -1191,13 +1216,6 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                     <span>Student Profile</span>
                   </Link>
                   <Link
-                    href={`/activities?for=${forStudentId}`}
-                    className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
-                  >
-                    <span className="text-base leading-none">🏆</span>
-                    <span>Activities</span>
-                  </Link>
-                  <Link
                     href={`/lists?for=${forStudentId}`}
                     className="flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
                   >
@@ -1207,28 +1225,12 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                       <span className="text-[10px] text-slate-500 leading-tight truncate">colleges · scholarships · programs</span>
                     </span>
                   </Link>
-                </>
-              )}
-
-              {/* Activities + My Lists — students only (grouped with other nav links) */}
-              {!isCounselor && !isParent && (
-                <>
                   <Link
-                    href="/activities"
+                    href={`/activities?for=${forStudentId}`}
                     className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
                   >
                     <span className="text-base leading-none">🏆</span>
-                    <span>My Activities</span>
-                  </Link>
-                  <Link
-                    href="/lists"
-                    className="flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
-                  >
-                    <span className="text-base leading-none flex-shrink-0">📋</span>
-                    <span className="flex flex-col min-w-0">
-                      <span className="text-sm leading-tight">My Lists</span>
-                      <span className="text-[10px] text-slate-500 leading-tight truncate">colleges · scholarships · programs</span>
-                    </span>
+                    <span>Activities</span>
                   </Link>
                 </>
               )}

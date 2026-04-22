@@ -1847,9 +1847,9 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
   const sections = [
     { key: 'overview', label: 'Overview' },
     { key: 'application', label: 'Application' },
-    { key: 'research', label: 'Research Notes' },
+    { key: 'research', label: 'Research' },
     { key: 'financial', label: 'Financial' },
-    { key: 'people', label: 'People Notes' },
+    { key: 'people', label: 'People' },
     { key: 'summary', label: 'Soar Summary' },
   ]
 
@@ -1889,13 +1889,13 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
         </div>
 
         {/* Section tabs */}
-        <div style={{ display: 'flex', overflowX: 'auto', borderBottom: '1px solid #e2e8f0', padding: '0 22px', gap: 0 }}>
+        <div style={{ display: 'flex', overflowX: 'auto', borderBottom: '1px solid #e2e8f0', padding: '0 10px', gap: 0 }}>
           {sections.map((s) => (
             <button
               key={s.key}
               onClick={() => setActiveSection(s.key)}
               style={{
-                padding: '10px 14px', border: 'none', background: 'none', cursor: 'pointer',
+                padding: '10px 10px', border: 'none', background: 'none', cursor: 'pointer',
                 fontSize: '0.8rem', fontWeight: 600, whiteSpace: 'nowrap',
                 color: activeSection === s.key ? '#4f46e5' : '#6b7280',
                 borderBottom: activeSection === s.key ? '2px solid #4f46e5' : '2px solid transparent',
