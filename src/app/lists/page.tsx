@@ -1738,6 +1738,7 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
   const [deadlines, setDeadlines] = useState<Array<{ label: string; type: string; month: number; day: number }>>([])
   const [generatingSummary, setGeneratingSummary] = useState(false)
   const [summaryText, setSummaryText] = useState(entry.soar_research_summary || '')
+  const [summaryNoResearch, setSummaryNoResearch] = useState(false)
   const [activeSection, setActiveSection] = useState<string>('overview')
   const [recalculating, setRecalculating] = useState(false)
   const [recalcMessage, setRecalcMessage] = useState<string | null>(null)
@@ -1775,6 +1776,7 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
   const handleGenerateSummary = async () => {
     setGeneratingSummary(true)
     setSummaryText('')
+    setSummaryNoResearch(false)
     try {
       const token = await getToken()
       const res = await fetch(`${apiUrl}/lists/colleges/${entry.id}/generate-summary`, {
@@ -1793,6 +1795,7 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
           if (line.startsWith('data: ')) {
             try {
               const payload = JSON.parse(line.slice(6))
+              if (payload.no_research) setSummaryNoResearch(true)
               if (payload.text) setSummaryText((prev) => prev + payload.text)
             } catch { /* ignore */ }
           }
@@ -2422,9 +2425,15 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
                 </div>
               ) : (
                 <div style={{ textAlign: 'center', padding: '30px 0' }}>
-                  <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: 16 }}>
-                    Get a personalized research summary for this school based on your profile.
-                  </p>
+                  {summaryNoResearch ? (
+                    <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: 16 }}>
+                      Research this school in Soar first — your summary will draw from your actual conversations once you've discussed it.
+                    </p>
+                  ) : (
+                    <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: 16 }}>
+                      Generate a personalized summary grounded in your research conversations and counseling notes for this school.
+                    </p>
+                  )}
                   <button
                     onClick={handleGenerateSummary}
                     disabled={generatingSummary}
