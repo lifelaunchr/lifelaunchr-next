@@ -1588,6 +1588,7 @@ function ReportsContent() {
                       onChange={(e) => { if (!isReadOnly) setAdditionalEmails(e.target.value) }}
                       readOnly={isReadOnly}
                       placeholder="parent@example.com, other@example.com"
+                      autoComplete="off"
                       style={isReadOnly ? inputDisabledSt : inputSt}
                     />
                   </div>
