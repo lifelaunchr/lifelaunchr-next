@@ -44,8 +44,9 @@
   <!-- Divider line under subtitle -->
   <rect x="340" y="330" width="500" height="2" rx="1" fill="#38bdf8" opacity="0.3"/>
 
-  <!-- Tagline -->
-  <text x="340" y="390" font-family="'Helvetica Neue', Arial, sans-serif" font-size="32" font-weight="400" fill="#93c5fd" letter-spacing="0.5">Built by a counselor. Powered by AI.</text>
+  <!-- Tagline (two lines) -->
+  <text x="340" y="385" font-family="'Helvetica Neue', Arial, sans-serif" font-size="30" font-weight="400" fill="#93c5fd" letter-spacing="0.5">College and Career Planning,</text>
+  <text x="340" y="425" font-family="'Helvetica Neue', Arial, sans-serif" font-size="30" font-weight="400" fill="#93c5fd" letter-spacing="0.5">Built for the Whole Team.</text>
 
   <!-- URL bottom -->
   <text x="340" y="540" font-family="'Helvetica Neue', Arial, sans-serif" font-size="22" font-weight="400" fill="#38bdf8" opacity="0.6" letter-spacing="1">soar.lifelaunchr.com</text>
