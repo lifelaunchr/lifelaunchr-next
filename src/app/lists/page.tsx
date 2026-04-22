@@ -1779,6 +1779,7 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
     setSummaryText('')
     setSummaryNoResearch(false)
     setSummaryError(null)
+    let fullText = ''
     try {
       const token = await getToken()
       const res = await fetch(`${apiUrl}/lists/colleges/${entry.id}/generate-summary`, {
@@ -1804,10 +1805,17 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
               const payload = JSON.parse(line.slice(6))
               if (payload.no_research) setSummaryNoResearch(true)
               if (payload.error) setSummaryError(payload.error)
-              if (payload.text) setSummaryText((prev) => prev + payload.text)
+              if (payload.text) {
+                fullText += payload.text
+                setSummaryText((prev) => prev + payload.text)
+              }
             } catch { /* ignore */ }
           }
         }
+      }
+      // Update the parent entries array so the summary persists when drawer is reopened
+      if (fullText) {
+        await onSave(entry.id, { soar_research_summary: fullText })
       }
     } catch (e) {
       setSummaryError('Failed to generate summary. Please try again.')
