@@ -68,10 +68,19 @@
 
 1. Confirm no code was accidentally deleted: `git diff origin/main..HEAD --stat`
 2. Update `CLAUDE.md` with all UI/component changes and commit to `main` first.
-3. Deploy both repos to production together:
+3. Deploy both repos to production together (pre-launch: main = production always):
    ```bash
    git push origin main
-   git checkout production && git merge origin/main --no-edit && git push origin production && git checkout main
+   git push --force-with-lease origin main:production
+   ```
+   **Never use** `git checkout production && git merge origin/main` — creates unnecessary merge commits and causes branch divergence. Always use the `main:production` form.
+
+4. Post-launch (when main may be ahead of production): cherry-pick specific commits onto production:
+   ```bash
+   git checkout production
+   git cherry-pick <commit-hash>
+   git push origin production
+   git checkout main
    ```
 
 ### Branch rules
