@@ -2302,7 +2302,7 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
                   Completed Net Price Calculator
                   {form.sc_npc_url && (
                     <a
-                      href={form.sc_npc_url}
+                      href={form.sc_npc_url.startsWith('http') ? form.sc_npc_url : `https://${form.sc_npc_url}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{ marginLeft: 8, fontSize: '0.8rem', color: '#4f46e5' }}
