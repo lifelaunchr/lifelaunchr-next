@@ -60,6 +60,22 @@
 
 **Practical rule: push to `main` for staging. Merge `main` → `production` to deploy to live users.**
 
+### Deployment checklist (run before every production push)
+
+1. Confirm no code was accidentally deleted: `git diff origin/main..HEAD --stat`
+2. Update `CLAUDE.md` with all UI/component changes and commit to `main` first.
+3. Deploy both repos to production together:
+   ```bash
+   git push origin main
+   git checkout production && git merge origin/main --no-edit && git push origin production && git checkout main
+   ```
+
+### Branch rules
+- **All commits go to `main` only.** Never commit directly to `production`.
+- `production` must never be ahead of `main`. At the end of every fix session both branches must be at the same content.
+- **Never run** `git push origin main:production` — this only works when production is a strict ancestor of main and fails confusingly when branches have diverged.
+- See the backend `CLAUDE.md` (`lifelaunchr-app-3`) for the full pre-production checklist including `check_wiring.py`.
+
 ## Key URLs
 | Environment | Frontend | Backend API |
 |---|---|---|
