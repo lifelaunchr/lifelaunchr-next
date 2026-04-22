@@ -14,7 +14,7 @@
 
 # LifeLaunchr / Soar — Deployment Reference
 
-> Last updated: 2026-04-22 (v0.9.14).
+> Last updated: 2026-04-22 (v0.9.15).
 
 ## Version History
 
@@ -46,6 +46,7 @@
 | v0.9.12 | 2026-04-21 | Parent profile page cleanup: Academic Information, Background, High School, College Interests, and Preferences & Goals sections now hidden for parents viewing their own profile (gate: accountType !== 'parent' \|\| isViewingStudent). Added a "Financial Preferences" section (income tier, SAI/EFC, budget max) with explanatory note. Removed History retention row from Plan & Usage table — field is not enforced in the backend. Filed next#21 to wire financial prefs into system prompt (post-launch). Stale localStorage forStudentId bug (counselors with no students seeing student nav items) filed as next#20 (post-launch). |
 | v0.9.13 | 2026-04-22 | College drawer tab visibility: tab labels shortened ("Research Notes"→"Research", "People Notes"→"People") and horizontal padding reduced (container 22px→10px, buttons 14px→10px per side) so all 6 tabs fit in the 520px drawer without horizontal scrolling. "Soar Summary" was previously hidden off-screen unless the user scrolled right. (`src/app/lists/page.tsx`) |
 | v0.9.13 | 2026-04-22 | Sidebar nav discoverability: "My Lists" moved to appear immediately after "Profile" for students — was previously after Research Summaries and Activities, hidden below the fold on typical screens. For counselors/parents viewing a student, "Lists" now appears before "Activities". "My Activities" for students is now between "My Lists" and "Research Summaries". (`src/components/chat/ChatInterface.tsx`) |
+| v0.9.15 | 2026-04-22 | Fix NPC link opening as relative URL (next#23): `sc_npc_url` from the DB sometimes lacks an `https://` prefix. The `href` on the "(Link ↗)" anchor in the Financial tab now guards with `.startsWith('http') ? url : \`https://${url}\``. (`src/app/lists/page.tsx` — `EditDrawer` Financial tab) |
 | v0.9.14 | 2026-04-22 | Fix enrichment AddEnrichmentModal showing 'Add "undefined"' (next#29): backend `/enrichment-lookup` was aliasing `name AS program_name` but `EnrichmentSearchResult` interface expected `name` — alias removed in backend. Frontend unchanged. (`lifelaunchr-app-3/main.py`) |
 | v0.9.14 | 2026-04-22 | Fix enrichment tab count showing 0 until clicked (next#29): `loadEnrichment()` was lazy (tab-click only). Now fired in parallel with the initial `GET /lists/{id}` fetch at page load via `Promise.all`. `enrichmentLoaded` flag set immediately so lazy guard prevents double-fetch. (`src/app/lists/page.tsx`) |
 | v0.9.13 | 2026-04-22 | Fix: coach assessment fields (EC rating, Academic Rigor) reset to -Select after save (#25). Root cause: GET /profile returns DB column names (`extracurricular_rating`, `academic_rigor`) but the selects bind to `ec_rating` and `academic_rigor_rating`. Post-save re-fetch was wiping the select values. Added `normalizeProfile()` in `src/app/profile/page.tsx` to map DB names → frontend names on both initial load and post-save re-fetch. |
