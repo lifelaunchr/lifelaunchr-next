@@ -46,7 +46,7 @@ export const metadata: Metadata = {
     siteName: 'Soar by LifeLaunchr',
     images: [
       {
-        url: '/og-image.png',
+        url: '/og-image.png?v=2',
         width: 1200,
         height: 630,
         alt: 'Soar by LifeLaunchr',
@@ -59,7 +59,7 @@ export const metadata: Metadata = {
     title: 'Soar by LifeLaunchr',
     description:
       'The AI college and career planning assistant that keeps counselors, students, and parents on the same page. Built on real data, deep counseling methodology, and a shared research record.',
-    images: ['/og-image.png'],
+    images: ['/og-image.png?v=2'],
   },
   icons: {
     icon: [
