@@ -159,6 +159,16 @@ function ProfileContent() {
   } | null>(null)
   const [canWrite, setCanWrite] = useState(true)   // from API; false for parents
   const [profile, setProfile] = useState<Profile>({})
+
+  // Normalize DB column names → frontend field names for the coach assessment fields.
+  // GET /profile returns extracurricular_rating + academic_rigor (DB names); the selects
+  // bind to ec_rating + academic_rigor_rating. athletic_rating matches in both, no mapping needed.
+  const normalizeProfile = (p: Record<string, unknown>): Profile => ({
+    ...p,
+    ec_rating: (p.ec_rating ?? p.extracurricular_rating ?? '') as string || undefined,
+    academic_rigor_rating: (p.academic_rigor_rating ?? p.academic_rigor ?? '') as string || undefined,
+  })
+
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -235,7 +245,7 @@ function ProfileContent() {
         if (profRes.ok) {
           const data = await profRes.json()
           const p = data.profile || {}
-          setProfile(p)
+          setProfile(normalizeProfile(p))
           if (typeof data.can_write === 'boolean') setCanWrite(data.can_write)
           if (data.counselor_info) {
             setCounselorOrg(data.counselor_info.organization || '')
@@ -315,7 +325,7 @@ function ProfileContent() {
         if (fresh.ok) {
           const freshData = await fresh.json()
           const p = freshData.profile || {}
-          setProfile(p)
+          setProfile(normalizeProfile(p))
           if (p.high_school_state) setHsSearchState(p.high_school_state)
           if (p.high_school_name) setHsQuery(p.high_school_name)
         }
