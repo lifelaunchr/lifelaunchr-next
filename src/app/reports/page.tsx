@@ -1589,6 +1589,9 @@ function ReportsContent() {
                       readOnly={isReadOnly}
                       placeholder="parent@example.com, other@example.com"
                       autoComplete="off"
+                      data-form-type="other"
+                      data-lpignore="true"
+                      data-1p-ignore="true"
                       style={isReadOnly ? inputDisabledSt : inputSt}
                     />
                   </div>
