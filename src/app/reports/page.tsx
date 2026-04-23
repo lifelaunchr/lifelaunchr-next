@@ -93,6 +93,15 @@ function fmtDate(d?: string) {
   return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+// Convert a UTC ISO timestamp to a local YYYY-MM-DD string.
+// Using .slice(0,10) on a UTC timestamp gives the UTC date, which can be
+// one day ahead for US users filing late in the evening.
+function localDateStr(iso?: string): string | undefined {
+  if (!iso) return undefined
+  const d = new Date(iso)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 function fmtTime(t?: string, ianaTimezone?: string, date?: string) {
   if (!t) return ''
   const [h, m] = t.split(':').map(Number)
@@ -118,7 +127,7 @@ function reportLabel(r: SessionReport) {
     return `${fmtDate(r.start_date)} – ${fmtDate(r.end_date)}`
   }
   if (r.report_type === 'note') {
-    return fmtDate(r.created_at?.slice(0, 10))
+    return fmtDate(localDateStr(r.created_at))
   }
   return fmtDate(r.appointment_date)
 }
@@ -983,7 +992,7 @@ function ReportsContent() {
                     {/* Title (research) or Date (session report) */}
                     <div style={{ fontSize: '0.78rem', color: '#6b7280', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {isResearch
-                        ? (rs.title || fmtDate(rs.started_at?.slice(0, 10)))
+                        ? (rs.title || fmtDate(localDateStr(rs.started_at)))
                         : reportLabel(sr)}
                     </div>
                     {/* Type + status row */}
@@ -992,7 +1001,7 @@ function ReportsContent() {
                         <>
                           <span style={badgeStyle('research_summary')}>Research Summary</span>
                           <span style={{ fontSize: '0.68rem', color: '#6b7280' }}>
-                            {fmtDate(rs.started_at?.slice(0, 10))}
+                            {fmtDate(localDateStr(rs.started_at))}
                           </span>
                         </>
                       ) : (
@@ -1221,7 +1230,7 @@ function ReportsContent() {
                     )}
                     <div>
                       <div style={labelSt}>Date</div>
-                      <div style={{ fontSize: '0.875rem', color: '#111827' }}>{fmtDate(rs.started_at?.slice(0, 10))}</div>
+                      <div style={{ fontSize: '0.875rem', color: '#111827' }}>{fmtDate(localDateStr(rs.started_at))}</div>
                     </div>
                   </div>
                 </div>
