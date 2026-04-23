@@ -268,7 +268,7 @@ function ProfileContent() {
       }
     }
     load()
-  }, [getToken, apiUrl, forStudentId, clerkUser])
+  }, [getToken, apiUrl, forStudentId, clerkUser?.id])
 
   const targetId = forStudentId ?? myUserId
 
