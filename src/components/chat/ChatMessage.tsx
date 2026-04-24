@@ -21,19 +21,19 @@ interface ChatMessageProps {
 // colleges in one response each get their own button.
 function extractResearchListOffers(content: string): string[] {
   const stripped = content.replace(/\*\*/g, '')
-  return [...stripped.matchAll(/Want to add ([A-Z][^?]+?) to (?:your|.+?'s) research list\?/g)]
+  return [...stripped.matchAll(/Want to add ([A-Z][^?]+?) to (?:your|her|his|their|.+?'s) research list\?/g)]
     .map(m => m[1].trim())
 }
 
 function extractScholarshipListOffers(content: string): string[] {
   const stripped = content.replace(/\*\*/g, '')
-  return [...stripped.matchAll(/Want to add ([A-Z][^?]+?) to (?:your|.+?'s) scholarship list\?/g)]
+  return [...stripped.matchAll(/Want to add ([A-Z][^?]+?) to (?:your|her|his|their|.+?'s) scholarship list\?/g)]
     .map(m => m[1].trim())
 }
 
 function extractEnrichmentListOffers(content: string): string[] {
   const stripped = content.replace(/\*\*/g, '')
-  return [...stripped.matchAll(/Want to add ([A-Z][^?]+?) to (?:your|.+?'s) enrichment list\?/g)]
+  return [...stripped.matchAll(/Want to add ([A-Z][^?]+?) to (?:your|her|his|their|.+?'s) enrichment list\?/g)]
     .map(m => m[1].trim())
 }
 
