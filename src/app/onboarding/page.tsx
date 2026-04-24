@@ -334,8 +334,13 @@ export default function OnboardingPage() {
         body: JSON.stringify(body),
       })
 
+      if (!syncRes.ok) {
+        const body = await syncRes.text().catch(() => '(unreadable)')
+        throw new Error(`auth/sync failed: ${syncRes.status} — ${body}`)
+      }
+
       // For students: save profile + college wishlist if provided
-      if (isStudent && syncRes.ok) {
+      if (isStudent) {
         const syncData = await syncRes.json()
         const userId = syncData.user_id
 
@@ -374,7 +379,8 @@ export default function OnboardingPage() {
 
       // Advance to "Make the most of Soar" cards
       setStep(4)
-    } catch {
+    } catch (err) {
+      console.error('[onboarding] handleSaveData error:', err)
       setError('Something went wrong. Please try again.')
     } finally {
       setSubmitting(false)
