@@ -14,7 +14,7 @@
 
 # LifeLaunchr / Soar — Deployment Reference
 
-> Last updated: 2026-04-23 (v0.9.25).
+> Last updated: 2026-04-23 (v1.0).
 
 ## Version History
 
@@ -55,6 +55,7 @@
 | v0.9.25 | 2026-04-23 | Backend-only: counselor families endpoint (#90) — `_find_or_create_user()` now handles all 4 cases (created/reinvited/reactivated/connected); connected notification email Sign In link now uses `_SOAR_BASE_URL`; `send_connected_notification_email()` gains `app_url` param. No frontend code changes. |
 | v0.9.24 | 2026-04-23 | Fix note and research summary dates showing tomorrow for late-evening US users (next#35): `reportLabel()` was using `created_at?.slice(0,10)` and `started_at?.slice(0,10)` to get the display date — slicing a UTC ISO timestamp gives the UTC date, which is one day ahead for US users after ~5 PM local time. Added `localDateStr()` helper in `src/app/reports/page.tsx` that converts a UTC timestamp to a local YYYY-MM-DD string using `getFullYear()/getMonth()/getDate()` (local clock). Applied to note `created_at` label and all three research summary `started_at` display sites. |
 | v0.9.23 | 2026-04-23 | Fix profile re-fetch wipes unsaved edits (next#26): `useEffect` in `src/app/profile/page.tsx` had `clerkUser` (the full object) as a dependency. Clerk silently creates a new object reference on every background token refresh (~60s), causing the effect to re-run, re-fetch the profile from the server, and overwrite any pending unsaved changes — explaining why citizenship, testing_status, and other fields "required 2-3 saves." Fixed by changing the dependency to `clerkUser?.id`. One-line change; no backend changes. |
+| v1.0 | 2026-04-23 | Production go-live. No frontend code changes — all v1.0 work was backend migration quality fixes (html2text paragraph collapse, EC/athletic rating key mapping, UC/CA activity categories, org_description, Key to-dos paragraph break in session notes) and data backfill (sent_at on 10,570 session reports). Backend: see lifelaunchr-app-3 CLAUDE.md v0.9.26–v0.9.28. |
 | v0.9.22 | 2026-04-23 | Fix onboarding skip for newly invited users (#93 follow-up): `NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/chat` in Vercel env vars was overriding `fallbackRedirectUrl="/onboarding"` on the `<SignUp>` component — all new sign-ups landed directly in chat, bypassing profile setup, college selection, and the Soar intro cards. Removed from staging and production Vercel env vars. Updated `.env.local.example` to document the correct value (`/onboarding`). No code changes — the `<SignUp fallbackRedirectUrl="/onboarding" />` setting in `src/app/sign-up/[[...sign-up]]/page.tsx` was always correct. |
 | v0.9.18 | 2026-04-22 | Soar Summary fixes (#91): (1) `summaryError` state + red error banner in the Soar Summary tab — errors are now visible instead of silent. (2) `onUpdateEntry` prop added to `EditDrawer` — updates parent `entries` array and `editEntry` state without closing the drawer; used after generation completes so the summary persists when the drawer is closed and reopened. (3) Fixed drawer closing on "Regenerate Summary" — was caused by `handleGenerateSummary` calling `onSave` (which calls `setEditEntry(null)`); switched to `onUpdateEntry` which has no close side-effect. All in `src/app/lists/page.tsx`. |
 
