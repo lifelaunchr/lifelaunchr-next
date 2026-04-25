@@ -275,13 +275,19 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
     if (!userId) return
     try {
       const token = await getToken()
-      // When a student is selected, fetch ALL sessions for that student (from any counselor/parent),
-      // not just sessions the caller personally conducted. This gives counselors, parents, and the
-      // student a shared view of all research done on their behalf.
-      // When no student is selected, show the caller's own unscoped sessions.
-      const url = forStudentId
-        ? `${apiUrl}/sessions?for_student_id=${forStudentId}`
-        : `${apiUrl}/sessions?unscoped=1`
+      // Three cases:
+      // 1. Counselor/parent has a student selected → all sessions for that student (shared view)
+      // 2. Student viewing their own research → all sessions for themselves, including those
+      //    conducted by their counselors/parents (shared view using their own DB user ID)
+      // 3. Counselor/parent with no student selected → their own unscoped sessions only
+      let url: string
+      if (forStudentId) {
+        url = `${apiUrl}/sessions?for_student_id=${forStudentId}`
+      } else if (!isCounselor && !isParent && usageData?.user_id) {
+        url = `${apiUrl}/sessions?for_student_id=${usageData.user_id}`
+      } else {
+        url = `${apiUrl}/sessions?unscoped=1`
+      }
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -290,7 +296,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
         setSessions(data)
       }
     } catch { /* silently ignore */ }
-  }, [userId, getToken, apiUrl, forStudentId])
+  }, [userId, getToken, apiUrl, forStudentId, isCounselor, isParent, usageData])
 
   // Auth sync — ensure user exists in our DB so profile/lists work.
   // Also claims any guest sessions from localStorage so history/usage carry over.
