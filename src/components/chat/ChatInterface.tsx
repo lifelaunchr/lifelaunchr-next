@@ -99,7 +99,7 @@ function formatSessionDate(iso: string): string {
 }
 
 export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
-  const { getToken, userId: clerkUserId } = useAuth()
+  const { getToken, userId: clerkUserId, isLoaded } = useAuth()
   // Prefer client-side Clerk state over server prop — reacts immediately to sign-out
   const userId = clerkUserId ?? serverUserId
   const { user: clerkUser } = useUser()
@@ -163,6 +163,34 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
   const onboardingAutoSentRef = useRef(false)
+  const prevUserIdRef = useRef<string | null>(null)
+
+  // Clear stale state when the signed-in user changes (e.g. log out → log in as someone else).
+  // Without this, the previous user's usage data, student list, and sessions bleed into the
+  // new session and 401-retried fetches overwrite them with wrong data.
+  useEffect(() => {
+    if (!isLoaded) return
+    const prev = prevUserIdRef.current
+    const curr = userId ?? null
+    if (prev !== null && prev !== curr) {
+      // User switched — wipe all auth-scoped state before new fetches fire
+      setUsageData(null)
+      setMyStudents([])
+      setSessions([])
+      setMessages([])
+      setConversationHistory([])
+      setServerSessionId(null)
+      setActiveSessionId(null)
+      setIsCounselor(false)
+      setIsParent(false)
+      setIsAdmin(false)
+      setMyConnections(null)
+      setInviteUrl(null)
+      setSchedulingLink(null)
+      setCurrentResearchSessionId(null)
+    }
+    prevUserIdRef.current = curr
+  }, [isLoaded, userId])
 
   // Fetch tenant branding on mount (public endpoint, no auth required)
   useEffect(() => {
@@ -272,7 +300,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
   // counselor accounts whose Clerk ID was recreated would appear as students because
   // /my-usage ran before the DB row was updated.
   useEffect(() => {
-    if (!userId || !clerkUser) return
+    if (!isLoaded || !userId || !clerkUser) return
     const sync = async () => {
       try {
         const token = await getToken()
@@ -304,16 +332,17 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
       fetchUsage()
     }
     sync()
-  }, [userId, clerkUser, getToken, apiUrl, fetchUsage])
+  }, [isLoaded, userId, clerkUser, getToken, apiUrl, fetchUsage])
 
   useEffect(() => {
+    if (!isLoaded) return
     fetchUsage()
     fetchSessions()
-  }, [fetchUsage, fetchSessions])
+  }, [isLoaded, fetchUsage, fetchSessions])
 
   // Fetch student's linked counselors/parents (students only — others get empty arrays)
   useEffect(() => {
-    if (!userId) return
+    if (!isLoaded || !userId) return
     const fetchConnections = async () => {
       try {
         const token = await getToken()
@@ -327,7 +356,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
       } catch { /* silently ignore */ }
     }
     fetchConnections()
-  }, [userId, getToken, apiUrl])
+  }, [isLoaded, userId, getToken, apiUrl])
 
   // Auto-select the student when a parent has exactly one connected student.
   // Also clears a stale forStudentId if the saved student is no longer connected.
