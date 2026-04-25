@@ -159,14 +159,18 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
     parents: Array<{ id: number; full_name: string; email: string }>
   } | null>(null)
 
+  // Stable DB user ID — set by fetchUsage, depended on by fetchSessions.
+  // Stored as state (not just a ref) so that when fetchUsage completes and sets this,
+  // React re-renders, fetchSessions' callback is recreated, and the sessions effect
+  // re-fires with the correct ID. Using a number (not the whole usageData object) avoids
+  // infinite loops — numbers are compared by value, not reference.
+  const [myDbUserId, setMyDbUserId] = useState<number | null>(null)
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
   const onboardingAutoSentRef = useRef(false)
   const prevUserIdRef = useRef<string | null>(null)
-  // Holds the authenticated user's DB integer ID — set by fetchUsage, read by fetchSessions
-  // via ref (not state) to avoid an infinite loop: usageData in fetchSessions deps would
-  // recreate the callback every time fetchUsage sets new data, re-firing the effect endlessly.
   const myDbUserIdRef = useRef<number | null>(null)
 
   // Clear stale state when the signed-in user changes (e.g. log out → log in as someone else).
@@ -193,6 +197,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
       setSchedulingLink(null)
       setCurrentResearchSessionId(null)
       myDbUserIdRef.current = null
+      setMyDbUserId(null)
       // Also clear forStudentId — students must never inherit a counselor's selected student
       setForStudentId(null)
       localStorage.removeItem('ll_for_student_id')
@@ -243,7 +248,8 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
       if (res.ok) {
         const data = await res.json()
         console.log('[fetchUsage] account_type:', data.account_type, 'user_id:', data.user_id)
-        myDbUserIdRef.current = data.user_id  // set ref before state so fetchSessions reads it immediately
+        myDbUserIdRef.current = data.user_id
+        setMyDbUserId(data.user_id)  // triggers fetchSessions re-run via state dep (see fetchSessions callback)
         setUsageData(data)
 
         const accountType = data.account_type ?? 'student'
@@ -293,10 +299,10 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
       if (forStudentId && (isCounselor || isParent)) {
         // Counselor/parent has a student selected → all sessions for that student (shared view)
         url = `${apiUrl}/sessions?for_student_id=${forStudentId}`
-      } else if (!isCounselor && !isParent && myDbUserIdRef.current) {
+      } else if (!isCounselor && !isParent && myDbUserId) {
         // Student viewing their own research → include counselor-conducted sessions
-        // Use ref (not usageData state) to avoid dep-triggered infinite loop
-        url = `${apiUrl}/sessions?for_student_id=${myDbUserIdRef.current}`
+        // myDbUserId is a stable number dep — safe to use here without causing loops
+        url = `${apiUrl}/sessions?for_student_id=${myDbUserId}`
       } else {
         // Counselor/parent with no student selected → their own unscoped sessions only
         url = `${apiUrl}/sessions?unscoped=1`
@@ -309,10 +315,10 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
         setSessions(data)
       }
     } catch { /* silently ignore */ }
-  // NOTE: usageData intentionally NOT in deps — user_id read via myDbUserIdRef to avoid
-  // infinite loop (every fetchUsage() call creates a new object reference → callback
-  // recreated → effect re-fires → fetchUsage() again → loop).
-  }, [userId, getToken, apiUrl, forStudentId, isCounselor, isParent])
+  // myDbUserId (a number) is safe in deps — when fetchUsage sets it, this callback
+  // is recreated and the sessions effect re-fires, ensuring the student branch runs
+  // AFTER fetchUsage has committed the user ID. Numbers compare by value, no loop risk.
+  }, [userId, getToken, apiUrl, forStudentId, isCounselor, isParent, myDbUserId])
 
   // Auth sync — ensure user exists in our DB so profile/lists work.
   // Also claims any guest sessions from localStorage so history/usage carry over.
@@ -355,11 +361,20 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
     sync()
   }, [isLoaded, userId, clerkUser, getToken, apiUrl, fetchUsage])
 
+  // Fetch usage data. When this completes it sets myDbUserId + role flags as state,
+  // which causes fetchSessions to be recreated and the effect below to re-fire.
   useEffect(() => {
     if (!isLoaded) return
     fetchUsage()
+  }, [isLoaded, fetchUsage])
+
+  // Fetch session list. This fires after fetchUsage because myDbUserId/isCounselor/isParent
+  // are in fetchSessions' deps — once fetchUsage sets them, this callback is recreated
+  // and this effect re-fires with the correct values (no parallel race condition).
+  useEffect(() => {
+    if (!isLoaded || !userId) return
     fetchSessions()
-  }, [isLoaded, fetchUsage, fetchSessions])
+  }, [isLoaded, userId, fetchSessions])
 
   // Fetch student's linked counselors/parents (students only — others get empty arrays)
   useEffect(() => {
