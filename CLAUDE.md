@@ -14,12 +14,14 @@
 
 # LifeLaunchr / Soar — Deployment Reference
 
-> Last updated: 2026-04-24 (v1.0.2).
+> Last updated: 2026-04-25 (v1.0.3).
 
 ## Version History
 
 | Version | Date | Notes |
 |---------|------|-------|
+| v1.0.3 | 2026-04-25 | Shared session visibility + auth timing race fixes (next#36, app#98): (1) `fetchSessions` in `ChatInterface.tsx` now calls `?for_student_id=their_db_id` for students instead of `?unscoped=1`, so students see all sessions conducted for them by counselors/parents. `isCounselor`, `isParent`, and `usageData` added to `fetchSessions` deps so it re-runs after `fetchUsage` populates the user's DB ID. (2) Auth timing race on account switch: `isLoaded` from `useAuth()` now guards all four auth-dependent `useEffect` hooks — no API calls fire while Clerk is mid-session-switch. `prevUserIdRef` + state-clearing effect wipes all auth-scoped state (`usageData`, `sessions`, `messages`, `myStudents`, role flags, etc.) when `userId` changes, preventing previous user's data from bleeding into the new session. |
+| v1.0.2 | 2026-04-24 | Fix add-to-list buttons missing in counselor mode: `extractResearchListOffers`, `extractScholarshipListOffers`, and `extractEnrichmentListOffers` in `ChatMessage.tsx` now match `her\|his\|their` in addition to `your` and `[Name]'s`. Fix silent auth/sync failure on parent/counselor onboarding: `handleSaveData()` in `onboarding/page.tsx` now checks `syncRes.ok` for all account types. |
 | v0.9.6.2 | 2026-04-10 | Unified reports page (#28); sidebar scoping (#49); summary modal spinner |
 | v0.9.6.3 | 2026-04-10 | Family onboarding (#38, #39): AddFamilyModal, Invited badges with copy-link on dashboard and admin; WelcomeCard first-session starters (#48 partial) |
 | v0.9.6.5 | 2026-04-11 | Extended onboarding suite (#48): 6-step flow (role picker → profile → colleges → Soar intro cards → counselor invite → question picker); auto-send first question to chat via sessionStorage; role-specific card content and taglines; parent onboarding flow; migration invite routing; strikethrough rendering fix; add-to-list buttons hidden for parents |
