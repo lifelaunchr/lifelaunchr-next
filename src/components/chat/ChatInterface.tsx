@@ -275,11 +275,10 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
     if (!userId) return
     try {
       const token = await getToken()
-      // Counselors: use /sessions?for_student_id=X to see their OWN sessions tagged for a student.
-      // Sidebar sessions are scoped by student selection:
-      // - Student selected: show caller's sessions tagged for that student
-      // - No student selected: show caller's unscoped sessions only
-      // Works for counselors AND parents — both use the same endpoint.
+      // When a student is selected, fetch ALL sessions for that student (from any counselor/parent),
+      // not just sessions the caller personally conducted. This gives counselors, parents, and the
+      // student a shared view of all research done on their behalf.
+      // When no student is selected, show the caller's own unscoped sessions.
       const url = forStudentId
         ? `${apiUrl}/sessions?for_student_id=${forStudentId}`
         : `${apiUrl}/sessions?unscoped=1`
