@@ -164,6 +164,10 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
   const abortControllerRef = useRef<AbortController | null>(null)
   const onboardingAutoSentRef = useRef(false)
   const prevUserIdRef = useRef<string | null>(null)
+  // Holds the authenticated user's DB integer ID — set by fetchUsage, read by fetchSessions
+  // via ref (not state) to avoid an infinite loop: usageData in fetchSessions deps would
+  // recreate the callback every time fetchUsage sets new data, re-firing the effect endlessly.
+  const myDbUserIdRef = useRef<number | null>(null)
 
   // Clear stale state when the signed-in user changes (e.g. log out → log in as someone else).
   // Without this, the previous user's usage data, student list, and sessions bleed into the
@@ -188,6 +192,10 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
       setInviteUrl(null)
       setSchedulingLink(null)
       setCurrentResearchSessionId(null)
+      myDbUserIdRef.current = null
+      // Also clear forStudentId — students must never inherit a counselor's selected student
+      setForStudentId(null)
+      localStorage.removeItem('ll_for_student_id')
     }
     prevUserIdRef.current = curr
   }, [isLoaded, userId])
@@ -235,6 +243,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
       if (res.ok) {
         const data = await res.json()
         console.log('[fetchUsage] account_type:', data.account_type, 'user_id:', data.user_id)
+        myDbUserIdRef.current = data.user_id  // set ref before state so fetchSessions reads it immediately
         setUsageData(data)
 
         const accountType = data.account_type ?? 'student'
@@ -281,11 +290,15 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
       //    conducted by their counselors/parents (shared view using their own DB user ID)
       // 3. Counselor/parent with no student selected → their own unscoped sessions only
       let url: string
-      if (forStudentId) {
+      if (forStudentId && (isCounselor || isParent)) {
+        // Counselor/parent has a student selected → all sessions for that student (shared view)
         url = `${apiUrl}/sessions?for_student_id=${forStudentId}`
-      } else if (!isCounselor && !isParent && usageData?.user_id) {
-        url = `${apiUrl}/sessions?for_student_id=${usageData.user_id}`
+      } else if (!isCounselor && !isParent && myDbUserIdRef.current) {
+        // Student viewing their own research → include counselor-conducted sessions
+        // Use ref (not usageData state) to avoid dep-triggered infinite loop
+        url = `${apiUrl}/sessions?for_student_id=${myDbUserIdRef.current}`
       } else {
+        // Counselor/parent with no student selected → their own unscoped sessions only
         url = `${apiUrl}/sessions?unscoped=1`
       }
       const res = await fetch(url, {
@@ -296,7 +309,10 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
         setSessions(data)
       }
     } catch { /* silently ignore */ }
-  }, [userId, getToken, apiUrl, forStudentId, isCounselor, isParent, usageData])
+  // NOTE: usageData intentionally NOT in deps — user_id read via myDbUserIdRef to avoid
+  // infinite loop (every fetchUsage() call creates a new object reference → callback
+  // recreated → effect re-fires → fetchUsage() again → loop).
+  }, [userId, getToken, apiUrl, forStudentId, isCounselor, isParent])
 
   // Auth sync — ensure user exists in our DB so profile/lists work.
   // Also claims any guest sessions from localStorage so history/usage carry over.
