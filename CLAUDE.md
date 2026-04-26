@@ -14,12 +14,13 @@
 
 # LifeLaunchr / Soar — Deployment Reference
 
-> Last updated: 2026-04-25 (v1.0.3).
+> Last updated: 2026-04-26 (v1.0.4).
 
 ## Version History
 
 | Version | Date | Notes |
 |---------|------|-------|
+| v1.0.4 | 2026-04-26 | Two `ChatInterface.tsx` bug fixes (next#37): (1) 403 infinite loop on account switch — stale `ll_for_student_id` localStorage key from a counselor session persisted into the next login; state-clearing effect now calls `setForStudentId(null)` + `localStorage.removeItem('ll_for_student_id')` on user switch. Also added `myDbUserIdRef` to track the authenticated user's DB integer ID via ref, cleared on switch. (2) Student shared-session visibility race condition — `fetchUsage()` and `fetchSessions()` were called simultaneously in a combined `useEffect`; `fetchSessions` ran before `fetchUsage` had set the user's DB ID, so students fell through to `?unscoped=1` and only saw their own sessions. Fix: added `myDbUserId` state (a number, safe in deps — no loop risk); `fetchSessions` depends on it; split combined effect into two separate effects so `fetchSessions` only fires after `fetchUsage` commits the user ID and role flags to state. `forStudentId` path in `fetchSessions` now also guarded by `isCounselor \|\| isParent` to prevent student accounts from ever hitting it via stale localStorage. |
 | v1.0.3 | 2026-04-25 | Shared session visibility + auth timing race fixes (next#36, app#98): (1) `fetchSessions` in `ChatInterface.tsx` now calls `?for_student_id=their_db_id` for students instead of `?unscoped=1`, so students see all sessions conducted for them by counselors/parents. `isCounselor`, `isParent`, and `usageData` added to `fetchSessions` deps so it re-runs after `fetchUsage` populates the user's DB ID. (2) Auth timing race on account switch: `isLoaded` from `useAuth()` now guards all four auth-dependent `useEffect` hooks — no API calls fire while Clerk is mid-session-switch. `prevUserIdRef` + state-clearing effect wipes all auth-scoped state (`usageData`, `sessions`, `messages`, `myStudents`, role flags, etc.) when `userId` changes, preventing previous user's data from bleeding into the new session. |
 | v1.0.2 | 2026-04-24 | Fix add-to-list buttons missing in counselor mode: `extractResearchListOffers`, `extractScholarshipListOffers`, and `extractEnrichmentListOffers` in `ChatMessage.tsx` now match `her\|his\|their` in addition to `your` and `[Name]'s`. Fix silent auth/sync failure on parent/counselor onboarding: `handleSaveData()` in `onboarding/page.tsx` now checks `syncRes.ok` for all account types. |
 | v0.9.6.2 | 2026-04-10 | Unified reports page (#28); sidebar scoping (#49); summary modal spinner |
