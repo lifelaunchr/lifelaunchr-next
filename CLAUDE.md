@@ -14,7 +14,7 @@
 
 # LifeLaunchr / Soar — Deployment Reference
 
-> Last updated: 2026-04-26 (v1.0.4).
+> Last updated: 2026-04-26 (v1.0.5).
 
 ## Version History
 
