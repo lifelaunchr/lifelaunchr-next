@@ -3398,8 +3398,12 @@ function ListsContent() {
             setEditEntry(null)
           }}
           onUpdateEntry={async (id, updates) => {
-            await updateEntry(id, updates)
+            // Optimistically update local state immediately so the summary
+            // persists when the drawer is closed and reopened, even for
+            // students where the PATCH may not fire (app#108).
+            setEntries((prev) => prev.map((e) => e.id === id ? { ...e, ...updates } : e))
             setEditEntry((prev) => prev ? { ...prev, ...updates } : prev)
+            await updateEntry(id, updates)
           }}
           apiUrl={apiUrl}
           getToken={getToken}
