@@ -159,6 +159,11 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
     parents: Array<{ id: number; full_name: string; email: string }>
   } | null>(null)
 
+  // True from mount until the first fetchSessions completes — used to show a skeleton
+  // instead of "No past conversations yet." during the 1-2s auth + data loading window.
+  // Reset to true on user switch so the skeleton reappears on account change.
+  const [isInitializing, setIsInitializing] = useState(true)
+
   // Stable DB user ID — set by fetchUsage, depended on by fetchSessions.
   // Stored as state (not just a ref) so that when fetchUsage completes and sets this,
   // React re-renders, fetchSessions' callback is recreated, and the sessions effect
@@ -198,6 +203,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
       setCurrentResearchSessionId(null)
       myDbUserIdRef.current = null
       setMyDbUserId(null)
+      setIsInitializing(true)
       // Also clear forStudentId — students must never inherit a counselor's selected student
       setForStudentId(null)
       localStorage.removeItem('ll_for_student_id')
@@ -314,7 +320,9 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
         const data = await res.json()
         setSessions(data)
       }
-    } catch { /* silently ignore */ }
+    } catch { /* silently ignore */ } finally {
+      setIsInitializing(false)
+    }
   // myDbUserId (a number) is safe in deps — when fetchUsage sets it, this callback
   // is recreated and the sessions effect re-fires, ensuring the student branch runs
   // AFTER fetchUsage has committed the user ID. Numbers compare by value, no loop risk.
@@ -976,6 +984,15 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
               <p className="text-center text-slate-600 text-xs px-4 py-5">
                 Sign in to save conversations.
               </p>
+            ) : isInitializing ? (
+              <div className="px-4 py-3 space-y-2">
+                {[72, 56, 64].map((w) => (
+                  <div key={w} className="animate-pulse">
+                    <div className={`h-3 bg-white/10 rounded w-${w === 72 ? '3/4' : w === 56 ? '1/2' : '2/3'} mb-1`} />
+                    <div className="h-2 bg-white/5 rounded w-1/4" />
+                  </div>
+                ))}
+              </div>
             ) : sessions.length === 0 ? (
               <p className="text-center text-slate-600 text-xs px-4 py-5">
                 No past conversations yet.
