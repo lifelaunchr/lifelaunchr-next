@@ -78,6 +78,8 @@
 
 **Practical rule: push to `main` for staging, test there first, then push to `production` only when ready. Never tag a version until after it has been pushed to production and verified.**
 
+> ⛔ **NEVER push to `production` without the user explicitly saying "push to production" or "looks good on staging." No exceptions, even for trivial or low-risk fixes. Always push to `main` first, tell the user to test on staging, and wait for explicit confirmation before touching `production`.**
+
 ### Step-by-step workflow
 
 **Step 1 — Develop and push to `main` (staging)**
