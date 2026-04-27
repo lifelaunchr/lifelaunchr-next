@@ -1728,7 +1728,7 @@ interface EditDrawerProps {
   canWrite: boolean
   onClose: () => void
   onSave: (entryId: number, updates: Partial<CollegeEntry>) => Promise<void>
-  onUpdateEntry: (entryId: number, updates: Partial<CollegeEntry>) => Promise<void>
+  onUpdateEntry: (entryId: number, updates: Partial<CollegeEntry>) => void
   apiUrl: string
   getToken: () => Promise<string | null>
 }
@@ -1814,9 +1814,14 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
           }
         }
       }
-      // Update the parent entries array so the summary persists when drawer is reopened
+      // Persist the generated summary:
+      // 1. Update form so clicking Save includes the summary in the PATCH body.
+      // 2. Notify parent to update entries array (for close/reopen without Save).
+      // The streaming endpoint has already committed to DB by the time we get here,
+      // so we do NOT fire an extra PATCH from onUpdateEntry — we just update state.
       if (fullText) {
-        await onUpdateEntry(entry.id, { soar_research_summary: fullText })
+        setForm((prev) => ({ ...prev, soar_research_summary: fullText }))
+        onUpdateEntry(entry.id, { soar_research_summary: fullText })
       }
     } catch (e) {
       setSummaryError('Failed to generate summary. Please try again.')
@@ -3397,13 +3402,13 @@ function ListsContent() {
             await updateEntry(id, updates)
             setEditEntry(null)
           }}
-          onUpdateEntry={async (id, updates) => {
-            // Optimistically update local state immediately so the summary
-            // persists when the drawer is closed and reopened, even for
-            // students where the PATCH may not fire (app#108).
+          onUpdateEntry={(id, updates) => {
+            // Only update local React state — no PATCH call.
+            // The streaming endpoint already committed the value to DB (app#108).
+            // If the user later clicks Save, form now includes the summary so the
+            // PATCH will persist it without any risk of a stale-read race.
             setEntries((prev) => prev.map((e) => e.id === id ? { ...e, ...updates } : e))
             setEditEntry((prev) => prev ? { ...prev, ...updates } : prev)
-            await updateEntry(id, updates)
           }}
           apiUrl={apiUrl}
           getToken={getToken}
