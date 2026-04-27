@@ -23,6 +23,9 @@ interface UserRow {
   editate_school_selectivity: string | null
   editate_feedback_preferences: string | null
   organization: string | null
+  consultation_link: string | null
+  scheduling_link_comprehensive: string | null
+  scheduling_link_hourly: string | null
   is_admin: boolean
   is_super_admin: boolean
   is_tenant_admin: boolean
@@ -358,6 +361,9 @@ export default function AdminPage() {
           editate_review_limit: editingUser.editate_review_limit,
           editate_school_selectivity: editingUser.editate_school_selectivity || null,
           editate_feedback_preferences: editingUser.editate_feedback_preferences || null,
+          consultation_link: editingUser.consultation_link || null,
+          scheduling_link_comprehensive: editingUser.scheduling_link_comprehensive || null,
+          scheduling_link_hourly: editingUser.scheduling_link_hourly || null,
         })
       })
       if (res.ok) {
@@ -1210,6 +1216,45 @@ export default function AdminPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Scheduling links — counselors only */}
+              {editingUser.account_type === 'counselor' && (
+                <div className="border-t border-gray-100 pt-4">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Scheduling Links</p>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Consultation link <span className="text-gray-400 font-normal">(new / prospective clients)</span></label>
+                      <input
+                        type="url"
+                        value={editingUser.consultation_link || ''}
+                        onChange={e => setEditingUser({ ...editingUser, consultation_link: e.target.value || null })}
+                        placeholder="https://calendly.com/…"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Comprehensive scheduling link <span className="text-gray-400 font-normal">(comprehensive / stay-on-track students)</span></label>
+                      <input
+                        type="url"
+                        value={editingUser.scheduling_link_comprehensive || ''}
+                        onChange={e => setEditingUser({ ...editingUser, scheduling_link_comprehensive: e.target.value || null })}
+                        placeholder="https://calendly.com/…"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Hourly scheduling link <span className="text-gray-400 font-normal">(hourly / test-prep / essay students)</span></label>
+                      <input
+                        type="url"
+                        value={editingUser.scheduling_link_hourly || ''}
+                        onChange={e => setEditingUser({ ...editingUser, scheduling_link_hourly: e.target.value || null })}
+                        placeholder="https://calendly.com/…"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {(isAdmin || isSuperAdmin) && (
                 <div className="flex gap-4">
