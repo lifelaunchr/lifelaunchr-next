@@ -139,8 +139,9 @@ function EditPanel({
         body: JSON.stringify(form),
       })
       if (res.ok) {
-        const data = await res.json()
-        onSave({ ...student, ...data })
+        // Merge form state back into parent — backend returns {ok:true}, not the
+        // updated row, so use form (which has the user's edits) to update the list.
+        onSave({ ...student, ...form } as DashboardStudent)
       }
     } finally {
       setSaving(false)
