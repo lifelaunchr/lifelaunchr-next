@@ -592,7 +592,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
             ...(serverSessionId ? { session_id: serverSessionId } : {}),
             ...(guestToken && !userId ? { guest_token: guestToken } : {}),
             active_topics: activeModules,
-            ...(forStudentId ? { for_student_id: forStudentId } : {}),
+            ...((forStudentId && (isCounselor || isParent)) ? { for_student_id: forStudentId } : {}),
           }),
           signal: abortControllerRef.current.signal,
         })
