@@ -177,6 +177,9 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
   const onboardingAutoSentRef = useRef(false)
   const prevUserIdRef = useRef<string | null>(null)
   const myDbUserIdRef = useRef<number | null>(null)
+  // Tracks the previous forStudentId so we can detect genuine user-driven changes
+  // vs. the initial load from localStorage (which should not trigger a chat reset).
+  const prevForStudentIdRef = useRef<number | null | undefined>(undefined)
 
   // Clear stale state when the signed-in user changes (e.g. log out → log in as someone else).
   // Without this, the previous user's usage data, student list, and sessions bleed into the
@@ -210,6 +213,47 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
     }
     prevUserIdRef.current = curr
   }, [isLoaded, userId])
+
+  // ── Reset chat when the selected student changes ──────────────────────────
+  // When a counselor/parent switches the "Researching for" dropdown, the active
+  // chat (messages, session ID, research session) must be cleared immediately so
+  // the next message is sent into a fresh session for the new student — not into
+  // the previous student's session with their conversation history attached.
+  // We use prevForStudentIdRef to skip the very first render (undefined → initial
+  // value from localStorage), which should not trigger a reset.
+  useEffect(() => {
+    const prev = prevForStudentIdRef.current
+    prevForStudentIdRef.current = forStudentId
+    // Skip initial mount (prev is undefined, meaning we haven't seen any value yet)
+    if (prev === undefined) return
+    // Skip if the value didn't actually change
+    if (prev === forStudentId) return
+    // Student genuinely changed — abort any in-flight stream and reset chat state
+    if (abortControllerRef.current) abortControllerRef.current.abort()
+    setMessages([])
+    setConversationHistory([])
+    setServerSessionId(null)
+    setActiveSessionId(null)
+    setCurrentResearchSessionId(null)
+    setInput('')
+    setIsStreaming(false)
+    setStreamingMessageId(null)
+    if (textareaRef.current) textareaRef.current.style.height = 'auto'
+  }, [forStudentId])
+
+  // ── Cross-tab student sync ─────────────────────────────────────────────────
+  // localStorage is shared across browser tabs. If the user switches students
+  // in tab B, tab A must reflect that change — otherwise tab A silently continues
+  // researching for the old student under the new student's label.
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key !== 'll_for_student_id') return
+      const newVal = e.newValue ? parseInt(e.newValue, 10) : null
+      setForStudentId(newVal)
+    }
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
+  }, [])
 
   // Fetch tenant branding on mount (public endpoint, no auth required)
   useEffect(() => {
