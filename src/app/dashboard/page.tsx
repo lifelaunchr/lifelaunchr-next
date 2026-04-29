@@ -43,6 +43,8 @@ interface DashboardStudent {
   has_safety_flag?: boolean
   clerk_user_id?: string | null
   invite_url?: string | null
+  assigned_counselor?: string | null
+  actual_counselor_id?: number | null
 }
 
 // ── Label maps ────────────────────────────────────────────────────────────────
@@ -232,6 +234,11 @@ function EditPanel({
           {/* Overview */}
           <section>
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Overview</h3>
+            {student.assigned_counselor && (
+              <Field label="Assigned Coach">
+                <p className="text-sm text-gray-700 py-1.5">{student.assigned_counselor}</p>
+              </Field>
+            )}
             <Field label="Overall Status">
               <Select field="overall_status" options={OVERALL_LABELS} />
             </Field>
@@ -706,6 +713,9 @@ export default function DashboardPage() {
                             )}
                           </div>
                           <div className="text-xs text-gray-400 mt-0.5">{s.high_school_name || s.email}</div>
+                          {s.assigned_counselor && (
+                            <div className="text-xs text-blue-500 mt-0.5">Coach: {s.assigned_counselor}</div>
+                          )}
                           {/* Status badges */}
                           <div className="flex flex-wrap gap-1.5 mt-2">
                             {s.overall_status && (
@@ -779,7 +789,7 @@ export default function DashboardPage() {
                           />
                         </td>
                         <td className="px-4 py-3">
-                          <div className="font-medium text-gray-900 flex items-center gap-1.5">
+                          <div className="font-medium text-gray-900 flex items-center gap-1.5 flex-wrap">
                             {s.has_safety_flag && (
                               <button
                                 onClick={(e) => { e.stopPropagation(); setSafetyStudent(s) }}
@@ -807,6 +817,9 @@ export default function DashboardPage() {
                             )}
                           </div>
                           <div className="text-xs text-gray-400">{s.email}</div>
+                          {s.assigned_counselor && (
+                            <div className="text-xs text-blue-500 mt-0.5">Coach: {s.assigned_counselor}</div>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-gray-600">{s.high_school_name || '—'}</td>
                         <td className="px-4 py-3 text-gray-600">{s.graduation_year || '—'}</td>
