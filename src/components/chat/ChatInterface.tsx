@@ -363,7 +363,9 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
   // the previous student's session with their conversation history attached.
   // We use prevForStudentIdRef to skip the very first render (undefined → initial
   // value from localStorage), which should not trigger a reset.
-  // Placed AFTER fetchSessions declaration so the callback is in scope.
+  // This effect ONLY clears state — it does NOT call fetchSessions. The sessions
+  // effect below is responsible for fetching, and has forStudentId in its own deps
+  // so it fires directly whenever the student changes (no indirect chain needed).
   useEffect(() => {
     const prev = prevForStudentIdRef.current
     prevForStudentIdRef.current = forStudentId
@@ -371,7 +373,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
     if (prev === undefined) return
     // Skip if the value didn't actually change
     if (prev === forStudentId) return
-    // Student genuinely changed — abort any in-flight stream and reset chat state
+    // Student genuinely changed — abort any in-flight stream and reset all per-student state
     if (abortControllerRef.current) abortControllerRef.current.abort()
     setMessages([])
     setConversationHistory([])
@@ -382,8 +384,11 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
     setIsStreaming(false)
     setStreamingMessageId(null)
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
-    fetchSessions()
-  }, [forStudentId, fetchSessions])
+    // Clear the sessions list immediately and show the skeleton so the previous
+    // student's sessions never flash for the new student — even for a moment.
+    setSessions([])
+    setIsInitializing(true)
+  }, [forStudentId])
 
   // Auth sync — ensure user exists in our DB so profile/lists work.
   // Also claims any guest sessions from localStorage so history/usage carry over.
@@ -433,13 +438,15 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
     fetchUsage()
   }, [isLoaded, fetchUsage])
 
-  // Fetch session list. This fires after fetchUsage because myDbUserId/isCounselor/isParent
-  // are in fetchSessions' deps — once fetchUsage sets them, this callback is recreated
-  // and this effect re-fires with the correct values (no parallel race condition).
+  // Fetch session list. Deps include forStudentId directly so this effect fires
+  // immediately when the student changes — no indirect chain through fetchSessions
+  // recreation needed. Also fires after fetchUsage sets myDbUserId/isCounselor/isParent
+  // (those are in fetchSessions' deps, causing it to be recreated, which triggers this
+  // effect again with the correct role values — no parallel race condition).
   useEffect(() => {
     if (!isLoaded || !userId) return
     fetchSessions()
-  }, [isLoaded, userId, fetchSessions])
+  }, [isLoaded, userId, forStudentId, fetchSessions])
 
   // Fetch student's linked counselors/parents (students only — others get empty arrays)
   useEffect(() => {
