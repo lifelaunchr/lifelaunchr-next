@@ -281,6 +281,14 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
         setIsCounselor(counselor)
         setIsParent(parent)
         setIsAdmin(!!data.is_admin)
+        // Students must never inherit a stale ll_for_student_id left by a counselor
+        // who closed the tab without signing out. Clear it as soon as we confirm the
+        // account type — the user-switch effect only fires when userId changes, not
+        // on a fresh mount where the previous user's localStorage is still present.
+        if (!counselor && !parent) {
+          setForStudentId(null)
+          localStorage.removeItem('ll_for_student_id')
+        }
         if (!counselor && !parent && data.scheduling_link) {
           setSchedulingLink(data.scheduling_link)
         }
