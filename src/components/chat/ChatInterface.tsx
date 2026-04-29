@@ -319,8 +319,11 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
       //    conducted by their counselors/parents (shared view using their own DB user ID)
       // 3. Counselor/parent with no student selected → their own unscoped sessions only
       let url: string
-      if (forStudentId && (isCounselor || isParent)) {
-        // Counselor/parent has a student selected → all sessions for that student (shared view)
+      if (forStudentId) {
+        // A student is selected (counselor/parent mode) — fetch all sessions for that student.
+        // Do NOT gate this on isCounselor/isParent being set yet: on page reload, this callback
+        // fires before fetchUsage completes, so those flags are still false. Using forStudentId
+        // directly is correct — the backend enforces access control regardless.
         url = `${apiUrl}/sessions?for_student_id=${forStudentId}`
       } else if (!isCounselor && !isParent && myDbUserId) {
         // Student viewing their own research → include counselor-conducted sessions
