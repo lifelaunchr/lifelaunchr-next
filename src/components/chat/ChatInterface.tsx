@@ -239,7 +239,8 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
     setIsStreaming(false)
     setStreamingMessageId(null)
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
-  }, [forStudentId])
+    fetchSessions()
+  }, [forStudentId, fetchSessions])
 
   // ── Cross-tab student sync ─────────────────────────────────────────────────
   // localStorage is shared across browser tabs. If the user switches students
