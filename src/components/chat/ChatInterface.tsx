@@ -214,34 +214,6 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
     prevUserIdRef.current = curr
   }, [isLoaded, userId])
 
-  // ── Reset chat when the selected student changes ──────────────────────────
-  // When a counselor/parent switches the "Researching for" dropdown, the active
-  // chat (messages, session ID, research session) must be cleared immediately so
-  // the next message is sent into a fresh session for the new student — not into
-  // the previous student's session with their conversation history attached.
-  // We use prevForStudentIdRef to skip the very first render (undefined → initial
-  // value from localStorage), which should not trigger a reset.
-  useEffect(() => {
-    const prev = prevForStudentIdRef.current
-    prevForStudentIdRef.current = forStudentId
-    // Skip initial mount (prev is undefined, meaning we haven't seen any value yet)
-    if (prev === undefined) return
-    // Skip if the value didn't actually change
-    if (prev === forStudentId) return
-    // Student genuinely changed — abort any in-flight stream and reset chat state
-    if (abortControllerRef.current) abortControllerRef.current.abort()
-    setMessages([])
-    setConversationHistory([])
-    setServerSessionId(null)
-    setActiveSessionId(null)
-    setCurrentResearchSessionId(null)
-    setInput('')
-    setIsStreaming(false)
-    setStreamingMessageId(null)
-    if (textareaRef.current) textareaRef.current.style.height = 'auto'
-    fetchSessions()
-  }, [forStudentId, fetchSessions])
-
   // ── Cross-tab student sync ─────────────────────────────────────────────────
   // localStorage is shared across browser tabs. If the user switches students
   // in tab B, tab A must reflect that change — otherwise tab A silently continues
@@ -372,6 +344,35 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
   // is recreated and the sessions effect re-fires, ensuring the student branch runs
   // AFTER fetchUsage has committed the user ID. Numbers compare by value, no loop risk.
   }, [userId, getToken, apiUrl, forStudentId, isCounselor, isParent, myDbUserId])
+
+  // ── Reset chat when the selected student changes ──────────────────────────
+  // When a counselor/parent switches the "Researching for" dropdown, the active
+  // chat (messages, session ID, research session) must be cleared immediately so
+  // the next message is sent into a fresh session for the new student — not into
+  // the previous student's session with their conversation history attached.
+  // We use prevForStudentIdRef to skip the very first render (undefined → initial
+  // value from localStorage), which should not trigger a reset.
+  // Placed AFTER fetchSessions declaration so the callback is in scope.
+  useEffect(() => {
+    const prev = prevForStudentIdRef.current
+    prevForStudentIdRef.current = forStudentId
+    // Skip initial mount (prev is undefined, meaning we haven't seen any value yet)
+    if (prev === undefined) return
+    // Skip if the value didn't actually change
+    if (prev === forStudentId) return
+    // Student genuinely changed — abort any in-flight stream and reset chat state
+    if (abortControllerRef.current) abortControllerRef.current.abort()
+    setMessages([])
+    setConversationHistory([])
+    setServerSessionId(null)
+    setActiveSessionId(null)
+    setCurrentResearchSessionId(null)
+    setInput('')
+    setIsStreaming(false)
+    setStreamingMessageId(null)
+    if (textareaRef.current) textareaRef.current.style.height = 'auto'
+    fetchSessions()
+  }, [forStudentId, fetchSessions])
 
   // Auth sync — ensure user exists in our DB so profile/lists work.
   // Also claims any guest sessions from localStorage so history/usage carry over.
