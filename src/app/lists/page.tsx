@@ -291,7 +291,8 @@ function formatScholarshipAward(entry: ScholarshipEntry): string {
 }
 
 function formatScholarshipDeadline(entry: ScholarshipEntry): string {
-  const dateStr = entry.deadline_date || entry.custom_deadline
+  // custom_deadline is the user's override — it must take precedence over the DB date
+  const dateStr = entry.custom_deadline || entry.deadline_date
   if (dateStr) {
     const d = new Date(dateStr + 'T00:00:00')
     const mon = d.toLocaleString('en-US', { month: 'short' })
