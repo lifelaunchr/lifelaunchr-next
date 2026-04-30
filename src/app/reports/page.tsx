@@ -406,6 +406,9 @@ function ReportsContent() {
     setBriefText(null)
     setSelectedReport(null)
     setMobileShowDetail(true)
+    // Set name immediately from local list so heading is correct during generation
+    const student = students.find((s) => s.id === studentId)
+    setBriefStudentName(student?.preferred_name || student?.full_name || '')
     try {
       const token = await getToken()
       const res = await fetch(`${apiUrl}/meeting-brief`, {
@@ -426,7 +429,7 @@ function ReportsContent() {
     } finally {
       setBriefLoading(false)
     }
-  }, [getToken])
+  }, [getToken, students])
 
   const saveBriefToReport = useCallback(async () => {
     if (!briefText || !selectedStudentId) return
