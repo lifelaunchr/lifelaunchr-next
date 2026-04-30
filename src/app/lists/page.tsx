@@ -499,9 +499,11 @@ function ScholarshipEditDrawer({ entry, canWrite, onClose, onSave, onDelete, api
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
-  // Auto-refresh from DB if key fields are missing
+  // Auto-refresh from DB only if the entry was added from Peterson's search results
+  // (in_db === true). Manual entries (in_db === false) are not in our DB by definition —
+  // auto-refreshing them runs fuzzy matching and attaches wrong data from an unrelated entry.
   useEffect(() => {
-    const needsRefresh = !entry.award_low && !entry.program_url && !entry.application_url && !entry.deadline_date
+    const needsRefresh = entry.in_db && !entry.award_low && !entry.program_url && !entry.application_url && !entry.deadline_date
     if (!needsRefresh) return
     getToken().then(async (token) => {
       if (!token) return
