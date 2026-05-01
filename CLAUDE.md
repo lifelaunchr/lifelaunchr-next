@@ -14,12 +14,13 @@
 
 # LifeLaunchr / Soar — Deployment Reference
 
-> Last updated: 2026-04-30 (v1.0.15).
+> Last updated: 2026-04-30 (v1.0.16).
 
 ## Version History
 
 | Version | Date | Notes |
 |---------|------|-------|
+| v1.0.16 | 2026-04-30 | Backend script-only: rewrite `gen_family_invites.py` as argument-driven CLI. No frontend changes. See backend CLAUDE.md v1.0.16. |
 | v1.0.15 | 2026-04-30 | Fix Meeting Brief heading showing wrong student name during generation (frontend-only): `generateBrief` in `reports/page.tsx` cleared `briefText` but not `briefStudentName` at the start of a new request, so the heading displayed the previous brief's student name for the entire duration of generation. Fix: look up the student name from the local `students` array using the passed `studentId` and call `setBriefStudentName` immediately before the fetch — heading is now correct from the first frame. Added `students` to `useCallback` deps. No backend changes. |
 | v1.0.14 | 2026-04-29 | Backend-only: fix tenant admin blocked from student lists, profiles, and activities (app#113). No frontend changes. See backend CLAUDE.md v1.0.14. |
 | v1.0.13 | 2026-04-29 | Fix wrong Peterson's data on manually-added scholarships + deadline override ignored (frontend): (1) `ScholarshipEditDrawer` auto-refresh guard in `lists/page.tsx`: added `entry.in_db &&` to `needsRefresh` — auto-refresh from DB only fires for entries added via Peterson's search (`in_db=true`); manual entries (`in_db=false`) are skipped. This was the proximate cause: even after the add endpoint was fixed, the drawer was calling `refresh-from-db` automatically on open, re-attaching wrong data from an unrelated scholarship. (2) `formatScholarshipDeadline` in `lists/page.tsx`: fixed evaluation order from `deadline_date \|\| custom_deadline` → `custom_deadline \|\| deadline_date` so the Deadline Override the counselor enters takes precedence over the Peterson's DB date rather than being silently ignored. Backend changes (add endpoint + refresh-from-db endpoint) documented in backend CLAUDE.md v1.0.13. |
