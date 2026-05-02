@@ -123,7 +123,7 @@ export default function SessionsHelpModal({
 
           <section className="pt-3 border-t border-white/10">
             <p className="text-xs text-slate-400">
-              Limits reset on the 1st of each month. If you have questions, please
+              Limits reset at 8 AM UTC (Greenwich Mean Time) on the 1st of each month. If you have questions, please
               email us at{' '}
               <a
                 href={`mailto:${supportEmail}`}
