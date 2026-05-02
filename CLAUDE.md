@@ -14,12 +14,13 @@
 
 # LifeLaunchr / Soar — Deployment Reference
 
-> Last updated: 2026-05-02 (v1.0.17).
+> Last updated: 2026-05-02 (v1.0.18).
 
 ## Version History
 
 | Version | Date | Notes |
 |---------|------|-------|
+| v1.0.18 | 2026-05-02 | Fix stale session counts + session reset cron (app#110, frontend): `SessionsHelpModal.tsx` — updated reset timing copy from "Limits reset on the 1st of each month" to "Limits reset at 8 AM UTC (Greenwich Mean Time) on the 1st of each month" to match the actual Render cron schedule. Backend changes (Part 1: `/my-usage` read-time fix; Part 2: `/internal/session-reset` endpoint + cron) documented in backend CLAUDE.md v1.0.18. |
 | v1.0.17 | 2026-05-02 | Fix multi-child parent landing on blank student state (next#42, frontend-only): `ChatInterface.tsx` — two changes. (1) Parent auto-select effect: changed condition from `myStudents.length === 1` to `myStudents.length >= 1` — now auto-selects the first student for all parents (not just single-child) when no valid selection exists. Removed the `else` branch that was explicitly clearing `forStudentId` to null for multi-child parents, which was the root cause of the blank state. (2) Blank dropdown option: changed render condition from `(!isParent || myStudents.length > 1)` to `!isParent` — parents never see the blank "— Select student —" option since they have no meaningful "no student" state. No backend changes. |
 | v1.0.16 | 2026-04-30 | Backend script-only: rewrite `gen_family_invites.py` as argument-driven CLI. No frontend changes. See backend CLAUDE.md v1.0.16. |
 | v1.0.15 | 2026-04-30 | Fix Meeting Brief heading showing wrong student name during generation (frontend-only): `generateBrief` in `reports/page.tsx` cleared `briefText` but not `briefStudentName` at the start of a new request, so the heading displayed the previous brief's student name for the entire duration of generation. Fix: look up the student name from the local `students` array using the passed `studentId` and call `setBriefStudentName` immediately before the fetch — heading is now correct from the first frame. Added `students` to `useCallback` deps. No backend changes. |
