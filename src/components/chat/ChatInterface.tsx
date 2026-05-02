@@ -466,22 +466,17 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
     fetchConnections()
   }, [isLoaded, userId, getToken, apiUrl])
 
-  // Auto-select the student when a parent has exactly one connected student.
+  // Auto-select the first student when a parent has no valid selection.
   // Also clears a stale forStudentId if the saved student is no longer connected.
+  // Parents must always have a student selected — there is no meaningful "no student" state for them.
   useEffect(() => {
     if (!isParent || myStudents.length === 0) return
     const savedIsValid = forStudentId !== null && myStudents.some(s => s.id === forStudentId)
     if (!savedIsValid) {
-      if (myStudents.length === 1) {
-        // Auto-select the only student
-        const s = myStudents[0]
-        setForStudentId(s.id)
-        localStorage.setItem('ll_for_student_id', String(s.id))
-      } else {
-        // Multiple students and no valid selection — clear the stale value
-        setForStudentId(null)
-        localStorage.removeItem('ll_for_student_id')
-      }
+      // Auto-select the first student (works for both single and multi-child parents)
+      const s = myStudents[0]
+      setForStudentId(s.id)
+      localStorage.setItem('ll_for_student_id', String(s.id))
     }
   }, [isParent, myStudents, forStudentId])
 
@@ -1238,7 +1233,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                     }}
                     className="w-full bg-white/5 border border-white/10 text-slate-300 text-xs rounded-lg px-3 py-2 focus:outline-none"
                   >
-                    {(!isParent || myStudents.length > 1) && <option value="">— Select student —</option>}
+                    {!isParent && <option value="">— Select student —</option>}
                     {myStudents.map((s) => (
                       <option key={s.id} value={s.id}>{s.has_safety_flag ? `🚩 ${s.full_name || s.email}` : (s.full_name || s.email)}</option>
                     ))}
