@@ -110,7 +110,7 @@ function fmtTime(t?: string, ianaTimezone?: string, date?: string) {
   const base = `${h12}:${String(m).padStart(2, '0')} ${ampm}`
   if (!ianaTimezone) return ` at ${base}`
   try {
-    const dateStr = date || new Date().toISOString().slice(0, 10)
+    const dateStr = date || localDateStr(new Date().toISOString())!
     const parts = new Intl.DateTimeFormat('en-US', {
       timeZoneName: 'short',
       timeZone: ianaTimezone,
@@ -435,7 +435,7 @@ function ReportsContent() {
     if (!briefText || !selectedStudentId) return
     try {
       const token = await getToken()
-      const today = new Date().toISOString().slice(0, 10)
+      const today = localDateStr(new Date().toISOString())!
       const res = await fetch(`${apiUrl}/session-reports`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
