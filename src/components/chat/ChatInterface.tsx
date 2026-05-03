@@ -11,8 +11,11 @@ import { WelcomeCard } from './WelcomeCard'
 import { LimitModal } from './LimitModal'
 import SessionsHelpModal from './SessionsHelpModal'
 import SafetyEventModal, { SafetyStudent } from '@/components/safety/SafetyEventModal'
-import ProductTour from '@/components/tour/ProductTour'
+import dynamic from 'next/dynamic'
 import { tourMeta, type TourRole } from '@/lib/tourContent'
+
+// Dynamic import prevents SSR and ensures joyride portal can mount cleanly
+const ProductTour = dynamic(() => import('@/components/tour/ProductTour'), { ssr: false })
 
 export interface MessageDownload {
   filename: string
@@ -299,8 +302,9 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
         // Auto-start tour on first visit for this role
         const tourRole: TourRole = counselor ? 'counselor' : parent ? 'parent' : 'student'
         if (!localStorage.getItem(tourMeta.localStorageKey(tourRole))) {
-          // Small delay so the page finishes rendering before joyride starts
-          setTimeout(() => setTourActive(true), 800)
+          // Delay gives the page and dynamic import time to fully render
+          // before joyride scans for target elements
+          setTimeout(() => setTourActive(true), 1500)
         }
 
         // Invite link — available to everyone
@@ -1699,8 +1703,8 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
         />
       )}
 
-      {/* Product tour — auto-shows on first visit per role, re-triggerable from ? menu */}
-      {tourActive && userId && (
+      {/* Product tour — always mounted when signed in so joyride is ready before run flips */}
+      {userId && (
         <ProductTour
           role={isCounselor ? 'counselor' : isParent ? 'parent' : 'student'}
           run={tourActive}
