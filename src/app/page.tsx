@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { SignInButton, useAuth } from '@clerk/nextjs'
+import { useAuth } from '@clerk/nextjs'
 import Link from 'next/link'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://lifelaunchr.onrender.com'
@@ -77,11 +77,9 @@ export default function Home() {
                 Open Soar →
               </Link>
             ) : (
-              <SignInButton mode="modal">
-                <button className="text-sm font-medium transition-colors" style={{ color: '#fff' }}>
-                  Sign in
-                </button>
-              </SignInButton>
+              <Link href="/sign-in" className="text-sm font-medium transition-colors" style={{ color: '#fff' }}>
+                Sign in
+              </Link>
             )}
           </nav>
         </div>
@@ -286,11 +284,9 @@ export default function Home() {
                     Open Soar →
                   </Link>
                 ) : (
-                  <SignInButton mode="modal">
-                    <button type="button" className="underline hover:text-gray-600">
-                      Sign in
-                    </button>
-                  </SignInButton>
+                  <Link href="/sign-in" className="underline hover:text-gray-600">
+                    Sign in
+                  </Link>
                 )}
               </p>
             </form>
