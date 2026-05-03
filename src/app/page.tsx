@@ -1,13 +1,24 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { SignInButton, useAuth } from '@clerk/nextjs'
 import Link from 'next/link'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://lifelaunchr.onrender.com'
 
 export default function Home() {
-  const { isSignedIn } = useAuth()
+  const { isSignedIn, isLoaded } = useAuth()
+  const router = useRouter()
+
+  // Client-side fallback for cases where the server-side redirect in proxy.ts
+  // didn't fire (e.g. Brave tab isolation blocking the session cookie).
+  // If Clerk detects an active session via localStorage, redirect immediately.
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      router.replace('/chat')
+    }
+  }, [isLoaded, isSignedIn, router])
   const [form, setForm] = useState({
     name: '',
     email: '',
