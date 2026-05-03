@@ -16,7 +16,7 @@ function buildJoyrideSteps(role: TourRole): Step[] {
   return tourSteps[role].map((s) => ({
     target: s.target,
     placement: s.placement ?? 'auto',
-    disableBeacon: true,
+    skipBeacon: true,
     title: s.title,
     content: (
       <div className="text-left text-sm leading-relaxed">
