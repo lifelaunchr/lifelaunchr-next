@@ -11,6 +11,8 @@ import { WelcomeCard } from './WelcomeCard'
 import { LimitModal } from './LimitModal'
 import SessionsHelpModal from './SessionsHelpModal'
 import SafetyEventModal, { SafetyStudent } from '@/components/safety/SafetyEventModal'
+import ProductTour from '@/components/tour/ProductTour'
+import { tourMeta, type TourRole } from '@/lib/tourContent'
 
 export interface MessageDownload {
   filename: string
@@ -125,6 +127,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
   const [currentResearchSessionId, setCurrentResearchSessionId] = useState<number | null>(null)
   const [showNewSessionBanner, setShowNewSessionBanner] = useState(false)
   const [showSessionsHelp, setShowSessionsHelp] = useState(false)
+  const [tourActive, setTourActive] = useState(false)
   const [generatingSummary, setGeneratingSummary] = useState(false)
   const [summaryToast, setSummaryToast] = useState<{ kind: 'success' | 'error'; text: string } | null>(null)
   const [showSummaryConfirm, setShowSummaryConfirm] = useState(false)
@@ -291,6 +294,13 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
         }
         if (!counselor && !parent && data.scheduling_link) {
           setSchedulingLink(data.scheduling_link)
+        }
+
+        // Auto-start tour on first visit for this role
+        const tourRole: TourRole = counselor ? 'counselor' : parent ? 'parent' : 'student'
+        if (!localStorage.getItem(tourMeta.localStorageKey(tourRole))) {
+          // Small delay so the page finishes rendering before joyride starts
+          setTimeout(() => setTourActive(true), 800)
         }
 
         // Invite link — available to everyone
@@ -994,6 +1004,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
         sessionsUsed={usageData?.sessions_used}
         sessionLimit={usageData?.session_limit ?? null}
         onShowSessionsHelp={() => setShowSessionsHelp(true)}
+        onStartTour={() => setTourActive(true)}
         messagesUsed={usageData?.messages_used}
         effectiveLimit={usageData?.effective_limit ?? null}
         botName={tenantBranding.botName}
@@ -1022,6 +1033,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
           {/* New conversation button */}
           <div className="px-3 pt-3 pb-2 flex-shrink-0">
             <button
+              id="tour-new-session"
               onClick={() => { handleNewConversation(); setSidebarOpen(window.innerWidth < 768 ? false : true) }}
               className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-300 hover:text-white hover:bg-white/10 rounded-lg transition-all border border-white/10"
             >
@@ -1081,7 +1093,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
             <div className="border-t border-white/10 p-3 flex-shrink-0 flex flex-col gap-0.5 overflow-y-auto max-h-[60vh]">
               {/* Usage bar — sessions (primary) or messages (fallback) */}
               {userId && usageData && (usageData.session_limit != null || usageData.effective_limit != null) && (
-                <div className="mb-2 px-3">
+                <div id="tour-session-counter" className="mb-2 px-3">
                   {usageData.session_limit != null ? (
                     // Session-based usage. Show TWO blocks when a beneficiary is
                     // selected: caller's own pool + the student's shared pool.
@@ -1219,7 +1231,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
 
               {/* Counselors + Parents: student picker dropdown */}
               {(isCounselor || isParent) && myStudents.length > 0 && (
-                <div className="mb-2">
+                <div id="tour-student-selector" className="mb-2">
                   <p className="text-[10px] uppercase tracking-widest text-slate-600 px-3 mb-1">
                     {isCounselor ? 'Researching for' : 'Your student'}
                   </p>
@@ -1285,6 +1297,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
               {/* My Lists — students only, shown near the top for discoverability */}
               {!isCounselor && !isParent && (
                 <Link
+                  id="tour-nav-lists"
                   href="/lists"
                   className="flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
                 >
@@ -1299,6 +1312,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
               {/* Counselor dashboard link */}
               {isCounselor && (
                 <Link
+                  id="tour-nav-students"
                   href="/dashboard"
                   className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
                 >
@@ -1308,7 +1322,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
               )}
 
               {/* Session & Research Summaries link — all roles */}
-              <Link href="/reports" className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all">
+              <Link id="tour-nav-reports" href="/reports" className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all">
                 <span className="text-base leading-none">📝</span>
                 <span>Session &amp; Research Summaries</span>
               </Link>
@@ -1316,6 +1330,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
               {/* My Activities — students only */}
               {!isCounselor && !isParent && (
                 <Link
+                  id="tour-nav-activities"
                   href="/activities"
                   className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
                 >
@@ -1357,6 +1372,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                     <span>Student Profile</span>
                   </Link>
                   <Link
+                    id="tour-nav-lists"
                     href={`/lists?for=${forStudentId}`}
                     className="flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
                   >
@@ -1516,7 +1532,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
           <ModuleChips activeModules={activeModules} onToggle={toggleModule} />
 
           {/* Input area */}
-          <div className="bg-white border-t border-gray-200 px-3 sm:px-4 py-3 flex-shrink-0">
+          <div id="tour-chat-input" className="bg-white border-t border-gray-200 px-3 sm:px-4 py-3 flex-shrink-0">
             <div className="max-w-3xl mx-auto w-full">
               <div className="flex gap-2 items-end">
                 <textarea
@@ -1680,6 +1696,19 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
             setSafetyStudent(null)
           }}
           getToken={async () => await getToken()}
+        />
+      )}
+
+      {/* Product tour — auto-shows on first visit per role, re-triggerable from ? menu */}
+      {tourActive && userId && (
+        <ProductTour
+          role={isCounselor ? 'counselor' : isParent ? 'parent' : 'student'}
+          run={tourActive}
+          onFinish={() => {
+            setTourActive(false)
+            const role: TourRole = isCounselor ? 'counselor' : isParent ? 'parent' : 'student'
+            localStorage.setItem(tourMeta.localStorageKey(role), '1')
+          }}
         />
       )}
     </div>

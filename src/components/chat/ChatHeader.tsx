@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { UserButton } from '@clerk/nextjs'
+import HelpMenu from './HelpMenu'
 
 function SoarLogo() {
   return (
@@ -44,6 +45,7 @@ interface ChatHeaderProps {
   sessionsUsed?: number
   sessionLimit?: number | null
   onShowSessionsHelp?: () => void
+  onStartTour?: () => void
   messagesUsed?: number
   effectiveLimit?: number | null
   botName?: string
@@ -58,6 +60,7 @@ export function ChatHeader({
   sessionsUsed,
   sessionLimit,
   onShowSessionsHelp,
+  onStartTour,
   messagesUsed,
   effectiveLimit,
   botName = 'Soar',
@@ -125,16 +128,12 @@ export function ChatHeader({
             >
               {badgeUsed} / {badgeLimit} {badgeUnit} · Upgrade →
             </a>
-            {onShowSessionsHelp && useSessions && (
-              <button
-                type="button"
-                onClick={onShowSessionsHelp}
-                aria-label="How are sessions counted?"
-                title="How are sessions counted?"
-                className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-white/10 text-white/80 hover:bg-white/20 text-xs leading-none"
-              >
-                ?
-              </button>
+            {onShowSessionsHelp && (
+              <HelpMenu
+                onShowSessionsHelp={onShowSessionsHelp}
+                onStartTour={onStartTour ?? (() => {})}
+                isSignedIn={!!userId}
+              />
             )}
           </div>
         ) : !userId ? (
