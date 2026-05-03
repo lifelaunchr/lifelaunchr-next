@@ -14,12 +14,13 @@
 
 # LifeLaunchr / Soar — Deployment Reference
 
-> Last updated: 2026-05-02 (v1.0.19).
+> Last updated: 2026-05-02 (v1.0.20).
 
 ## Version History
 
 | Version | Date | Notes |
 |---------|------|-------|
+| v1.0.20 | 2026-05-02 | Backend-only: remove fuzzy DB lookups for manually-added enrichment programs and colleges (app#111) — see backend CLAUDE.md v1.0.20. No frontend changes. |
 | v1.0.19 | 2026-05-02 | Fix session report date defaulting to next day for US West Coast users after ~5 PM PDT (next#41, frontend-only): `reports/page.tsx` — two occurrences of `new Date().toISOString().slice(0, 10)` replaced with `localDateStr(new Date().toISOString())!`. `toISOString()` always returns UTC, which rolls over to the next calendar day for PDT (UTC-7) users after ~5 PM. `localDateStr()` (already in the file, used for research summary and note dates since v0.9.24) uses `getFullYear()/getMonth()/getDate()` — local time — so the correct local date is used. Two sites fixed: (1) `saveBriefToReport()`: meeting brief "Save as Report" was POSTing tomorrow's date as `appointment_date`, so the saved report appeared with the wrong date unless the counselor noticed and manually corrected it. (2) `fmtTime()` fallback: used when rendering a time + timezone label with no explicit date context. No backend changes. |
 | v1.0.18 | 2026-05-02 | Fix stale session counts + session reset cron (app#110, frontend): `SessionsHelpModal.tsx` — updated reset timing copy from "Limits reset on the 1st of each month" to "Limits reset at 8 AM UTC (Greenwich Mean Time) on the 1st of each month" to match the actual Render cron schedule. Backend changes (Part 1: `/my-usage` read-time fix; Part 2: `/internal/session-reset` endpoint + cron) documented in backend CLAUDE.md v1.0.18. |
 | v1.0.17 | 2026-05-02 | Fix multi-child parent landing on blank student state (next#42, frontend-only): `ChatInterface.tsx` — two changes. (1) Parent auto-select effect: changed condition from `myStudents.length === 1` to `myStudents.length >= 1` — now auto-selects the first student for all parents (not just single-child) when no valid selection exists. Removed the `else` branch that was explicitly clearing `forStudentId` to null for multi-child parents, which was the root cause of the blank state. (2) Blank dropdown option: changed render condition from `(!isParent || myStudents.length > 1)` to `!isParent` — parents never see the blank "— Select student —" option since they have no meaningful "no student" state. No backend changes. |
