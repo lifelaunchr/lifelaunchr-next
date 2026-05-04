@@ -52,7 +52,7 @@ const studentSteps: TourStepContent[] = [
   {
     target: '#tour-chat-input',
     title: 'Welcome to Soar 👋',
-    body: "Soar is your thinking partner — not just a smarter Google. Don't search for facts; explore ideas. Try something like:",
+    body: "Soar is your thinking partner — not just a smarter Google. Don't just search for facts; explore ideas. Try something like:",
     list: [
       '"I love environmental science and writing — what majors or careers might fit me?"',
       '"I want a strong film program, not too far from home — where should I look?"',
@@ -63,7 +63,7 @@ const studentSteps: TourStepContent[] = [
   {
     target: '#tour-session-counter',
     title: 'Research sessions',
-    body: 'Each conversation counts as one research session. Your plan includes a set number per month — they reset on the 1st. You can always pick up where you left off within a session.',
+    body: 'Each conversation counts as one research session — and a session stays open for 60 minutes, so there\'s plenty of room to explore. Your plan includes a set number per month, resetting on the 1st. Past sessions are always saved so you can pick up exactly where you left off.',
     placement: 'right',
   },
   {
@@ -86,8 +86,8 @@ const studentSteps: TourStepContent[] = [
   },
   {
     target: '#tour-nav-reports',
-    title: 'Research Summaries',
-    body: 'Every conversation gets summarized automatically so you can pick up where you left off — even weeks later. Your counselor can also see what you\'ve been exploring.',
+    title: 'Research Summaries & Notes',
+    body: 'Every conversation gets summarized automatically so you can pick up where you left off — even weeks later. When you meet with your counselor, your meeting notes are shared here too.',
     placement: 'right',
   },
   {
@@ -225,15 +225,21 @@ const parentSteps: TourStepContent[] = [
 
 const studentShowcase: ShowcaseItem[] = [
   {
-    icon: '🎯',
-    title: 'Likelihood Assessment',
-    description: 'See how competitive you are at each college — Likely, Target, or Reach — based on your actual GPA, test scores, and the school\'s data.',
-    href: '/lists',
+    icon: '👤',
+    title: 'Your Profile',
+    description: 'The more Soar knows about you, the better the advice. Keep your GPA, test scores, and interests up to date.',
+    href: '/profile',
   },
   {
     icon: '✨',
-    title: 'Soar Summary',
-    description: 'An AI-written personalized summary for each college on your list, drawing from your research conversations and your profile.',
+    title: 'Personalized College Fit Summaries',
+    description: 'An AI-written summary for each college on your list — personalized to your profile and drawn from your actual research conversations.',
+    href: '/lists',
+  },
+  {
+    icon: '🎯',
+    title: 'Likelihood Assessment',
+    description: 'See how competitive you are at each college — Likely, Target, or Reach — based on your actual GPA, test scores, and the school\'s data.',
     href: '/lists',
   },
   {
@@ -247,12 +253,6 @@ const studentShowcase: ShowcaseItem[] = [
     title: 'Enrichment Programs',
     description: 'Summer programs and enrichment opportunities — Soar can find ones that match your interests and strengthen your application.',
     href: '/lists',
-  },
-  {
-    icon: '👤',
-    title: 'Your Profile',
-    description: 'The more Soar knows about you, the better the advice. Keep your GPA, test scores, and interests up to date.',
-    href: '/profile',
   },
 ]
 
@@ -277,7 +277,7 @@ const counselorShowcase: ShowcaseItem[] = [
   },
   {
     icon: '✨',
-    title: 'Soar Summary',
+    title: 'Personalized College Fit Summaries',
     description: 'A personalized AI college summary for each student, drawn from their research history and profile. Great for meeting prep.',
     href: '/lists',
   },
@@ -298,7 +298,7 @@ const parentShowcase: ShowcaseItem[] = [
   },
   {
     icon: '✨',
-    title: 'Soar Summary',
+    title: 'Personalized College Fit Summaries',
     description: 'A personalized AI write-up for each college, informed by your student\'s actual profile and research conversations.',
     href: '/lists',
   },

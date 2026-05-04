@@ -29,17 +29,17 @@ export default function TourShowcaseModal({ role, onClose }: TourShowcaseModalPr
       ref={overlayRef}
       onClick={handleBackdrop}
       className="fixed inset-0 z-[10000] flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(2px)' }}
+      style={{ background: 'rgba(4,8,20,0.72)', backdropFilter: 'blur(3px)' }}
     >
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="px-6 pt-6 pb-4 border-b border-gray-100">
-          <h2 className="text-lg font-bold text-gray-900">{tourMeta.showcaseTitle}</h2>
-          <p className="text-sm text-gray-500 mt-1">{tourMeta.showcaseSubtitle}</p>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+        {/* Header — dark navy band */}
+        <div className="px-6 py-5 flex-shrink-0" style={{ background: '#0c1b33' }}>
+          <h2 className="text-base font-bold" style={{ color: '#7dd3fc' }}>{tourMeta.showcaseTitle}</h2>
+          <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.5)' }}>{tourMeta.showcaseSubtitle}</p>
         </div>
 
-        {/* Feature grid */}
-        <div className="px-6 py-4 space-y-3">
+        {/* Feature list */}
+        <div className="px-5 py-4 space-y-1 overflow-y-auto flex-1">
           {items.map((item) => (
             <a
               key={item.title}
@@ -53,15 +53,21 @@ export default function TourShowcaseModal({ role, onClose }: TourShowcaseModalPr
                 </p>
                 <p className="text-xs text-gray-500 leading-relaxed mt-0.5">{item.description}</p>
               </div>
+              <svg className="w-4 h-4 text-gray-300 group-hover:text-indigo-400 flex-shrink-0 mt-1 ml-auto transition-colors" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
             </a>
           ))}
         </div>
 
         {/* Footer */}
-        <div className="px-6 pb-6 pt-2">
+        <div className="px-5 pb-5 pt-3 border-t border-gray-100 flex-shrink-0">
           <button
             onClick={onClose}
-            className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium py-2.5 rounded-xl transition-colors"
+            className="w-full text-white text-sm font-semibold py-2.5 rounded-xl transition-colors"
+            style={{ background: '#4f46e5' }}
+            onMouseEnter={e => (e.currentTarget.style.background = '#4338ca')}
+            onMouseLeave={e => (e.currentTarget.style.background = '#4f46e5')}
           >
             {tourMeta.showcaseDone}
           </button>
