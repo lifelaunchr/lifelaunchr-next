@@ -166,10 +166,10 @@ const counselorSteps: TourStepContent[] = [
     title: 'Things you might not think to ask',
     body: 'Soar can handle more than college research. Try:',
     list: [
-      '"Summarize what we\'ve researched about UCLA to prep for my next meeting."',
-      '"Draft a first outline of this student\'s Common App activity list."',
-      '"What merit scholarships should this student know about, given her profile?"',
-      '"What are the strongest programs at UT Austin for pre-med students?"',
+      '"Given this student\'s activities, what clubs and organizations at UCLA would be interesting to them?"',
+      '"Draft a first outline of this student\'s Common App activity list so she and I can edit and finalize it."',
+      '"What merit scholarships would be a good fit for this student at each of her colleges — and outside?"',
+      '"This student wants to study public health. What kinds of careers could that lead to?"',
     ],
     placement: 'top',
   },
@@ -284,7 +284,7 @@ const counselorShowcase: ShowcaseItem[] = [
   {
     icon: '🎯',
     title: 'Likelihood Assessment',
-    description: 'Data-driven fit tiers (Likely / Target / Reach / Far Reach) for each college, based on the student\'s GPA, test scores, and school benchmarks.',
+    description: 'Data-driven fit tiers (Likely / Target / Reach / Far Reach) based on the student\'s GPA, test scores, and school benchmarks. You can override any tier based on your own knowledge of the student.',
     href: '/lists',
   },
   {
