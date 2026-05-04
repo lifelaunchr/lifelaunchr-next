@@ -109,6 +109,12 @@ const studentSteps: TourStepContent[] = [
 
 const counselorSteps: TourStepContent[] = [
   {
+    target: 'body',
+    title: 'Welcome to Soar 👋',
+    body: "Soar is your AI-powered research partner — built for the way counselors actually work. It knows your students' profiles, tracks their lists, and gets smarter the more you use it together. This tour takes about 90 seconds.",
+    placement: 'center',
+  },
+  {
     target: '#tour-student-selector',
     title: 'Select a student to begin',
     body: 'Everything in Soar — research, lists, summaries, and reports — is scoped to whoever is selected here. Switch students at any time; Soar loads their full profile automatically.',
@@ -172,6 +178,12 @@ const counselorSteps: TourStepContent[] = [
 // ─── Parent tour ──────────────────────────────────────────────────────────────
 
 const parentSteps: TourStepContent[] = [
+  {
+    target: 'body',
+    title: 'Welcome to Soar 👋',
+    body: "Soar is your family's college and career planning partner — backed by real admissions data and shaped by your student's actual profile. You can research alongside your student, explore costs and fit, and stay in the loop on every session. This quick tour shows you around.",
+    placement: 'center',
+  },
   {
     target: '#tour-student-selector',
     title: "Your student's view",
