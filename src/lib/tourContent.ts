@@ -225,8 +225,8 @@ const parentSteps: TourStepContent[] = [
     body: 'Soar can help with more than college lists. Try:',
     list: [
       '"What questions should we ask on college visits next month?"',
-      '"Explain the difference between Early Decision and Early Action — is ED right for us?"',
-      '"What does the financial aid timeline look like for a student applying this fall?"',
+      '"My daughter wants to study medicine — what majors can she pursue in college?"',
+      '"What are career opportunities for a graduate in statistics?"',
       '"Which schools on her list are most likely to offer merit aid for her profile?"',
     ],
     placement: 'top',
