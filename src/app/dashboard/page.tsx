@@ -111,6 +111,55 @@ function relativeTime(d?: string) {
   return `${Math.floor(diff / 30)}mo ago`
 }
 
+// ── Edit Panel sub-components (defined outside EditPanel to prevent remount on each keystroke) ──
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="mb-4">
+      <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+        {label}
+      </label>
+      {children}
+    </div>
+  )
+}
+
+function PanelSelect({ field, options, placeholder = 'Not set', form, set }: {
+  field: keyof DashboardStudent
+  options: Record<string, string>
+  placeholder?: string
+  form: Partial<DashboardStudent>
+  set: (k: keyof DashboardStudent, v: unknown) => void
+}) {
+  return (
+    <select
+      value={(form[field] as string) || ''}
+      onChange={e => set(field, e.target.value || null)}
+      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+    >
+      <option value="">{placeholder}</option>
+      {Object.entries(options).map(([v, l]) => (
+        <option key={v} value={v}>{l}</option>
+      ))}
+    </select>
+  )
+}
+
+function DateInput({ field, form, set }: {
+  field: keyof DashboardStudent
+  form: Partial<DashboardStudent>
+  set: (k: keyof DashboardStudent, v: unknown) => void
+}) {
+  return (
+    <input
+      type="date"
+      value={(form[field] as string)?.slice(0, 10) || ''}
+      onChange={e => set(field, e.target.value || null)}
+      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+    />
+  )
+}
+
 // ── Edit Panel ────────────────────────────────────────────────────────────────
 
 function EditPanel({
@@ -180,41 +229,6 @@ function EditPanel({
     }
   }
 
-  const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-    <div className="mb-4">
-      <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
-        {label}
-      </label>
-      {children}
-    </div>
-  )
-
-  const Select = ({ field, options, placeholder = 'Not set' }: {
-    field: keyof DashboardStudent
-    options: Record<string, string>
-    placeholder?: string
-  }) => (
-    <select
-      value={(form[field] as string) || ''}
-      onChange={e => set(field, e.target.value || null)}
-      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-    >
-      <option value="">{placeholder}</option>
-      {Object.entries(options).map(([v, l]) => (
-        <option key={v} value={v}>{l}</option>
-      ))}
-    </select>
-  )
-
-  const DateInput = ({ field }: { field: keyof DashboardStudent }) => (
-    <input
-      type="date"
-      value={(form[field] as string)?.slice(0, 10) || ''}
-      onChange={e => set(field, e.target.value || null)}
-      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-    />
-  )
-
   return (
     <div className="fixed inset-0 z-40 flex justify-end">
       <div className="absolute inset-0 bg-black/20" onClick={onClose} />
@@ -240,15 +254,15 @@ function EditPanel({
               </Field>
             )}
             <Field label="Overall Status">
-              <Select field="overall_status" options={OVERALL_LABELS} />
+              <PanelSelect form={form} set={set} field="overall_status" options={OVERALL_LABELS} />
             </Field>
             <Field label="Essay Status">
-              <Select field="essay_status" options={ESSAY_LABELS} />
+              <PanelSelect form={form} set={set} field="essay_status" options={ESSAY_LABELS} />
             </Field>
             <Field label="Testing Status">
-              <Select field="testing_status" options={TESTING_LABELS} />
+              <PanelSelect form={form} set={set} field="testing_status" options={TESTING_LABELS} />
             </Field>
-            <Field label="Next Test Date"><DateInput field="next_test_date" /></Field>
+            <Field label="Next Test Date"><DateInput form={form} set={set} field="next_test_date" /></Field>
             <Field label="">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -266,7 +280,7 @@ function EditPanel({
           <section>
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Engagement</h3>
             <Field label="Engagement Type">
-              <Select field="engagement_type" options={ENGAGEMENT_LABELS} />
+              <PanelSelect form={form} set={set} field="engagement_type" options={ENGAGEMENT_LABELS} />
             </Field>
             <Field label="Package Name">
               <input
@@ -278,13 +292,13 @@ function EditPanel({
               />
             </Field>
             <Field label="Primary Contact">
-              <Select field="primary_contact" options={{ student: 'Student', parent: 'Parent' }} />
+              <PanelSelect form={form} set={set} field="primary_contact" options={{ student: 'Student', parent: 'Parent' }} />
             </Field>
-            <Field label="Start Date"><DateInput field="start_date" /></Field>
-            <Field label="Expected End Date"><DateInput field="expected_end_date" /></Field>
-            <Field label="Actual End Date"><DateInput field="actual_end_date" /></Field>
+            <Field label="Start Date"><DateInput form={form} set={set} field="start_date" /></Field>
+            <Field label="Expected End Date"><DateInput form={form} set={set} field="expected_end_date" /></Field>
+            <Field label="Actual End Date"><DateInput form={form} set={set} field="actual_end_date" /></Field>
             <Field label="Billing Status">
-              <Select field="billing_status" options={BILLING_LABELS} />
+              <PanelSelect form={form} set={set} field="billing_status" options={BILLING_LABELS} />
             </Field>
           </section>
 
