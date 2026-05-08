@@ -36,6 +36,9 @@ export default function AddFamilyModal({ open, onClose, onSuccess, counselors }:
   const [startDate, setStartDate] = useState('')
   const [expectedEndDate, setExpectedEndDate] = useState('')
   const [actualEndDate, setActualEndDate] = useState('')
+  const [editateEnabled, setEditateEnabled] = useState(false)
+  const [editateReviewLimit, setEditateReviewLimit] = useState('')
+  const [graduationYear, setGraduationYear] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState<FamilyResult | null>(null)
@@ -60,6 +63,9 @@ export default function AddFamilyModal({ open, onClose, onSuccess, counselors }:
     setStartDate('')
     setExpectedEndDate('')
     setActualEndDate('')
+    setEditateEnabled(false)
+    setEditateReviewLimit('')
+    setGraduationYear('')
     setError('')
     setResult(null)
     setResultNames({ studentName: '', parentNames: [] })
@@ -108,11 +114,14 @@ export default function AddFamilyModal({ open, onClose, onSuccess, counselors }:
       const fp = parents.filter(p => p.full_name.trim() && p.email.trim())
       const endpoint = isTenantAdmin ? '/tenant-admin/families' : '/counselors/me/families'
       const engagementFields = {
-        ...(engagementType      ? { engagement_type:       engagementType }      : {}),
-        ...(packageName.trim()  ? { coaching_package_name: packageName.trim() }  : {}),
-        ...(startDate           ? { start_date:            startDate }            : {}),
-        ...(expectedEndDate     ? { expected_end_date:     expectedEndDate }      : {}),
-        ...(actualEndDate       ? { actual_end_date:       actualEndDate }        : {}),
+        ...(engagementType                    ? { engagement_type:       engagementType }                           : {}),
+        ...(packageName.trim()                ? { coaching_package_name: packageName.trim() }                       : {}),
+        ...(startDate                         ? { start_date:            startDate }                                : {}),
+        ...(expectedEndDate                   ? { expected_end_date:     expectedEndDate }                          : {}),
+        ...(actualEndDate                     ? { actual_end_date:       actualEndDate }                            : {}),
+        ...(editateEnabled                    ? { editate_enabled:       true }                                     : {}),
+        ...(editateReviewLimit.trim()         ? { editate_review_limit:  parseInt(editateReviewLimit, 10) }         : {}),
+        ...(graduationYear.trim()             ? { graduation_year:       parseInt(graduationYear, 10) }             : {}),
       }
       const body = isTenantAdmin
         ? {
@@ -302,6 +311,42 @@ export default function AddFamilyModal({ open, onClose, onSuccess, counselors }:
                         onChange={e => setActualEndDate(e.target.value)}
                         className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3 items-end">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Grad Year</label>
+                      <input
+                        type="number"
+                        placeholder="e.g. 2027"
+                        min={2020}
+                        max={2035}
+                        value={graduationYear}
+                        onChange={e => setGraduationYear(e.target.value)}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Feedback Rounds</label>
+                      <input
+                        type="number"
+                        placeholder="e.g. 3"
+                        min={0}
+                        max={99}
+                        value={editateReviewLimit}
+                        onChange={e => setEditateReviewLimit(e.target.value)}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 pb-2">
+                      <input
+                        id="editate-enabled"
+                        type="checkbox"
+                        checked={editateEnabled}
+                        onChange={e => setEditateEnabled(e.target.checked)}
+                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <label htmlFor="editate-enabled" className="text-sm text-gray-700 cursor-pointer">Editate enabled</label>
                     </div>
                   </div>
                 </div>
