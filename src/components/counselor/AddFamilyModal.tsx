@@ -31,15 +31,35 @@ export default function AddFamilyModal({ open, onClose, onSuccess, counselors }:
   const [studentName, setStudentName] = useState('')
   const [studentEmail, setStudentEmail] = useState('')
   const [parents, setParents] = useState<ParentEntry[]>([{ full_name: '', email: '' }])
+  const [engagementType, setEngagementType] = useState('')
+  const [packageName, setPackageName] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [expectedEndDate, setExpectedEndDate] = useState('')
+  const [actualEndDate, setActualEndDate] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState<FamilyResult | null>(null)
   const [resultNames, setResultNames] = useState({ studentName: '', parentNames: [] as string[] })
 
+  const ENGAGEMENT_TYPES = [
+    { value: '', label: '— Select —' },
+    { value: 'not_a_client_yet', label: 'Not a client yet' },
+    { value: 'comprehensive', label: 'Comprehensive' },
+    { value: 'stay_on_track', label: 'Stay on Track' },
+    { value: 'hourly_on_demand', label: 'Hourly / On Demand' },
+    { value: 'test_prep', label: 'Test Prep' },
+    { value: 'essay', label: 'Essay' },
+  ]
+
   const reset = () => {
     setStudentName('')
     setStudentEmail('')
     setParents([{ full_name: '', email: '' }])
+    setEngagementType('')
+    setPackageName('')
+    setStartDate('')
+    setExpectedEndDate('')
+    setActualEndDate('')
     setError('')
     setResult(null)
     setResultNames({ studentName: '', parentNames: [] })
@@ -87,15 +107,24 @@ export default function AddFamilyModal({ open, onClose, onSuccess, counselors }:
       const token = await getToken()
       const fp = parents.filter(p => p.full_name.trim() && p.email.trim())
       const endpoint = isTenantAdmin ? '/tenant-admin/families' : '/counselors/me/families'
+      const engagementFields = {
+        ...(engagementType      ? { engagement_type:       engagementType }      : {}),
+        ...(packageName.trim()  ? { coaching_package_name: packageName.trim() }  : {}),
+        ...(startDate           ? { start_date:            startDate }            : {}),
+        ...(expectedEndDate     ? { expected_end_date:     expectedEndDate }      : {}),
+        ...(actualEndDate       ? { actual_end_date:       actualEndDate }        : {}),
+      }
       const body = isTenantAdmin
         ? {
             counselor_id: selectedCounselorId,
             student: { full_name: studentName.trim(), email: studentEmail.trim() },
             parents: fp.map(p => ({ full_name: p.full_name.trim(), email: p.email.trim() })),
+            ...engagementFields,
           }
         : {
             student: { full_name: studentName.trim(), email: studentEmail.trim() },
             parents: fp.map(p => ({ full_name: p.full_name.trim(), email: p.email.trim() })),
+            ...engagementFields,
           }
       const res = await fetch(API + endpoint, {
         method: 'POST',
@@ -218,6 +247,64 @@ export default function AddFamilyModal({ open, onClose, onSuccess, counselors }:
                   ))}
                 </div>
                 {parents.length < 4 && <button onClick={addParent} className="mt-2 text-sm text-blue-600 hover:text-blue-700 font-medium">+ Add another parent</button>}
+              </div>
+              <div className="mb-5">
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Engagement Details <span className="font-normal normal-case text-gray-400">(optional)</span></label>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Engagement Type</label>
+                      <select
+                        value={engagementType}
+                        onChange={e => setEngagementType(e.target.value)}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        {ENGAGEMENT_TYPES.map(o => (
+                          <option key={o.value} value={o.value}>{o.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Package Name</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Diamond Package"
+                        value={packageName}
+                        onChange={e => setPackageName(e.target.value)}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Start Date</label>
+                      <input
+                        type="date"
+                        value={startDate}
+                        onChange={e => setStartDate(e.target.value)}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Expected End</label>
+                      <input
+                        type="date"
+                        value={expectedEndDate}
+                        onChange={e => setExpectedEndDate(e.target.value)}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Actual End</label>
+                      <input
+                        type="date"
+                        value={actualEndDate}
+                        onChange={e => setActualEndDate(e.target.value)}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
               <div className="flex gap-3">
                 <button onClick={onClose} className="flex-1 px-4 py-2.5 text-sm font-medium border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button>
