@@ -98,6 +98,8 @@
 
 > ⛔ **NEVER push to `production` without the user explicitly saying "push to production" or "looks good on staging." No exceptions, even for trivial or low-risk fixes. Always push to `main` first, tell the user to test on staging, and wait for explicit confirmation before touching `production`.**
 
+> 🚫 **Claude must NEVER run the production push command.** After completing Step 3, write out the exact command(s) the user should run, then stop. The user copies and runs them after testing on staging. This rule exists because Claude repeatedly rationalizes around the confirmation gate — making it physical (user must type the command) is the only reliable fix. No exceptions for "small fixes," "wiring check passed," or "it was already on staging."
+
 ### Step-by-step workflow
 
 **Step 1 — Develop and push to `main` (staging)**
@@ -119,7 +121,9 @@
 2. Update `CLAUDE.md` with all UI/component changes and commit to `main`.
 3. For backend changes, also run `check_wiring.py` and update `FEATURES.md` — see the backend `CLAUDE.md` (`lifelaunchr-app-3`) for the full backend checklist.
 
-**Step 4 — Push to production**
+**Step 4 — Push to production (USER RUNS THIS, NOT CLAUDE)**
+
+Claude writes out the command(s) below and stops. The user runs them after confirming staging looks good.
 
 To push all of `main` to production (fast-forward):
 ```bash
