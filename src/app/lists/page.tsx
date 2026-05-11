@@ -1752,6 +1752,13 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
   const isCounselor = accountType === 'counselor' || accountType === 'admin'
   const isParent = accountType === 'parent'
 
+  // Auto-expand textareas to fit content (no fixed rows, no scrollbars)
+  const autoExpand = useCallback((el: HTMLTextAreaElement | null) => {
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = el.scrollHeight + 'px'
+  }, [])
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -2306,12 +2313,13 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
                 <div key={field} style={fieldStyle}>
                   <label style={labelStyle}>{label}</label>
                   <textarea
+                    ref={el => autoExpand(el)}
                     value={(form as Record<string, unknown>)[field] as string || ''}
                     onChange={(e) => set(field as keyof CollegeEntry, e.target.value)}
+                    onInput={e => autoExpand(e.currentTarget)}
                     disabled={!canWrite || isParent}
                     placeholder={placeholder}
-                    rows={3}
-                    style={{ ...(canWrite && !isParent ? inputStyle : readonlyStyle), resize: 'vertical' }}
+                    style={{ ...(canWrite && !isParent ? inputStyle : readonlyStyle), resize: 'none', overflow: 'hidden', minHeight: '72px' }}
                   />
                 </div>
               ))}
@@ -2377,11 +2385,12 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
                 <div style={fieldStyle}>
                   <label style={labelStyle}>Coach Notes (internal — student cannot edit)</label>
                   <textarea
+                    ref={el => autoExpand(el)}
                     value={form.coach_notes || ''}
                     onChange={(e) => set('coach_notes', e.target.value)}
-                    rows={4}
+                    onInput={e => autoExpand(e.currentTarget)}
                     placeholder="Internal notes for the counseling team…"
-                    style={{ ...inputStyle, resize: 'vertical' }}
+                    style={{ ...inputStyle, resize: 'none', overflow: 'hidden', minHeight: '90px' }}
                   />
                 </div>
               )}
@@ -2390,10 +2399,10 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
                 <div style={fieldStyle}>
                   <label style={labelStyle}>Coach Notes</label>
                   <textarea
+                    ref={el => autoExpand(el)}
                     readOnly
                     value={entry.coach_notes}
-                    rows={4}
-                    style={{ ...readonlyStyle, resize: 'vertical' }}
+                    style={{ ...readonlyStyle, resize: 'none', overflow: 'hidden', minHeight: '90px' }}
                   />
                 </div>
               )}
@@ -2401,12 +2410,13 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
               <div style={fieldStyle}>
                 <label style={labelStyle}>Parent Notes</label>
                 <textarea
+                  ref={el => autoExpand(el)}
                   value={form.parent_notes || ''}
                   onChange={(e) => set('parent_notes', e.target.value)}
+                  onInput={e => autoExpand(e.currentTarget)}
                   disabled={!isParent && !isCounselor && !viewerIsStudent}
-                  rows={3}
                   placeholder="Parent thoughts or questions about this school…"
-                  style={{ ...inputStyle, resize: 'vertical' }}
+                  style={{ ...inputStyle, resize: 'none', overflow: 'hidden', minHeight: '72px' }}
                 />
               </div>
 
@@ -2414,12 +2424,13 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
                 <div style={fieldStyle}>
                   <label style={labelStyle}>My Note</label>
                   <textarea
+                    ref={el => autoExpand(el)}
                     value={form.student_note || ''}
                     onChange={(e) => set('student_note', e.target.value)}
+                    onInput={e => autoExpand(e.currentTarget)}
                     disabled={isParent}
-                    rows={3}
                     placeholder="Personal notes…"
-                    style={{ ...inputStyle, resize: 'vertical' }}
+                    style={{ ...inputStyle, resize: 'none', overflow: 'hidden', minHeight: '72px' }}
                   />
                 </div>
               )}
