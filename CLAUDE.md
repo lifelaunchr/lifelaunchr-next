@@ -14,12 +14,13 @@
 
 # LifeLaunchr / Soar — Deployment Reference
 
-> Last updated: 2026-05-11 (v1.0.30).
+> Last updated: 2026-05-11 (v1.0.31).
 
 ## Version History
 
 | Version | Date | Notes |
 |---------|------|-------|
+| v1.0.31 | 2026-05-11 | Auto-expand textareas in college drawer Research and People tabs (next#49, frontend-only). **`src/app/lists/page.tsx`:** added `autoExpand` `useCallback` inside `EditDrawer` (sets `height = 'auto'` then `height = scrollHeight + 'px'`). Applied to all 9 note textareas: 5 in the Research tab (academic_notes, cultural_notes, admission_notes, other_interesting_facts, relevant_merit_scholarships) and 4 in the People tab (coach_notes editable, coach_notes readonly, parent_notes, student_note). Each textarea gets `ref={el => autoExpand(el)}` (fires on drawer open to expand existing content) and `onInput={e => autoExpand(e.currentTarget)}` (expands live as the user types). `rows` attribute removed; replaced with `minHeight: '72px'` (3-row fields) or `minHeight: '90px'` (coach notes, was 4 rows); `resize: 'vertical'` replaced with `resize: 'none', overflow: 'hidden'`. `useCallback` was already imported — no new imports required. No backend changes. |
 | v1.0.30 | 2026-05-11 | Backend-only: fix AI calling test-blind schools "test-optional" (app#115) — strengthened `test_policy=free` rule in `skill-core.md`; added all CSU campuses by popular name; DB fix (8 NULL rows → free). See backend CLAUDE.md v1.0.30. No frontend changes. |
 | v1.0.29 | 2026-05-11 | Backend-only: fix `POST /research-sessions/{id}/generate-summary` returning 403 for counselors and tenant admins on student-owned sessions — see backend CLAUDE.md v1.0.29. No frontend changes. |
 | v1.0.28 | 2026-05-11 | Backend-only: sweep cron for orphaned research sessions with no summary (app#105) — see backend CLAUDE.md v1.0.28. No frontend changes. **Action required:** create `sweep-session-summaries-prod` cron in Render dashboard. |
