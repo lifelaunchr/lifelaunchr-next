@@ -14,12 +14,15 @@
 
 # LifeLaunchr / Soar — Deployment Reference
 
-> Last updated: 2026-05-09 (v1.0.26).
+> Last updated: 2026-05-11 (v1.0.29).
 
 ## Version History
 
 | Version | Date | Notes |
 |---------|------|-------|
+| v1.0.29 | 2026-05-11 | Backend-only: fix `POST /research-sessions/{id}/generate-summary` returning 403 for counselors and tenant admins on student-owned sessions — see backend CLAUDE.md v1.0.29. No frontend changes. |
+| v1.0.28 | 2026-05-11 | Backend-only: sweep cron for orphaned research sessions with no summary (app#105) — see backend CLAUDE.md v1.0.28. No frontend changes. **Action required:** create `sweep-session-summaries-prod` cron in Render dashboard. |
+| v1.0.27 | 2026-05-11 | Backend-only: fix `GET /reports/unified` missing student self-conducted research sessions (app#105) — see backend CLAUDE.md v1.0.27. No frontend changes. |
 | v1.0.26 | 2026-05-09 | Backend-only: consolidate student access control + fix tenant admin gaps (next#46) — see backend CLAUDE.md v1.0.26. No frontend changes. Filed next#47 (friendly 403 error state when navigating to inaccessible session — not yet implemented). |
 | v1.0.25 | 2026-05-08 | Invite email overhaul + Add Family modal engagement fields (app#114, frontend portion). **`src/components/counselor/AddFamilyModal.tsx`:** new state for `engagementType`, `packageName`, `startDate`, `expectedEndDate`, `actualEndDate`, `editateEnabled`, `editateReviewLimit`, `graduationYear`; new "Engagement Details (optional)" section in form with engagement type dropdown, package name text input, start/expected/actual end date pickers (3-column row), and a second row with grad year, feedback rounds, and Editate enabled checkbox; all fields included in request body to both `/counselors/me/families` and `/tenant-admin/families`; all fields cleared on reset. **`src/app/dashboard/page.tsx`:** fixed focus-loss-on-keystroke bug in `EditPanel` — `Field`, `Select`, and `DateInput` were defined as arrow functions inside the component, causing React to see new component types on every state update and remount their children (dropping input focus after each character typed); moved all three outside `EditPanel` as named functions at module scope; `Select` renamed `PanelSelect` to avoid collision with HTML `select`; `form` and `set` passed as explicit props. Backend changes in backend CLAUDE.md v1.0.25. |
 | v1.0.23 | 2026-05-05 | Backend-only: CC sending coach on their own session report emails (app#112) — see backend CLAUDE.md v1.0.23. No frontend changes. |
