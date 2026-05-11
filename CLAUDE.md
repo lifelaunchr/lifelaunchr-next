@@ -14,12 +14,13 @@
 
 # LifeLaunchr / Soar — Deployment Reference
 
-> Last updated: 2026-05-11 (v1.0.29).
+> Last updated: 2026-05-11 (v1.0.30).
 
 ## Version History
 
 | Version | Date | Notes |
 |---------|------|-------|
+| v1.0.30 | 2026-05-11 | Backend-only: fix AI calling test-blind schools "test-optional" (app#115) — strengthened `test_policy=free` rule in `skill-core.md`; added all CSU campuses by popular name; DB fix (8 NULL rows → free). See backend CLAUDE.md v1.0.30. No frontend changes. |
 | v1.0.29 | 2026-05-11 | Backend-only: fix `POST /research-sessions/{id}/generate-summary` returning 403 for counselors and tenant admins on student-owned sessions — see backend CLAUDE.md v1.0.29. No frontend changes. |
 | v1.0.28 | 2026-05-11 | Backend-only: sweep cron for orphaned research sessions with no summary (app#105) — see backend CLAUDE.md v1.0.28. No frontend changes. **Action required:** create `sweep-session-summaries-prod` cron in Render dashboard. |
 | v1.0.27 | 2026-05-11 | Backend-only: fix `GET /reports/unified` missing student self-conducted research sessions (app#105) — see backend CLAUDE.md v1.0.27. No frontend changes. |
