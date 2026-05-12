@@ -165,6 +165,55 @@ const DEADLINE_TYPE_LABELS: Record<string, string> = {
   custom:   'Custom',
 }
 
+// ── College list sorting ─────────────────────────────────────────────────────
+type CollegeSortBy = 'likelihood' | 'name' | 'deadline' | 'status'
+
+const LIKELIHOOD_RANK: Record<string, number> = {
+  likely: 1, target: 2, reach: 3, far_reach: 4, unknown: 5,
+}
+
+const STATUS_ORDER = [
+  'researching', 'considering', 'applying', 'applied', 'accepted',
+  'waitlisted', 'deferred', 'denied', 'withdrawn', 'decided',
+]
+
+function sortCollegeEntries(
+  entries: CollegeEntry[],
+  sortBy: CollegeSortBy,
+  dir: 'asc' | 'desc',
+): CollegeEntry[] {
+  const mult = dir === 'asc' ? 1 : -1
+  return [...entries].sort((a, b) => {
+    switch (sortBy) {
+      case 'name':
+        return mult * a.college_name.localeCompare(b.college_name)
+      case 'likelihood': {
+        const ra = LIKELIHOOD_RANK[a.likelihood ?? ''] ?? 6
+        const rb = LIKELIHOOD_RANK[b.likelihood ?? ''] ?? 6
+        if (ra !== rb) return mult * (ra - rb)
+        return a.college_name.localeCompare(b.college_name)
+      }
+      case 'deadline': {
+        const da = a.deadline_date ?? ''
+        const db = b.deadline_date ?? ''
+        if (!da && !db) return a.college_name.localeCompare(b.college_name)
+        if (!da) return 1    // nulls always last regardless of direction
+        if (!db) return -1
+        return mult * da.localeCompare(db)
+      }
+      case 'status': {
+        const sa = STATUS_ORDER.indexOf(a.status ?? 'researching')
+        const sb = STATUS_ORDER.indexOf(b.status ?? 'researching')
+        if (sa !== sb) return mult * (sa - sb)
+        return a.college_name.localeCompare(b.college_name)
+      }
+      default:
+        return 0
+    }
+  })
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 const SCHOLARSHIP_STATUS_COLORS: Record<string, string> = {
   researching: '#7c3aed',
   applying:    '#2563eb',
@@ -2598,17 +2647,30 @@ interface SpreadsheetViewProps {
   entries: CollegeEntry[]
   canWrite: boolean
   accountType: string
+  sortBy: CollegeSortBy
+  sortDir: 'asc' | 'desc'
+  onSort: (field: CollegeSortBy) => void
   onEdit: (entry: CollegeEntry) => void
   onDelete: (id: number) => void
   onStatusChange: (id: number, status: string) => void
 }
 
-function SpreadsheetView({ entries, canWrite, accountType, onEdit, onDelete, onStatusChange }: SpreadsheetViewProps) {
+function SpreadsheetView({ entries, canWrite, accountType, sortBy, sortDir, onSort, onEdit, onDelete, onStatusChange }: SpreadsheetViewProps) {
   const thStyle: React.CSSProperties = {
     padding: '10px 12px', textAlign: 'left', fontSize: '0.75rem',
     fontWeight: 700, color: '#6b7280', borderBottom: '2px solid #e2e8f0',
     background: '#f9fafb', whiteSpace: 'nowrap',
   }
+  const sortableTh = (field: CollegeSortBy): React.CSSProperties => ({
+    ...thStyle,
+    cursor: 'pointer',
+    userSelect: 'none',
+    color: sortBy === field ? '#4f46e5' : '#6b7280',
+  })
+  const SortArrow = ({ field }: { field: CollegeSortBy }) =>
+    sortBy === field
+      ? <span style={{ marginLeft: 4 }}>{sortDir === 'asc' ? '▲' : '▼'}</span>
+      : <span style={{ marginLeft: 4, color: '#d1d5db' }}>⇅</span>
   const tdStyle: React.CSSProperties = {
     padding: '11px 12px', fontSize: '0.83rem', color: '#1f2937',
     borderBottom: '1px solid #f3f4f6', verticalAlign: 'middle',
@@ -2628,10 +2690,10 @@ function SpreadsheetView({ entries, canWrite, accountType, onEdit, onDelete, onS
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
-              <th style={thStyle}>College</th>
-              <th style={thStyle}>Status</th>
-              <th style={thStyle}>Likelihood</th>
-              <th className="hidden sm:table-cell" style={thStyle}>Deadline</th>
+              <th style={sortableTh('name')} onClick={() => onSort('name')}>College<SortArrow field="name" /></th>
+              <th style={sortableTh('status')} onClick={() => onSort('status')}>Status<SortArrow field="status" /></th>
+              <th style={sortableTh('likelihood')} onClick={() => onSort('likelihood')}>Likelihood<SortArrow field="likelihood" /></th>
+              <th className="hidden sm:table-cell" style={sortableTh('deadline')} onClick={() => onSort('deadline')}>Deadline<SortArrow field="deadline" /></th>
               <th className="hidden md:table-cell" style={thStyle}>Major</th>
               <th className="hidden md:table-cell" style={thStyle}>Est. Cost</th>
               <th className="hidden md:table-cell" style={thStyle}>Visited</th>
@@ -2883,6 +2945,12 @@ function ListsContent() {
     tabParam === 'scholarships' ? 'scholarships' : tabParam === 'enrichment' ? 'enrichment' : 'colleges'
   )
   const [viewMode, setViewMode] = useState<'spreadsheet' | 'card'>('spreadsheet')
+  const [collegeSortBy, setCollegeSortBy] = useState<CollegeSortBy>(
+    () => (typeof window !== 'undefined' ? (localStorage.getItem('ll_college_sort_by') as CollegeSortBy) : null) ?? 'likelihood'
+  )
+  const [collegeSortDir, setCollegeSortDir] = useState<'asc' | 'desc'>(
+    () => (typeof window !== 'undefined' ? (localStorage.getItem('ll_college_sort_dir') as 'asc' | 'desc') : null) ?? 'asc'
+  )
   const [showAddModal, setShowAddModal] = useState(false)
   const [showAddScholarshipModal, setShowAddScholarshipModal] = useState(false)
   const [editEntry, setEditEntry] = useState<CollegeEntry | null>(null)
@@ -2990,6 +3058,16 @@ function ListsContent() {
 
   const updateStatus = (entryId: number, status: string) =>
     updateEntry(entryId, { status })
+
+  const handleCollegeSort = (field: CollegeSortBy) => {
+    const newDir = collegeSortBy === field && collegeSortDir === 'asc' ? 'desc' : 'asc'
+    setCollegeSortBy(field)
+    setCollegeSortDir(newDir)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('ll_college_sort_by', field)
+      localStorage.setItem('ll_college_sort_dir', newDir)
+    }
+  }
 
   const removeCollege = async (entryId: number) => {
     if (!canWrite) return
@@ -3199,6 +3277,30 @@ function ListsContent() {
             </p>
           </div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexShrink: 0 }}>
+            {/* Sort control (colleges only) */}
+            {activeTab === 'colleges' && (
+              <select
+                value={`${collegeSortBy}-${collegeSortDir}`}
+                onChange={(ev) => {
+                  const [field, dir] = ev.target.value.split('-') as [CollegeSortBy, 'asc' | 'desc']
+                  setCollegeSortBy(field)
+                  setCollegeSortDir(dir)
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem('ll_college_sort_by', field)
+                    localStorage.setItem('ll_college_sort_dir', dir)
+                  }
+                }}
+                style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: '7px 10px', fontSize: '0.8rem', color: '#374151', background: '#fff', cursor: 'pointer' }}
+              >
+                <option value="likelihood-asc">Likelihood (best fit first)</option>
+                <option value="likelihood-desc">Likelihood (reach first)</option>
+                <option value="name-asc">Name (A–Z)</option>
+                <option value="name-desc">Name (Z–A)</option>
+                <option value="deadline-asc">Deadline (soonest)</option>
+                <option value="deadline-desc">Deadline (latest)</option>
+                <option value="status-asc">Status</option>
+              </select>
+            )}
             {/* View toggle */}
             <div style={{ display: 'flex', border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden' }}>
               {(['spreadsheet', 'card'] as const).map((mode) => (
@@ -3289,16 +3391,19 @@ function ListsContent() {
             {/* Main view */}
             {viewMode === 'spreadsheet' ? (
               <SpreadsheetView
-                entries={entries}
+                entries={sortCollegeEntries(entries, collegeSortBy, collegeSortDir)}
                 canWrite={canWrite}
                 accountType={accountType}
+                sortBy={collegeSortBy}
+                sortDir={collegeSortDir}
+                onSort={handleCollegeSort}
                 onEdit={setEditEntry}
                 onDelete={removeCollege}
                 onStatusChange={updateStatus}
               />
             ) : (
               <CardView
-                entries={entries}
+                entries={sortCollegeEntries(entries, collegeSortBy, collegeSortDir)}
                 canWrite={canWrite}
                 accountType={accountType}
                 onEdit={setEditEntry}
