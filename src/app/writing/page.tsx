@@ -221,19 +221,28 @@ function PersonalityAssessmentForm({
   const PAGE_SIZE = 20
 
   useEffect(() => {
-    fetch(`${API}/writing/questions`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    // Always get a fresh token — the prop may have expired if the user spent
+    // time on the page before entering test mode or returning to the form.
+    getToken()
+      .then(freshToken => {
+        if (!freshToken) throw new Error('Not signed in')
+        return fetch(`${API}/writing/questions`, {
+          headers: { Authorization: `Bearer ${freshToken}` },
+        })
+      })
       .then(r => r.json())
       .then(data => {
         setQuestions(data.questions || [])
         setLoading(false)
       })
-      .catch(() => {
-        setError('Failed to load questions. Please refresh and try again.')
+      .catch(err => {
+        setError(err?.message === 'Not signed in'
+          ? 'Session expired — please refresh the page.'
+          : 'Failed to load questions. Please refresh and try again.')
         setLoading(false)
       })
-  }, [token])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Scroll to the top of the form whenever the page changes
   useEffect(() => {
@@ -295,10 +304,26 @@ function PersonalityAssessmentForm({
     )
   }
 
-  if (error) {
+  if (error && questions.length === 0) {
     return (
-      <div className="bg-red-900/30 border border-red-700/50 rounded-xl p-4 text-red-300 text-sm">
-        {error}
+      <div className="bg-red-900/30 border border-red-700/50 rounded-xl p-4 text-red-300 text-sm flex items-center justify-between gap-4">
+        <span>{error}</span>
+        <button
+          onClick={() => {
+            setError(null)
+            setLoading(true)
+            getToken().then(tok => {
+              if (!tok) { setError('Session expired — please refresh.'); setLoading(false); return }
+              fetch(`${API}/writing/questions`, { headers: { Authorization: `Bearer ${tok}` } })
+                .then(r => r.json())
+                .then(data => { setQuestions(data.questions || []); setLoading(false) })
+                .catch(() => { setError('Still failing — please refresh the page.'); setLoading(false) })
+            })
+          }}
+          className="text-xs px-3 py-1.5 rounded-lg border border-red-700 text-red-300 hover:bg-red-900/50 whitespace-nowrap"
+        >
+          Try again
+        </button>
       </div>
     )
   }
