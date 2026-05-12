@@ -118,6 +118,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [conversationHistory, setConversationHistory] = useState<HistoryItem[]>([])
   const [serverSessionId, setServerSessionId] = useState<number | null>(null)
+  const [sessionAccessError, setSessionAccessError] = useState(false)
   const [input, setInput] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
   const [guestToken, setGuestToken] = useState<string | null>(null)
@@ -566,6 +567,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
     setServerSessionId(null)
     setActiveSessionId(null)
     setCurrentResearchSessionId(null)
+    setSessionAccessError(false)
     setInput('')
     setIsStreaming(false)
     setStreamingMessageId(null)
@@ -598,6 +600,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
   }, [currentResearchSessionId, generatingSummary, getToken, apiUrl])
 
   const loadSession = useCallback(async (sessionId: number) => {
+    setSessionAccessError(false)
     try {
       const token = userId ? await getToken() : null
       const headers: Record<string, string> = {}
@@ -606,6 +609,10 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
         // guest
       }
       const res = await fetch(`${apiUrl}/sessions/${sessionId}`, { headers })
+      if (res.status === 403) {
+        setSessionAccessError(true)
+        return
+      }
       if (!res.ok) return
       const data = await res.json()
       const msgs: Message[] = (data.messages || []).map((m: HistoryItem) => ({
@@ -1505,6 +1512,21 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                 <p className="text-sm text-gray-500 max-w-xs">
                   You&apos;re connected to multiple students. Choose who you&apos;d like to research for using the selector in the sidebar.
                 </p>
+              </div>
+            ) : sessionAccessError ? (
+              <div className="flex flex-col items-center justify-center h-full text-center px-6">
+                <div style={{ fontSize: '2.5rem', marginBottom: '16px' }}>🔒</div>
+                <h2 className="text-lg font-semibold text-gray-800 mb-2">You don&apos;t have access to this session</h2>
+                <p className="text-sm text-gray-500 max-w-sm mb-6">
+                  This session may belong to a student you&apos;re not connected to, or the link may be incorrect.
+                </p>
+                <button
+                  onClick={handleNewConversation}
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-white"
+                  style={{ backgroundColor: '#4f46e5' }}
+                >
+                  Start a new session
+                </button>
               </div>
             ) : messages.length === 0 ? (
               <WelcomeCard
