@@ -241,6 +241,11 @@ function PersonalityAssessmentForm({
     setResponses(prev => ({ ...prev, [num]: val }))
   }
 
+  function goToPage(p: number) {
+    setCurrentPage(p)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   async function handleSubmit() {
     if (!allAnswered) return
     setSubmitting(true)
@@ -384,7 +389,7 @@ function PersonalityAssessmentForm({
       {/* Navigation */}
       <div className="flex items-center justify-between pt-2">
         <button
-          onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
+          onClick={() => goToPage(Math.max(0, currentPage - 1))}
           disabled={currentPage === 0}
           className="px-4 py-2 rounded-lg text-sm border border-slate-600 text-slate-400 hover:border-slate-500 disabled:opacity-40 disabled:cursor-not-allowed"
         >
@@ -393,7 +398,7 @@ function PersonalityAssessmentForm({
 
         {currentPage < totalPages - 1 ? (
           <button
-            onClick={() => setCurrentPage(p => p + 1)}
+            onClick={() => goToPage(currentPage + 1)}
             disabled={!pageComplete}
             className="px-4 py-2 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed"
           >
