@@ -422,11 +422,13 @@ function SelfDiscoveryTab({
   token,
   studentId,
   studentName,
+  isReadOnly,
   courses,
 }: {
   token: string
   studentId?: string | null
   studentName?: string | null
+  isReadOnly?: boolean
   courses: Course[]
 }) {
   const [existingResult, setExistingResult] = useState<AssessmentResult | null>(null)
@@ -458,6 +460,7 @@ function SelfDiscoveryTab({
   }
 
   const displayResult = result || existingResult
+  const firstName = studentName ? studentName.split(' ')[0] : null
 
   return (
     <div className="space-y-6">
@@ -467,10 +470,11 @@ function SelfDiscoveryTab({
           <div>
             <h3 className="text-base font-semibold text-white">Personality Assessment</h3>
             <p className="text-xs text-slate-400 mt-1">
-              120-item Big Five inventory that reveals {studentName ? `${studentName.split(' ')[0]}'s` : studentId ? "the student's" : 'your'} natural strengths — the raw material for authentic college essays.
+              120-item Big Five inventory that reveals {firstName ? `${firstName}'s` : isReadOnly ? "the student's" : 'your'} natural strengths — the raw material for authentic college essays.
             </p>
           </div>
-          {displayResult && (
+          {/* Retake only available to the student themselves */}
+          {displayResult && !isReadOnly && (
             <button
               onClick={() => setShowForm(!showForm)}
               className="text-xs text-violet-400 hover:text-violet-300 whitespace-nowrap"
@@ -480,18 +484,35 @@ function SelfDiscoveryTab({
           )}
         </div>
 
-        {(!displayResult || showForm) ? (
-          <PersonalityAssessmentForm
-            token={token}
-            studentId={studentId}
-            studentName={studentName}
-            onComplete={r => {
-              setResult(r)
-              setShowForm(false)
-            }}
-          />
+        {isReadOnly ? (
+          /* Counselor / parent view — results only, no form */
+          displayResult ? (
+            <AssessmentResults result={displayResult} />
+          ) : (
+            <div className="text-center py-8 space-y-2">
+              <p className="text-slate-400 text-sm">
+                {firstName ?? 'This student'} hasn&apos;t completed the assessment yet.
+              </p>
+              <p className="text-xs text-slate-500">
+                They can complete it by signing in and visiting the Writing page.
+              </p>
+            </div>
+          )
         ) : (
-          <AssessmentResults result={displayResult} />
+          /* Student (or counselor exploring for themselves) — form + results */
+          (!displayResult || showForm) ? (
+            <PersonalityAssessmentForm
+              token={token}
+              studentId={studentId}
+              studentName={studentName}
+              onComplete={r => {
+                setResult(r)
+                setShowForm(false)
+              }}
+            />
+          ) : (
+            <AssessmentResults result={displayResult} />
+          )
         )}
       </div>
 
@@ -709,7 +730,13 @@ function WritingPageInner() {
         ) : (
           <>
             {activeTab === 'self-discovery' && showSelfDiscovery && token && (
-              <SelfDiscoveryTab token={token} studentId={forParam} studentName={studentName} courses={courses} />
+              <SelfDiscoveryTab
+                token={token}
+                studentId={forParam}
+                studentName={studentName}
+                isReadOnly={(isCounselor || isParent) && !!forParam}
+                courses={courses}
+              />
             )}
             {activeTab === 'writing-practice' && showWritingPractice && (
               <WritingPracticeTab courses={courses} studentId={forParam} />
