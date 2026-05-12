@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -204,6 +204,11 @@ function PersonalityAssessmentForm({
   studentName?: string | null
   onComplete: (result: AssessmentResult) => void
 }) {
+  // getToken() always returns a fresh Clerk JWT — never use the stored token
+  // prop for API calls that happen after page load (it will have expired).
+  const { getToken } = useAuth()
+  const topRef = useRef<HTMLDivElement>(null)
+
   const [questions, setQuestions] = useState<IpipQuestion[]>([])
   const [responses, setResponses] = useState<Record<number, number>>({})
   const [sex, setSex] = useState<'M' | 'F'>('M')
@@ -230,6 +235,11 @@ function PersonalityAssessmentForm({
       })
   }, [token])
 
+  // Scroll to the top of the form whenever the page changes
+  useEffect(() => {
+    topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [currentPage])
+
   const totalPages = Math.ceil(questions.length / PAGE_SIZE)
   const pageQuestions = questions.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
   const answeredOnPage = pageQuestions.filter(q => responses[q.number] !== undefined).length
@@ -241,23 +251,22 @@ function PersonalityAssessmentForm({
     setResponses(prev => ({ ...prev, [num]: val }))
   }
 
-  function goToPage(p: number) {
-    setCurrentPage(p)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
   async function handleSubmit() {
     if (!allAnswered) return
     setSubmitting(true)
     setError(null)
     try {
+      // Always fetch a fresh token at submit time — the stored prop may be
+      // expired after the 10-20 minutes it takes to complete 120 questions.
+      const freshToken = await getToken()
+      if (!freshToken) throw new Error('Session expired — please refresh the page and try again.')
       const url = studentId
         ? `${API}/writing/personality-assessment?student_id=${studentId}`
         : `${API}/writing/personality-assessment`
       const res = await fetch(url, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${freshToken}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ responses, sex, age: parseInt(age) }),
@@ -296,6 +305,9 @@ function PersonalityAssessmentForm({
 
   return (
     <div className="space-y-6">
+      {/* Scroll anchor — scrollIntoView targets this on page change */}
+      <div ref={topRef} />
+
       {/* Demographics — only on first page */}
       {currentPage === 0 && (
         <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-5">
@@ -389,7 +401,7 @@ function PersonalityAssessmentForm({
       {/* Navigation */}
       <div className="flex items-center justify-between pt-2">
         <button
-          onClick={() => goToPage(Math.max(0, currentPage - 1))}
+          onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
           disabled={currentPage === 0}
           className="px-4 py-2 rounded-lg text-sm border border-slate-600 text-slate-400 hover:border-slate-500 disabled:opacity-40 disabled:cursor-not-allowed"
         >
@@ -398,7 +410,7 @@ function PersonalityAssessmentForm({
 
         {currentPage < totalPages - 1 ? (
           <button
-            onClick={() => goToPage(currentPage + 1)}
+            onClick={() => setCurrentPage(p => p + 1)}
             disabled={!pageComplete}
             className="px-4 py-2 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed"
           >
