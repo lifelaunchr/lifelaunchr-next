@@ -11,6 +11,11 @@ interface UsageData {
   account_type?: string
   writing_self_discovery_module?: boolean
   writing_practice_module?: boolean
+  beneficiary?: {
+    user_id: number
+    full_name?: string | null
+    email?: string | null
+  }
 }
 
 interface Course {
@@ -191,10 +196,12 @@ interface IpipQuestion {
 function PersonalityAssessmentForm({
   token,
   studentId,
+  studentName,
   onComplete,
 }: {
   token: string
   studentId?: string | null
+  studentName?: string | null
   onComplete: (result: AssessmentResult) => void
 }) {
   const [questions, setQuestions] = useState<IpipQuestion[]>([])
@@ -287,7 +294,9 @@ function PersonalityAssessmentForm({
       {/* Demographics — only on first page */}
       {currentPage === 0 && (
         <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-5">
-          <h3 className="text-sm font-semibold text-white mb-4">About You</h3>
+          <h3 className="text-sm font-semibold text-white mb-4">
+            {studentName ? `About ${studentName.split(' ')[0]}` : studentId ? 'About the Student' : 'About You'}
+          </h3>
           <div className="flex flex-wrap gap-6">
             <div>
               <label className="block text-xs text-slate-400 mb-1.5">Sex (for norms)</label>
@@ -412,10 +421,12 @@ function PersonalityAssessmentForm({
 function SelfDiscoveryTab({
   token,
   studentId,
+  studentName,
   courses,
 }: {
   token: string
   studentId?: string | null
+  studentName?: string | null
   courses: Course[]
 }) {
   const [existingResult, setExistingResult] = useState<AssessmentResult | null>(null)
@@ -456,7 +467,7 @@ function SelfDiscoveryTab({
           <div>
             <h3 className="text-base font-semibold text-white">Personality Assessment</h3>
             <p className="text-xs text-slate-400 mt-1">
-              120-item Big Five inventory that reveals your natural strengths — the raw material for authentic college essays.
+              120-item Big Five inventory that reveals {studentName ? `${studentName.split(' ')[0]}'s` : studentId ? "the student's" : 'your'} natural strengths — the raw material for authentic college essays.
             </p>
           </div>
           {displayResult && (
@@ -473,6 +484,7 @@ function SelfDiscoveryTab({
           <PersonalityAssessmentForm
             token={token}
             studentId={studentId}
+            studentName={studentName}
             onComplete={r => {
               setResult(r)
               setShowForm(false)
@@ -625,6 +637,7 @@ function WritingPageInner() {
 
   const isCounselor = usageData?.account_type === 'counselor'
   const isParent = usageData?.account_type === 'parent'
+  const studentName = usageData?.beneficiary?.full_name || usageData?.beneficiary?.email || null
   const showSelfDiscovery = usageData?.writing_self_discovery_module !== false
   const showWritingPractice = usageData?.writing_practice_module !== false
 
@@ -658,7 +671,11 @@ function WritingPageInner() {
           <h1 className="text-lg font-semibold">Writing</h1>
           {(isCounselor || isParent) && forParam && (
             <span className="text-xs bg-violet-900/40 text-violet-300 px-2 py-0.5 rounded-full border border-violet-700/50 ml-auto">
-              Viewing student
+              {usageData?.beneficiary?.full_name
+                ? `Viewing: ${usageData.beneficiary.full_name}`
+                : usageData?.beneficiary?.email
+                ? `Viewing: ${usageData.beneficiary.email}`
+                : 'Viewing student'}
             </span>
           )}
         </div>
@@ -692,7 +709,7 @@ function WritingPageInner() {
         ) : (
           <>
             {activeTab === 'self-discovery' && showSelfDiscovery && token && (
-              <SelfDiscoveryTab token={token} studentId={forParam} courses={courses} />
+              <SelfDiscoveryTab token={token} studentId={forParam} studentName={studentName} courses={courses} />
             )}
             {activeTab === 'writing-practice' && showWritingPractice && (
               <WritingPracticeTab courses={courses} studentId={forParam} />
