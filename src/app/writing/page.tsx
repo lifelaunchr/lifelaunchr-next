@@ -416,6 +416,47 @@ function PersonalityAssessmentForm({
   )
 }
 
+// ── Big Five explainer ─────────────────────────────────────────────────────────
+
+function BigFiveExplainer() {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="border border-slate-700/50 rounded-lg overflow-hidden">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-4 py-2.5 text-xs text-slate-400 hover:text-white hover:bg-slate-700/30 transition-all"
+      >
+        <span>What does this assessment measure?</span>
+        <span className="text-slate-600">{open ? '▲' : '▼'}</span>
+      </button>
+      {open && (
+        <div className="px-4 pb-4 pt-1 space-y-3 bg-slate-800/30">
+          <p className="text-xs text-slate-400 leading-relaxed">
+            This is the <strong className="text-slate-300">Big Five personality assessment</strong> (IPIP-NEO 120), a public-domain research instrument developed by Prof. John Johnson at Penn State. It is one of the most scientifically validated personality measures in psychology. It measures five broad dimensions — often called OCEAN:
+          </p>
+          <div className="space-y-1.5">
+            {[
+              { key: 'O', emoji: '🔭', name: 'Openness', desc: 'Curiosity, imagination, and appreciation for new experiences and ideas.' },
+              { key: 'C', emoji: '🎯', name: 'Conscientiousness', desc: 'Organization, dependability, self-discipline, and goal-directedness.' },
+              { key: 'E', emoji: '🌟', name: 'Extraversion', desc: 'Sociability, assertiveness, and the tendency to draw energy from others.' },
+              { key: 'A', emoji: '🤝', name: 'Agreeableness', desc: 'Warmth, cooperation, empathy, and trust in others.' },
+              { key: 'N', emoji: '🌊', name: 'Neuroticism', desc: 'Sensitivity to negative emotions like stress, worry, or self-consciousness.' },
+            ].map(d => (
+              <div key={d.key} className="flex gap-2 text-xs">
+                <span>{d.emoji}</span>
+                <span><strong className="text-slate-300">{d.name}:</strong> <span className="text-slate-500">{d.desc}</span></span>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-slate-500 leading-relaxed">
+            Each dimension also breaks down into six <em>facets</em> (30 total) for a richer picture. Results are normed by age and sex against a large representative sample, so scores show how someone compares to peers — not whether any trait is &quot;good&quot; or &quot;bad.&quot; In the context of college essays, this helps students identify authentic stories, values, and strengths they might not have articulated before.
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Self-Discovery tab ─────────────────────────────────────────────────────────
 
 function SelfDiscoveryTab({
@@ -433,8 +474,11 @@ function SelfDiscoveryTab({
 }) {
   const [existingResult, setExistingResult] = useState<AssessmentResult | null>(null)
   const [resultLoaded, setResultLoaded] = useState(false)
-  const [showForm, setShowForm] = useState(false)
+  const [showRetakeForm, setShowRetakeForm] = useState(false)
   const [result, setResult] = useState<AssessmentResult | null>(null)
+  // Counselor "test mode" — strip student context, take for themselves
+  const [testMode, setTestMode] = useState(false)
+  const [testResult, setTestResult] = useState<AssessmentResult | null>(null)
 
   useEffect(() => {
     const url = studentId
@@ -465,54 +509,119 @@ function SelfDiscoveryTab({
   return (
     <div className="space-y-6">
       {/* Assessment card */}
-      <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-5">
-        <div className="flex items-start justify-between gap-4 mb-3">
+      <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-5 space-y-4">
+
+        {/* Header */}
+        <div className="flex items-start justify-between gap-4">
           <div>
             <h3 className="text-base font-semibold text-white">Personality Assessment</h3>
             <p className="text-xs text-slate-400 mt-1">
-              120-item Big Five inventory that reveals {firstName ? `${firstName}'s` : isReadOnly ? "the student's" : 'your'} natural strengths — the raw material for authentic college essays.
+              {isReadOnly && !testMode
+                ? `See ${firstName ? `${firstName}'s` : "the student's"} Big Five personality results — the foundation for authentic college essays.`
+                : testMode
+                ? "You're previewing the student experience. Results save to your own profile, not the student's."
+                : 'Discover your Big Five personality traits — the foundation for authentic college essays.'}
             </p>
           </div>
-          {/* Retake only available to the student themselves */}
-          {displayResult && !isReadOnly && (
+          {/* Retake — students only */}
+          {displayResult && !isReadOnly && !showRetakeForm && (
             <button
-              onClick={() => setShowForm(!showForm)}
-              className="text-xs text-violet-400 hover:text-violet-300 whitespace-nowrap"
+              onClick={() => setShowRetakeForm(true)}
+              className="text-xs text-violet-400 hover:text-violet-300 whitespace-nowrap shrink-0"
             >
-              {showForm ? 'Hide form' : 'Retake'}
+              Retake
             </button>
           )}
         </div>
 
-        {isReadOnly ? (
-          /* Counselor / parent view — results only, no form */
+        {/* What does this measure? */}
+        <BigFiveExplainer />
+
+        {/* Content */}
+        {testMode ? (
+          /* Counselor test mode — form runs against their own profile (no studentId) */
+          testResult ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-amber-400 bg-amber-900/30 border border-amber-700/40 px-2 py-0.5 rounded-full">
+                  Your personal result — not {firstName ?? "the student"}&apos;s
+                </span>
+                <button onClick={() => { setTestMode(false); setTestResult(null) }} className="text-xs text-slate-500 hover:text-slate-300">
+                  Exit test mode
+                </button>
+              </div>
+              <AssessmentResults result={testResult} />
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-amber-400 bg-amber-900/30 border border-amber-700/40 px-2 py-0.5 rounded-full">
+                  Test mode — answers save to your profile only
+                </span>
+                <button onClick={() => setTestMode(false)} className="text-xs text-slate-500 hover:text-slate-300">
+                  Cancel
+                </button>
+              </div>
+              <PersonalityAssessmentForm
+                token={token}
+                studentId={null}
+                onComplete={r => setTestResult(r)}
+              />
+            </div>
+          )
+        ) : isReadOnly ? (
+          /* Counselor / parent read-only view */
           displayResult ? (
             <AssessmentResults result={displayResult} />
           ) : (
-            <div className="text-center py-8 space-y-2">
-              <p className="text-slate-400 text-sm">
-                {firstName ?? 'This student'} hasn&apos;t completed the assessment yet.
-              </p>
-              <p className="text-xs text-slate-500">
-                They can complete it by signing in and visiting the Writing page.
-              </p>
+            <div className="space-y-4">
+              <div className="text-center py-6 space-y-1">
+                <p className="text-slate-400 text-sm">
+                  {`${firstName ?? 'This student'} hasn't completed the assessment yet.`}
+                </p>
+                <p className="text-xs text-slate-500">
+                  They can complete it by signing in and visiting the Writing page.
+                </p>
+              </div>
+              <div className="border-t border-slate-700/50 pt-4 flex items-center justify-between">
+                <span className="text-xs text-slate-500">Want to see what the assessment looks like?</span>
+                <button
+                  onClick={() => setTestMode(true)}
+                  className="text-xs px-3 py-1.5 rounded-lg border border-slate-600 text-slate-400 hover:border-violet-500/50 hover:text-violet-300 transition-all"
+                >
+                  🧪 Try it yourself
+                </button>
+              </div>
             </div>
           )
         ) : (
-          /* Student (or counselor exploring for themselves) — form + results */
-          (!displayResult || showForm) ? (
+          /* Student view — form or results */
+          (!displayResult || showRetakeForm) ? (
             <PersonalityAssessmentForm
               token={token}
               studentId={studentId}
               studentName={studentName}
               onComplete={r => {
                 setResult(r)
-                setShowForm(false)
+                setShowRetakeForm(false)
               }}
             />
           ) : (
             <AssessmentResults result={displayResult} />
           )
+        )}
+
+        {/* Test mode entry point when student has results */}
+        {isReadOnly && displayResult && !testMode && (
+          <div className="border-t border-slate-700/50 pt-3 flex items-center justify-between">
+            <span className="text-xs text-slate-500">Want to experience the assessment yourself?</span>
+            <button
+              onClick={() => setTestMode(true)}
+              className="text-xs px-3 py-1.5 rounded-lg border border-slate-600 text-slate-400 hover:border-violet-500/50 hover:text-violet-300 transition-all"
+            >
+              🧪 Try it yourself
+            </button>
+          </div>
         )}
       </div>
 
@@ -621,6 +730,7 @@ function WritingPageInner() {
 
   const [token, setToken] = useState<string | null>(null)
   const [usageData, setUsageData] = useState<UsageData | null>(null)
+  const [studentDisplayName, setStudentDisplayName] = useState<string | null>(null)
   const [courses, setCourses] = useState<Course[]>([])
   const [loadingCourses, setLoadingCourses] = useState(true)
   const [activeTab, setActiveTab] = useState<'self-discovery' | 'writing-practice'>(
@@ -638,7 +748,26 @@ function WritingPageInner() {
           `${API}/my-usage${forParam ? `?for_student_id=${forParam}` : ''}`,
           { headers: { Authorization: `Bearer ${tok}` } }
         )
-        if (res.ok) setUsageData(await res.json())
+        if (res.ok) {
+          const data = await res.json()
+          setUsageData(data)
+          // Prefer beneficiary name from /my-usage; fall back to profile fetch
+          // (beneficiary is only populated for direct student_counselor connections;
+          // admins and tenant-admins don't get it automatically)
+          const nameFromUsage = data?.beneficiary?.full_name || data?.beneficiary?.email
+          if (nameFromUsage) {
+            setStudentDisplayName(nameFromUsage)
+          } else if (forParam) {
+            // Fetch name directly from student profile
+            fetch(`${API}/profile/${forParam}`, { headers: { Authorization: `Bearer ${tok}` } })
+              .then(r => r.ok ? r.json() : null)
+              .then(profile => {
+                if (profile?.full_name) setStudentDisplayName(profile.full_name)
+                else if (profile?.email) setStudentDisplayName(profile.email)
+              })
+              .catch(() => {})
+          }
+        }
       })
       .catch(() => {})
   }, [isLoaded, getToken, forParam])
@@ -658,7 +787,7 @@ function WritingPageInner() {
 
   const isCounselor = usageData?.account_type === 'counselor'
   const isParent = usageData?.account_type === 'parent'
-  const studentName = usageData?.beneficiary?.full_name || usageData?.beneficiary?.email || null
+  // studentDisplayName is set from /my-usage beneficiary OR profile fetch fallback
   const showSelfDiscovery = usageData?.writing_self_discovery_module !== false
   const showWritingPractice = usageData?.writing_practice_module !== false
 
@@ -692,11 +821,7 @@ function WritingPageInner() {
           <h1 className="text-lg font-semibold">Writing</h1>
           {(isCounselor || isParent) && forParam && (
             <span className="text-xs bg-violet-900/40 text-violet-300 px-2 py-0.5 rounded-full border border-violet-700/50 ml-auto">
-              {usageData?.beneficiary?.full_name
-                ? `Viewing: ${usageData.beneficiary.full_name}`
-                : usageData?.beneficiary?.email
-                ? `Viewing: ${usageData.beneficiary.email}`
-                : 'Viewing student'}
+              {studentDisplayName ? `Viewing: ${studentDisplayName}` : 'Viewing student'}
             </span>
           )}
         </div>
@@ -733,7 +858,7 @@ function WritingPageInner() {
               <SelfDiscoveryTab
                 token={token}
                 studentId={forParam}
-                studentName={studentName}
+                studentName={studentDisplayName}
                 isReadOnly={(isCounselor || isParent) && !!forParam}
                 courses={courses}
               />
