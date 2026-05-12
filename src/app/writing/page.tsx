@@ -357,7 +357,7 @@ function PersonalityAssessmentForm({
           <div key={q.number} className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-4">
             <p className="text-sm text-white mb-3">
               <span className="text-slate-500 text-xs mr-2">#{q.number}</span>
-              {q.text}
+              {`I ${q.text.charAt(0).toLowerCase()}${q.text.slice(1)}`}
             </p>
             <div className="flex flex-wrap gap-2">
               {LIKERT.map(opt => {
