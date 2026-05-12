@@ -14,12 +14,13 @@
 
 # LifeLaunchr / Soar — Deployment Reference
 
-> Last updated: 2026-05-11 (v1.0.34).
+> Last updated: 2026-05-11 (v1.0.35).
 
 ## Version History
 
 | Version | Date | Notes |
 |---------|------|-------|
+| v1.0.35 | 2026-05-11 | Friendly error states for inaccessible or missing sessions (next#47, frontend-only). **`src/components/chat/ChatInterface.tsx`:** added `sessionAccessError` state typed as `'forbidden' \| 'not_found' \| null` (replaces previous boolean). `loadSession` now sets `sessionAccessError('forbidden')` on 403 and `'not_found'` on 404 before returning early (previously both were silently swallowed). `handleNewConversation` clears the error on new session. In the render tree, when `sessionAccessError` is non-null an error panel is shown instead of the WelcomeCard: 🔒 icon + "You don't have access to this session" / "This session belongs to a student you're not connected to." for 403; 🔍 icon + "Session not found" / "This link may be broken or the session may have been deleted." for 404. Both panels include a "Start a new session" button. No backend changes. |
 | v1.0.34 | 2026-05-11 | Backend-only: enrich Soar Summary with culture/community fit paragraph and deeper academic program analysis (app#117) — see backend CLAUDE.md v1.0.34. No frontend changes. |
 | v1.0.33 | 2026-05-11 | Fix college list status 'considering' bug (next#50, frontend portion). **`src/app/lists/page.tsx` card view (`CardView` component):** replaced fragile negative filter `e.status && e.status !== 'researching'` with explicit allowlist `APPLYING_STATUSES = ['applying','applied','accepted','denied','waitlisted','deferred','withdrawn','decided']`. Added 'considering' as a fallback alias for 'researching' in the researching bucket. Fixed the "X applying" summary count to use the same allowlist so 'considering' entries no longer inflate the applying count. Backend changes in backend CLAUDE.md v1.0.33. **Data fix required on staging and production:** `UPDATE college_list SET status='researching', updated_at=NOW() WHERE status='considering';` |
 | v1.0.32 | 2026-05-11 | Backend-only: fix Meeting Brief silently excluding unsummarized research sessions (app#116) — see backend CLAUDE.md v1.0.32. No frontend changes. |

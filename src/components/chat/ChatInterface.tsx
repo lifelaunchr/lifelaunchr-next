@@ -118,7 +118,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [conversationHistory, setConversationHistory] = useState<HistoryItem[]>([])
   const [serverSessionId, setServerSessionId] = useState<number | null>(null)
-  const [sessionAccessError, setSessionAccessError] = useState(false)
+  const [sessionAccessError, setSessionAccessError] = useState<'forbidden' | 'not_found' | null>(null)
   const [input, setInput] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
   const [guestToken, setGuestToken] = useState<string | null>(null)
@@ -567,7 +567,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
     setServerSessionId(null)
     setActiveSessionId(null)
     setCurrentResearchSessionId(null)
-    setSessionAccessError(false)
+    setSessionAccessError(null)
     setInput('')
     setIsStreaming(false)
     setStreamingMessageId(null)
@@ -600,7 +600,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
   }, [currentResearchSessionId, generatingSummary, getToken, apiUrl])
 
   const loadSession = useCallback(async (sessionId: number) => {
-    setSessionAccessError(false)
+    setSessionAccessError(null)
     try {
       const token = userId ? await getToken() : null
       const headers: Record<string, string> = {}
@@ -609,10 +609,8 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
         // guest
       }
       const res = await fetch(`${apiUrl}/sessions/${sessionId}`, { headers })
-      if (res.status === 403) {
-        setSessionAccessError(true)
-        return
-      }
+      if (res.status === 403) { setSessionAccessError('forbidden'); return }
+      if (res.status === 404) { setSessionAccessError('not_found'); return }
       if (!res.ok) return
       const data = await res.json()
       const msgs: Message[] = (data.messages || []).map((m: HistoryItem) => ({
@@ -1515,10 +1513,18 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
               </div>
             ) : sessionAccessError ? (
               <div className="flex flex-col items-center justify-center h-full text-center px-6">
-                <div style={{ fontSize: '2.5rem', marginBottom: '16px' }}>🔒</div>
-                <h2 className="text-lg font-semibold text-gray-800 mb-2">You don&apos;t have access to this session</h2>
+                <div style={{ fontSize: '2.5rem', marginBottom: '16px' }}>
+                  {sessionAccessError === 'forbidden' ? '🔒' : '🔍'}
+                </div>
+                <h2 className="text-lg font-semibold text-gray-800 mb-2">
+                  {sessionAccessError === 'forbidden'
+                    ? "You don’t have access to this session"
+                    : 'Session not found'}
+                </h2>
                 <p className="text-sm text-gray-500 max-w-sm mb-6">
-                  This session may belong to a student you&apos;re not connected to, or the link may be incorrect.
+                  {sessionAccessError === 'forbidden'
+                    ? "This session belongs to a student you’re not connected to."
+                    : 'This link may be broken or the session may have been deleted.'}
                 </p>
                 <button
                   onClick={handleNewConversation}
