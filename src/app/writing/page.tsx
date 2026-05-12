@@ -73,7 +73,7 @@ const DOMAIN_DESCRIPTIONS: Record<string, { emoji: string; high: string; low: st
 }
 
 const DOMAIN_NAMES: Record<string, string> = {
-  N: 'Neuroticism',
+  N: 'Emotional Sensitivity',
   E: 'Extraversion',
   O: 'Openness',
   A: 'Agreeableness',
@@ -440,7 +440,7 @@ function BigFiveExplainer() {
               { key: 'C', emoji: '🎯', name: 'Conscientiousness', desc: 'Organization, dependability, self-discipline, and goal-directedness.' },
               { key: 'E', emoji: '🌟', name: 'Extraversion', desc: 'Sociability, assertiveness, and the tendency to draw energy from others.' },
               { key: 'A', emoji: '🤝', name: 'Agreeableness', desc: 'Warmth, cooperation, empathy, and trust in others.' },
-              { key: 'N', emoji: '🌊', name: 'Neuroticism', desc: 'Sensitivity to negative emotions like stress, worry, or self-consciousness.' },
+              { key: 'N', emoji: '🌊', name: 'Emotional Sensitivity', desc: 'How strongly you experience emotions, especially stress, worry, or self-consciousness. High scorers feel things deeply; low scorers stay calm under pressure.' },
             ].map(d => (
               <div key={d.key} className="flex gap-2 text-xs">
                 <span>{d.emoji}</span>
