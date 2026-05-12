@@ -2772,8 +2772,10 @@ function CardView({ entries, canWrite, accountType, onEdit, onDelete, onDrop }: 
   const [draggingId, setDraggingId] = useState<number | null>(null)
   const [dragOver, setDragOver] = useState<string | null>(null)
 
-  const researching = entries.filter((e) => !e.status || e.status === 'researching')
-  const applying    = entries.filter((e) => e.status && e.status !== 'researching')
+  // 'considering' is a legacy alias for 'researching' — treat as researching
+  const APPLYING_STATUSES = ['applying', 'applied', 'accepted', 'denied', 'waitlisted', 'deferred', 'withdrawn', 'decided']
+  const researching = entries.filter((e) => !e.status || e.status === 'researching' || e.status === 'considering')
+  const applying    = entries.filter((e) => e.status && APPLYING_STATUSES.includes(e.status))
 
   const handleDragStart = (e: React.DragEvent, id: number) => {
     setDraggingId(id)
@@ -3279,8 +3281,8 @@ function ListsContent() {
             {/* Entry count summary */}
             <p style={{ fontSize: '0.8rem', color: '#9ca3af', marginBottom: 14 }}>
               {entries.length} college{entries.length !== 1 ? 's' : ''} on this list
-              {entries.filter((e) => e.status && e.status !== 'researching').length > 0
-                ? ` · ${entries.filter((e) => e.status && e.status !== 'researching').length} applying`
+              {entries.filter((e) => e.status && ['applying','applied','accepted','denied','waitlisted','deferred','withdrawn','decided'].includes(e.status)).length > 0
+                ? ` · ${entries.filter((e) => e.status && ['applying','applied','accepted','denied','waitlisted','deferred','withdrawn','decided'].includes(e.status)).length} applying`
                 : ''}
             </p>
 
