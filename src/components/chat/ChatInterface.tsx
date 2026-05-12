@@ -54,6 +54,8 @@ interface UsageData {
   is_tenant_admin?: boolean
   scheduling_link?: string | null
   essays_module?: boolean      // essay prompts available (any tenant with module)
+  writing_self_discovery_module?: boolean  // Self-Discovery Journey writing course
+  writing_practice_module?: boolean        // Writing Practice course
   editate_available?: boolean  // editate link + drafts (LifeLaunchr + editate_enabled)
   sessions_used?: number          // caller's own pool — always present
   session_limit?: number | null
@@ -1356,6 +1358,17 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                 >
                   <span className="text-base leading-none">✏️</span>
                   <span>Essays</span>
+                </Link>
+              )}
+
+              {/* Writing link — writing module enabled; students and counselors with student selected */}
+              {(usageData?.writing_self_discovery_module || usageData?.writing_practice_module) && !(isCounselor && !forStudentId) && (
+                <Link
+                  href={forStudentId && (isCounselor || isParent) ? `/writing?for=${forStudentId}` : '/writing'}
+                  className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                >
+                  <span className="text-base leading-none">📝</span>
+                  <span>Writing</span>
                 </Link>
               )}
 
