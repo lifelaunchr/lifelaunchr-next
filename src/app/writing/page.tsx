@@ -1274,13 +1274,18 @@ function ValuesReflectionSection({
             })}
           </div>
         ) : (
-          <div className="text-center py-6">
-            <p className="text-slate-400 text-sm">
-              {`${firstName ?? 'This student'} hasn't completed the Values Reflection yet.`}
+          <div className="space-y-4">
+            <p className="text-sm text-slate-400 bg-slate-800/30 rounded-lg p-3">
+              {`${firstName ?? 'This student'} hasn't answered these yet. Share them before your next session so you can discuss the answers together.`}
             </p>
-            <p className="text-xs text-slate-500 mt-1">
-              They can complete it by visiting the Writing page.
-            </p>
+            {VALUES_QUESTIONS.map((q, idx) => (
+              <div key={q.key} className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-4 space-y-1">
+                <p className="text-xs font-semibold text-violet-300">
+                  <span className="text-slate-500 mr-1">{idx + 1}.</span> {q.label}
+                </p>
+                <p className="text-xs text-slate-400 leading-relaxed">{q.prompt}</p>
+              </div>
+            ))}
           </div>
         )
       ) : reflection && !showForm ? (
