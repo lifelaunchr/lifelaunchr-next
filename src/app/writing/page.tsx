@@ -728,12 +728,14 @@ function SelfDiscoveryTab({
   studentId,
   studentName,
   isReadOnly,
+  canRegenerate = true,
   courses,
 }: {
   token: string
   studentId?: string | null
   studentName?: string | null
   isReadOnly?: boolean
+  canRegenerate?: boolean
   courses: Course[]
 }) {
   const { getToken } = useAuth()
@@ -1019,7 +1021,7 @@ function SelfDiscoveryTab({
           text={interpretation ?? ''}
           loading={interpretingLoading}
           error={interpretingError}
-          onRegenerate={() => fetchInterpretation(studentId, true)}
+          onRegenerate={canRegenerate ? () => fetchInterpretation(studentId, true) : undefined}
         />
       )}
 
@@ -1268,6 +1270,7 @@ function WritingPageInner() {
                 studentId={forParam}
                 studentName={studentDisplayName}
                 isReadOnly={(isCounselor || isParent) && !!forParam}
+                canRegenerate={!isParent}
                 courses={courses}
               />
             )}
