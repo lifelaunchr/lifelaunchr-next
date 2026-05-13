@@ -725,6 +725,7 @@ function SelfDiscoveryTab({
   const [interpretation, setInterpretation] = useState<string | null>(null)
   const [interpretingLoading, setInterpretingLoading] = useState(false)
   const [interpretingError, setInterpretingError] = useState<string | null>(null)
+  const [myOwnInterpretationLoading, setMyOwnInterpretationLoading] = useState(false)
 
   // ── Load student (or own) assessment on mount ─────────────────────────────
   useEffect(() => {
@@ -758,20 +759,31 @@ function SelfDiscoveryTab({
       .then(data => {
         if (data?.result) {
           setMyOwnResult(data.result)
-          if (data.interpretation) setMyOwnInterpretation(data.interpretation)
+          if (data.interpretation) {
+            setMyOwnInterpretation(data.interpretation)
+          } else {
+            fetchInterpretation(null, false, true)
+          }
         }
       })
       .catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, isReadOnly])
 
   // ── Stream interpretation whenever a result becomes available ─────────────
-  async function fetchInterpretation(forStudentId?: string | null, forceRegenerate = false) {
-    setInterpretingLoading(true)
-    setInterpretingError(null)
-    if (forceRegenerate) setInterpretation(null)
+  // forOwn=true → updates myOwnInterpretation (counselor test-mode path)
+  // forOwn=false → updates interpretation (student / read-only counselor path)
+  async function fetchInterpretation(forStudentId?: string | null, forceRegenerate = false, forOwn = false) {
+    const _setLoading = forOwn ? setMyOwnInterpretationLoading : setInterpretingLoading
+    const _setText = forOwn ? setMyOwnInterpretation : setInterpretation
+    const _setError = forOwn ? (_: string | null) => {} : setInterpretingError
+
+    _setLoading(true)
+    _setError(null)
+    if (forceRegenerate) _setText(null)
 
     const freshToken = await getToken()
-    if (!freshToken) { setInterpretingLoading(false); return }
+    if (!freshToken) { _setLoading(false); return }
 
     const url = forStudentId
       ? `${API}/writing/personality-assessment/interpret?student_id=${forStudentId}`
@@ -802,16 +814,16 @@ function SelfDiscoveryTab({
           if (!raw) continue
           try {
             const ev = JSON.parse(raw) as { type: string; text?: string; msg?: string }
-            if (ev.type === 'chunk' && ev.text) setInterpretation(prev => (prev ?? '') + ev.text)
-            else if (ev.type === 'text' && ev.text) setInterpretation(ev.text)   // cached
+            if (ev.type === 'chunk' && ev.text) _setText(prev => (prev ?? '') + ev.text)
+            else if (ev.type === 'text' && ev.text) _setText(ev.text)   // cached
             else if (ev.type === 'error') throw new Error(ev.msg ?? 'Generation failed')
           } catch { /* skip parse errors */ }
         }
       }
     } catch (e) {
-      setInterpretingError(e instanceof Error ? e.message : 'Failed to generate essay profile')
+      _setError(e instanceof Error ? e.message : 'Failed to generate essay profile')
     } finally {
-      setInterpretingLoading(false)
+      _setLoading(false)
     }
   }
 
@@ -900,7 +912,12 @@ function SelfDiscoveryTab({
               <PersonalityAssessmentForm
                 token={token}
                 studentId={null}
-                onComplete={r => { setTestResult(r); setMyOwnResult(r) }}
+                onComplete={r => {
+                  setTestResult(r)
+                  setMyOwnResult(r)
+                  setMyOwnInterpretation(null)
+                  fetchInterpretation(null, false, true)
+                }}
               />
             </div>
           )
@@ -978,8 +995,9 @@ function SelfDiscoveryTab({
       {testMode && (testResult || myOwnResult) && (
         <InterpretationCard
           text={testInterpretation ?? ''}
-          loading={false}
+          loading={myOwnInterpretationLoading}
           error={null}
+          onRegenerate={() => fetchInterpretation(null, true, true)}
         />
       )}
 
