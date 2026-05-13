@@ -13,6 +13,7 @@ interface UsageData {
   account_type?: string
   writing_self_discovery_module?: boolean
   writing_practice_module?: boolean
+  essays_module?: boolean
   beneficiary?: {
     user_id: number
     full_name?: string | null
@@ -185,6 +186,21 @@ function RadarChart({ result }: { result: AssessmentResult }) {
   )
 }
 
+// ── Values Reflection types ───────────────────────────────────────────────────
+
+interface ValuesQuestion {
+  key: string
+  label: string
+  prompt: string
+}
+
+interface ValuesReflection {
+  id: number
+  responses: Record<string, string>
+  interpretation: string | null
+  completed_at: string
+}
+
 // ── Essay-prep interpretation card ────────────────────────────────────────────
 
 function InterpretationCard({
@@ -192,11 +208,19 @@ function InterpretationCard({
   loading,
   error,
   onRegenerate,
+  title = '✨ Your Essay Profile',
+  emptyLabel = 'Generate Essay Profile →',
+  emptyDescription = 'Get a personalized interpretation of your results — what they say about how you work, connect, and what essay stories might emerge.',
+  generatingLabel = 'Analyzing your personality profile…',
 }: {
   text: string
   loading: boolean
   error: string | null
   onRegenerate?: () => void
+  title?: string
+  emptyLabel?: string
+  emptyDescription?: string
+  generatingLabel?: string
 }) {
   const isEmpty = !text && !loading && !error
 
@@ -204,7 +228,7 @@ function InterpretationCard({
     <div className="bg-slate-800/50 rounded-xl border border-violet-700/30 p-5 space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-          <span>✨</span> Your Essay Profile
+          {title}
         </h3>
         {!loading && !isEmpty && onRegenerate && (
           <button
@@ -219,7 +243,7 @@ function InterpretationCard({
       {loading && !text && (
         <div className="flex items-center gap-2 text-sm text-slate-400 py-4">
           <div className="w-4 h-4 border-2 border-violet-500 border-t-transparent rounded-full animate-spin shrink-0" />
-          Analyzing your personality profile…
+          {generatingLabel}
         </div>
       )}
 
@@ -227,13 +251,13 @@ function InterpretationCard({
       {isEmpty && onRegenerate && (
         <div className="py-4 space-y-3">
           <p className="text-sm text-slate-400">
-            Get a personalized interpretation of your results — what they say about how you work, connect, and what essay stories might emerge.
+            {emptyDescription}
           </p>
           <button
             onClick={onRegenerate}
             className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm rounded-lg transition-all"
           >
-            Generate Essay Profile →
+            {emptyLabel}
           </button>
         </div>
       )}
@@ -1040,6 +1064,313 @@ function SelfDiscoveryTab({
   )
 }
 
+// ── Values Reflection section ──────────────────────────────────────────────────
+
+const VALUES_QUESTIONS: ValuesQuestion[] = [
+  { key: 'q1', label: 'What matters most to you?', prompt: 'List up to five things that matter most to you in life — these can be relationships, principles, activities, or states of being.' },
+  { key: 'q2', label: 'A moment of pride', prompt: 'Describe a moment when you felt most proud of who you were — not an achievement, but how you showed up. What made that moment feel right?' },
+  { key: 'q3', label: 'When you feel most like yourself', prompt: 'When do you feel most like yourself? Describe where you are, what you\'re doing, and who (if anyone) is around.' },
+  { key: 'q4', label: 'A belief you hold', prompt: 'What\'s something you believe that not everyone around you shares? What shaped that belief?' },
+  { key: 'q5', label: 'Someone you admire', prompt: 'Think of someone you deeply admire. What quality do they have that you aspire to develop in yourself?' },
+  { key: 'q6', label: 'Your character today', prompt: 'What do you want people who know you well to say about who you are today — not your accomplishments, but your character?' },
+]
+
+function ValuesReflectionSection({
+  token,
+  studentId,
+  isReadOnly,
+  canRegenerate = true,
+  studentName,
+}: {
+  token: string
+  studentId?: string | null
+  isReadOnly?: boolean
+  canRegenerate?: boolean
+  studentName?: string | null
+}) {
+  const { getToken } = useAuth()
+
+  const [reflection, setReflection] = useState<ValuesReflection | null>(null)
+  const [reflectionLoaded, setReflectionLoaded] = useState(false)
+  const [showForm, setShowForm] = useState(false)
+
+  // Form state
+  const [responses, setResponses] = useState<Record<string, string>>({})
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+
+  // Interpretation streaming state
+  const [interpretation, setInterpretation] = useState<string | null>(null)
+  const [interpretingLoading, setInterpretingLoading] = useState(false)
+  const [interpretingError, setInterpretingError] = useState<string | null>(null)
+
+  // Load existing reflection on mount
+  useEffect(() => {
+    const url = studentId
+      ? `${API}/writing/values-reflection?student_id=${studentId}`
+      : `${API}/writing/values-reflection`
+    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.reflection) {
+          setReflection(data.reflection)
+          if (data.reflection.interpretation) {
+            setInterpretation(data.reflection.interpretation)
+          } else {
+            fetchInterpretation(studentId)
+          }
+        }
+        setReflectionLoaded(true)
+      })
+      .catch(() => setReflectionLoaded(true))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, studentId])
+
+  async function fetchInterpretation(forStudentId?: string | null, forceRegenerate = false) {
+    setInterpretingLoading(true)
+    setInterpretingError(null)
+    if (forceRegenerate) setInterpretation(null)
+
+    const freshToken = await getToken()
+    if (!freshToken) { setInterpretingLoading(false); return }
+
+    const url = forStudentId
+      ? `${API}/writing/values-reflection/interpret?student_id=${forStudentId}`
+      : `${API}/writing/values-reflection/interpret`
+
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${freshToken}` },
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error((err as { detail?: string }).detail || 'Failed to generate interpretation')
+      }
+      const reader = res.body?.getReader()
+      if (!reader) throw new Error('No response stream')
+      const decoder = new TextDecoder()
+      let buf = ''
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buf += decoder.decode(value, { stream: true })
+        const lines = buf.split('\n')
+        buf = lines.pop() ?? ''
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          const raw = line.slice(6).trim()
+          if (!raw) continue
+          let ev: { type: string; text?: string; msg?: string }
+          try { ev = JSON.parse(raw) } catch { continue }
+          if (ev.type === 'chunk' && ev.text) setInterpretation(prev => (prev ?? '') + ev.text)
+          else if (ev.type === 'text' && ev.text) setInterpretation(ev.text)
+          else if (ev.type === 'error') throw new Error(ev.msg ?? 'Generation failed')
+        }
+      }
+    } catch (e) {
+      setInterpretingError(e instanceof Error ? e.message : 'Failed to generate reflection')
+    } finally {
+      setInterpretingLoading(false)
+    }
+  }
+
+  async function handleSubmit() {
+    // Check at least 3 questions answered
+    const answered = VALUES_QUESTIONS.filter(q => responses[q.key]?.trim())
+    if (answered.length < 3) {
+      setSubmitError('Please answer at least 3 questions before submitting.')
+      return
+    }
+    setSubmitting(true)
+    setSubmitError(null)
+    try {
+      const freshToken = await getToken()
+      if (!freshToken) throw new Error('Session expired — please refresh the page.')
+      const url = studentId
+        ? `${API}/writing/values-reflection?student_id=${studentId}`
+        : `${API}/writing/values-reflection`
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${freshToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ responses }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error((err as { detail?: string }).detail || 'Save failed')
+      }
+      // Rebuild reflection locally for immediate display
+      const data = await res.json()
+      const newReflection: ValuesReflection = {
+        id: data.reflection_id,
+        responses,
+        interpretation: null,
+        completed_at: new Date().toISOString(),
+      }
+      setReflection(newReflection)
+      setShowForm(false)
+      setInterpretation(null)
+      fetchInterpretation(studentId)
+    } catch (e: unknown) {
+      setSubmitError(e instanceof Error ? e.message : 'Save failed')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const firstName = studentName ? studentName.split(' ')[0] : null
+
+  if (!reflectionLoaded) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="w-6 h-6 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-5 pt-6 border-t border-slate-800">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h3 className="text-base font-semibold text-white">Values Reflection</h3>
+          <p className="text-xs text-slate-400 mt-1">
+            {isReadOnly
+              ? `Six short reflection questions about ${firstName ? `${firstName}'s` : "the student's"} values, identity, and character — the raw material for authentic essays.`
+              : 'Six short questions about what matters to you, who you are, and what you believe. There are no right answers.'}
+          </p>
+        </div>
+        {reflection && !isReadOnly && !showForm && (
+          <button
+            onClick={() => {
+              setResponses(reflection.responses)
+              setShowForm(true)
+            }}
+            className="text-xs text-violet-400 hover:text-violet-300 whitespace-nowrap shrink-0"
+          >
+            Redo
+          </button>
+        )}
+      </div>
+
+      {/* Content */}
+      {isReadOnly ? (
+        /* Read-only view — show answers if available */
+        reflection ? (
+          <div className="space-y-3">
+            {VALUES_QUESTIONS.map(q => {
+              const answer = reflection.responses[q.key]
+              if (!answer?.trim()) return null
+              return (
+                <div key={q.key} className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-4">
+                  <p className="text-xs font-medium text-violet-300 mb-1.5">{q.label}</p>
+                  <p className="text-sm text-slate-300 whitespace-pre-wrap leading-relaxed">{answer}</p>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-6">
+            <p className="text-slate-400 text-sm">
+              {`${firstName ?? 'This student'} hasn't completed the Values Reflection yet.`}
+            </p>
+            <p className="text-xs text-slate-500 mt-1">
+              They can complete it by visiting the Writing page.
+            </p>
+          </div>
+        )
+      ) : reflection && !showForm ? (
+        /* Student — show saved answers */
+        <div className="space-y-3">
+          {VALUES_QUESTIONS.map(q => {
+            const answer = reflection.responses[q.key]
+            if (!answer?.trim()) return null
+            return (
+              <div key={q.key} className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-4">
+                <p className="text-xs font-medium text-violet-300 mb-1.5">{q.label}</p>
+                <p className="text-sm text-slate-300 whitespace-pre-wrap leading-relaxed">{answer}</p>
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        /* Form */
+        <div className="space-y-4">
+          <p className="text-xs text-slate-500 bg-slate-800/30 rounded-lg p-3 leading-relaxed">
+            Answer as many questions as feel right — aim for at least three. Write freely; these answers are just for you and your counselor.
+          </p>
+          {VALUES_QUESTIONS.map((q, idx) => (
+            <div key={q.key} className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-4 space-y-2">
+              <p className="text-xs font-semibold text-violet-300">
+                <span className="text-slate-500 mr-1">{idx + 1}.</span> {q.label}
+              </p>
+              <p className="text-xs text-slate-400 leading-relaxed">{q.prompt}</p>
+              <textarea
+                value={responses[q.key] || ''}
+                onChange={e => setResponses(prev => ({ ...prev, [q.key]: e.target.value }))}
+                rows={3}
+                placeholder="Write here…"
+                className="w-full bg-slate-700/50 border border-slate-600/50 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-slate-600 resize-y focus:outline-none focus:border-violet-500/50 leading-relaxed"
+              />
+            </div>
+          ))}
+
+          {submitError && (
+            <p className="text-xs text-red-400 bg-red-900/20 border border-red-700/40 rounded-lg px-4 py-2">
+              {submitError}
+            </p>
+          )}
+
+          <div className="flex items-center justify-between">
+            {reflection && (
+              <button
+                onClick={() => { setShowForm(false); setResponses({}) }}
+                className="text-xs text-slate-500 hover:text-slate-300"
+              >
+                Cancel
+              </button>
+            )}
+            <button
+              onClick={handleSubmit}
+              disabled={submitting}
+              className="ml-auto px-5 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {submitting && (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              )}
+              {submitting ? 'Saving…' : 'Save & Get Reflection →'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Interpretation card */}
+      {reflection && !showForm && (
+        <InterpretationCard
+          text={interpretation ?? ''}
+          loading={interpretingLoading}
+          error={interpretingError}
+          onRegenerate={canRegenerate ? () => fetchInterpretation(studentId, true) : undefined}
+          title="✨ Your Values Profile"
+          emptyDescription="Get a personalized reflection on what your answers reveal — your core values, what makes you you, and where your essay stories might live."
+          emptyLabel="Generate Values Profile →"
+          generatingLabel="Reflecting on your values…"
+        />
+      )}
+
+      {/* Empty state — no reflection, student hasn't done it yet */}
+      {!reflection && !showForm && !isReadOnly && (
+        <button
+          onClick={() => setShowForm(true)}
+          className="w-full py-3 border border-dashed border-violet-500/40 rounded-xl text-sm text-violet-400 hover:border-violet-400 hover:bg-violet-900/10 transition-all"
+        >
+          Start Values Reflection →
+        </button>
+      )}
+    </div>
+  )
+}
+
 // ── Unit assignment list (Units 2–4 of Self-Discovery) ─────────────────────────
 
 function UnitAssignmentList({
@@ -1359,16 +1690,25 @@ function WritingPageInner() {
               </div>
             ) : (
               <>
-                {/* Know Yourself — personality assessment */}
+                {/* Know Yourself — personality assessment + values reflection */}
                 {activeSection === 'sd-1' && showSelfDiscovery && token && (
-                  <SelfDiscoveryTab
-                    token={token}
-                    studentId={forParam}
-                    studentName={studentDisplayName}
-                    isReadOnly={(isCounselor || isParent) && !!forParam}
-                    canRegenerate={!isParent}
-                    courses={courses}
-                  />
+                  <div className="space-y-8">
+                    <SelfDiscoveryTab
+                      token={token}
+                      studentId={forParam}
+                      studentName={studentDisplayName}
+                      isReadOnly={(isCounselor || isParent) && !!forParam}
+                      canRegenerate={!isParent}
+                      courses={courses}
+                    />
+                    <ValuesReflectionSection
+                      token={token}
+                      studentId={forParam}
+                      studentName={studentDisplayName}
+                      isReadOnly={(isCounselor || isParent) && !!forParam}
+                      canRegenerate={!isParent}
+                    />
+                  </div>
                 )}
 
                 {/* Your Stories / Your Voice / Synthesis — assignment lists */}
