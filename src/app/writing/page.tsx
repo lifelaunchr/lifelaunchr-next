@@ -1079,7 +1079,7 @@ const VALUES_QUESTIONS: ValuesQuestion[] = [
   {
     key: 'q2',
     label: 'A moment of pride',
-    prompt: "Describe a moment when you felt most proud of who you were — not an achievement, but how you showed up. It doesn't have to be dramatic. Maybe you told someone a hard truth. Maybe you stayed calm when everyone around you wasn't. Maybe you showed up for someone when it cost you something. Describe what happened, and then try to name what about it felt right.",
+    prompt: "Describe a moment when you felt most proud of who you were — not an achievement, but how you showed up. It doesn't have to be dramatic or impressive. Maybe you told someone a hard truth. Maybe you stayed calm when everyone around you wasn't. Maybe you showed up for someone when it cost you something. The most interesting answers here are often the ones you'd be slightly hesitant to say out loud. Describe what happened, and then try to name what about it felt right.",
   },
   {
     key: 'q3',
@@ -1109,7 +1109,7 @@ const VALUES_QUESTIONS: ValuesQuestion[] = [
   {
     key: 'q8',
     label: 'Your character today',
-    prompt: "Forget résumés and achievements for a moment. If the people who know you best — a close friend, a sibling, a coach, a teacher who really sees you — were describing who you are as a person, what would you most want to be true? Not what you think they would say. What you'd want to be true about you, right now.",
+    prompt: "Forget résumés and achievements for a moment. If the people who know you best — a close friend, a sibling, a coach, a teacher who really sees you — were describing who you are as a person, what would you most want to be true? Not what you think they would say, and not what sounds good. What you'd actually want to be true about you, right now.",
   },
 ]
 
@@ -1340,7 +1340,10 @@ function ValuesReflectionSection({
         /* Form */
         <div className="space-y-4">
           <p className="text-xs text-slate-500 bg-slate-800/30 rounded-lg p-3 leading-relaxed">
-            Answer as many questions as feel right — aim for at least four. Write freely; these answers are just for you and your counselor. There are no right answers.
+            These answers aren't going anywhere near a college application. They're for you and your counselor — to help you find stories worth telling, not to evaluate you. The most useful answer is always the honest one, even if it feels small or unflattering. The detail that feels too minor to mention is often exactly where the most authentic essays begin.
+          </p>
+          <p className="text-xs text-slate-600 px-1">
+            Aim for at least four answers. Skip any that don't resonate.
           </p>
           {VALUES_QUESTIONS.map((q, idx) => (
             <div key={q.key} className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-4 space-y-2">
