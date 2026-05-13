@@ -80,6 +80,108 @@ const DOMAIN_NAMES: Record<string, string> = {
   C: 'Conscientiousness',
 }
 
+// ── Pentagon radar chart ───────────────────────────────────────────────────────
+
+function RadarChart({ result }: { result: AssessmentResult }) {
+  const W = 400, H = 300
+  const cx = 200, cy = 150
+  const maxR = 100
+  const labelR = 126
+
+  // Clockwise from top
+  const axes = [
+    { key: 'N', lines: ['Emotional', 'Sensitivity'], color: '#a78bfa' },
+    { key: 'E', lines: ['Extraversion'],              color: '#fbbf24' },
+    { key: 'O', lines: ['Openness'],                  color: '#60a5fa' },
+    { key: 'A', lines: ['Agreeableness'],             color: '#34d399' },
+    { key: 'C', lines: ['Conscien-', 'tiousness'],    color: '#fb923c' },
+  ]
+  const n = axes.length
+  const angleOf = (i: number) => -Math.PI / 2 + (i * 2 * Math.PI) / n
+  const pt = (i: number, r: number) => ({
+    x: cx + r * Math.cos(angleOf(i)),
+    y: cy + r * Math.sin(angleOf(i)),
+  })
+
+  // Grid rings
+  const GRID = [25, 50, 75, 100]
+  const gridPaths = GRID.map(pct => {
+    const pts = axes.map((_, i) => pt(i, (pct / 100) * maxR))
+    return {
+      pct,
+      d: pts.map((p, j) => `${j === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ') + ' Z',
+    }
+  })
+
+  // Data polygon
+  const dataPoints = axes.map((axis, i) => {
+    const pct = result.domains[axis.key]?.percentile ?? 50
+    return { ...pt(i, (pct / 100) * maxR), pct }
+  })
+  const dataPath =
+    dataPoints.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ') + ' Z'
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
+      {/* Grid pentagons */}
+      {gridPaths.map(({ pct, d }) => (
+        <path key={pct} d={d} fill="none"
+          stroke={pct === 100 ? '#334155' : '#1e293b'}
+          strokeWidth={pct === 100 ? 1.5 : 1}
+        />
+      ))}
+
+      {/* Axis lines */}
+      {axes.map((_, i) => {
+        const outer = pt(i, maxR)
+        return <line key={i} x1={cx} y1={cy}
+          x2={outer.x.toFixed(1)} y2={outer.y.toFixed(1)}
+          stroke="#334155" strokeWidth={1}
+        />
+      })}
+
+      {/* 50% reference ring tick label on top axis */}
+      {(() => { const p = pt(0, maxR * 0.5); return (
+        <text x={p.x + 4} y={p.y} fontSize={7} fill="#475569" dominantBaseline="middle">50</text>
+      )})()}
+
+      {/* Data polygon */}
+      <path d={dataPath}
+        fill="rgba(124,58,237,0.18)" stroke="#7c3aed" strokeWidth={2} strokeLinejoin="round"
+      />
+
+      {/* Colored dots */}
+      {dataPoints.map((p, i) => (
+        <circle key={i}
+          cx={p.x.toFixed(1)} cy={p.y.toFixed(1)}
+          r={5} fill={axes[i].color} stroke="#0f172a" strokeWidth={2}
+        />
+      ))}
+
+      {/* Axis labels */}
+      {axes.map((axis, i) => {
+        const angle = angleOf(i)
+        const lp = { x: cx + labelR * Math.cos(angle), y: cy + labelR * Math.sin(angle) }
+        const cosA = Math.cos(angle)
+        const textAnchor = Math.abs(cosA) < 0.2 ? 'middle' : cosA > 0 ? 'start' : 'end'
+        const lineH = 11
+        const totalH = (axis.lines.length - 1) * lineH
+        return (
+          <text key={i} textAnchor={textAnchor} fill="#94a3b8" fontSize={9} fontWeight="500">
+            {axis.lines.map((line, j) => (
+              <tspan key={j}
+                x={lp.x.toFixed(1)}
+                y={(lp.y - totalH / 2 + j * lineH).toFixed(1)}
+                dominantBaseline="middle"
+              >{line}</tspan>
+            ))}
+          </text>
+        )
+      })}
+    </svg>
+  )
+}
+
 // ── Percentile bar ─────────────────────────────────────────────────────────────
 
 function PercentileBar({ value, color }: { value: number; color: string }) {
@@ -121,10 +223,14 @@ function AssessmentResults({ result }: { result: AssessmentResult }) {
   return (
     <div className="space-y-4">
       <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-4">
-        <p className="text-xs text-slate-500 mb-4">
+        <p className="text-xs text-slate-500 mb-3">
           Norm group: {result.norms_used} · Big Five (IPIP-NEO 120 · Prof. John Johnson, Penn State DuBois · Public Domain)
         </p>
-        <div className="space-y-5">
+
+        {/* Pentagon radar */}
+        <RadarChart result={result} />
+
+        <div className="space-y-5 mt-4">
           {Object.entries(result.domains).map(([key, domain]) => {
             const desc = DOMAIN_DESCRIPTIONS[key]
             const isExpanded = expanded === key
