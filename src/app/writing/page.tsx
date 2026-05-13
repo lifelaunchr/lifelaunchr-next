@@ -812,12 +812,14 @@ function SelfDiscoveryTab({
           if (!line.startsWith('data: ')) continue
           const raw = line.slice(6).trim()
           if (!raw) continue
+          // Parse JSON separately so parse errors don't hide event errors
+          let ev: { type: string; text?: string; msg?: string }
           try {
-            const ev = JSON.parse(raw) as { type: string; text?: string; msg?: string }
-            if (ev.type === 'chunk' && ev.text) _setText(prev => (prev ?? '') + ev.text)
-            else if (ev.type === 'text' && ev.text) _setText(ev.text)   // cached
-            else if (ev.type === 'error') throw new Error(ev.msg ?? 'Generation failed')
-          } catch { /* skip parse errors */ }
+            ev = JSON.parse(raw)
+          } catch { continue }  // skip malformed lines
+          if (ev.type === 'chunk' && ev.text) _setText(prev => (prev ?? '') + ev.text)
+          else if (ev.type === 'text' && ev.text) _setText(ev.text)   // cached path
+          else if (ev.type === 'error') throw new Error(ev.msg ?? 'Generation failed')
         }
       }
     } catch (e) {
