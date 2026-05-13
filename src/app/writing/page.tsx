@@ -1071,12 +1071,46 @@ function SelfDiscoveryTab({
 // ── Values Reflection section ──────────────────────────────────────────────────
 
 const VALUES_QUESTIONS: ValuesQuestion[] = [
-  { key: 'q1', label: 'What matters most to you?', prompt: 'List up to five things that matter most to you in life — these can be relationships, principles, activities, or states of being.' },
-  { key: 'q2', label: 'A moment of pride', prompt: 'Describe a moment when you felt most proud of who you were — not an achievement, but how you showed up. What made that moment feel right?' },
-  { key: 'q3', label: 'When you feel most like yourself', prompt: 'When do you feel most like yourself? Describe where you are, what you\'re doing, and who (if anyone) is around.' },
-  { key: 'q4', label: 'A belief you hold', prompt: 'What\'s something you believe that not everyone around you shares? What shaped that belief?' },
-  { key: 'q5', label: 'Someone you admire', prompt: 'Think of someone you deeply admire. What quality do they have that you aspire to develop in yourself?' },
-  { key: 'q6', label: 'Your character today', prompt: 'What do you want people who know you well to say about who you are today — not your accomplishments, but your character?' },
+  {
+    key: 'q1',
+    label: 'What matters most to you?',
+    prompt: "This is harder than it sounds — don't write what you think you should value. Write what you actually find yourself protecting, returning to, or feeling lost without. It could be a relationship, a principle, a way of spending time, or a state of mind. List up to five things, and if any of your answers surprise you, that's worth noticing.",
+  },
+  {
+    key: 'q2',
+    label: 'A moment of pride',
+    prompt: "Describe a moment when you felt most proud of who you were — not an achievement, but how you showed up. It doesn't have to be dramatic. Maybe you told someone a hard truth. Maybe you stayed calm when everyone around you wasn't. Maybe you showed up for someone when it cost you something. Describe what happened, and then try to name what about it felt right.",
+  },
+  {
+    key: 'q3',
+    label: 'When you feel most like yourself',
+    prompt: "There are moments when everything feels aligned — when you're not performing or adjusting, just being. Where does that happen for you? Describe where you are, what you're doing, and who (if anyone) is around. If it helps: when do you forget to check your phone? When do you lose track of time?",
+  },
+  {
+    key: 'q4',
+    label: 'Community & belonging',
+    prompt: "Where do you feel you belong — not just comfortable, but genuinely of a place or group? This could be a family, a team, a neighborhood, a faith community, a cultural tradition, or even an online space. What is it about that community's values or ways of being that draws you in — what do they believe or care about that you find yourself believing too? If you're still searching for that feeling of belonging, describe what it would look like.",
+  },
+  {
+    key: 'q5',
+    label: 'A belief you hold',
+    prompt: "What's something you believe that not everyone around you shares? It doesn't have to be controversial — it might be a conviction about how people should treat each other, what makes a life worth living, or something in the world that you care about more than most people seem to. Where did that belief come from — a person, an experience, a moment that shifted something?",
+  },
+  {
+    key: 'q6',
+    label: 'Tradition & ritual',
+    prompt: "What's something you or your family does that you've never really stopped to explain, but that feels important? It could be a weekly ritual, a way of marking a holiday, a habit before a big moment, or just a way your household operates that you only notice when it's missing. Describe it. Then try to say what it means to you — what value it might be expressing, even if no one ever named it that way.",
+  },
+  {
+    key: 'q7',
+    label: 'Someone you admire',
+    prompt: "Think of someone whose way of being in the world you genuinely admire — don't pick someone because they're impressive. Pick someone whose character moves you. It could be someone famous, someone only you know, even a fictional person. What is it about them you wish you had more of? And when, if ever, do you see that quality in yourself?",
+  },
+  {
+    key: 'q8',
+    label: 'Your character today',
+    prompt: "Forget résumés and achievements for a moment. If the people who know you best — a close friend, a sibling, a coach, a teacher who really sees you — were describing who you are as a person, what would you most want to be true? Not what you think they would say. What you'd want to be true about you, right now.",
+  },
 ]
 
 function ValuesReflectionSection({
@@ -1182,8 +1216,8 @@ function ValuesReflectionSection({
   async function handleSubmit() {
     // Check at least 3 questions answered
     const answered = VALUES_QUESTIONS.filter(q => responses[q.key]?.trim())
-    if (answered.length < 3) {
-      setSubmitError('Please answer at least 3 questions before submitting.')
+    if (answered.length < 4) {
+      setSubmitError('Please answer at least 4 questions before submitting.')
       return
     }
     setSubmitting(true)
@@ -1240,8 +1274,8 @@ function ValuesReflectionSection({
           <h3 className="text-base font-semibold text-white">Values Reflection</h3>
           <p className="text-xs text-slate-400 mt-1">
             {isReadOnly
-              ? `Six short reflection questions about ${firstName ? `${firstName}'s` : "the student's"} values, identity, and character — the raw material for authentic essays.`
-              : 'Six short questions about what matters to you, who you are, and what you believe. There are no right answers.'}
+              ? `Eight reflection questions about ${firstName ? `${firstName}'s` : "the student's"} values, identity, and character — the raw material for authentic essays.`
+              : 'Eight questions about what matters to you, who you are, and what you believe. There are no right answers.'}
           </p>
         </div>
         {reflection && !isReadOnly && !showForm && (
@@ -1276,7 +1310,7 @@ function ValuesReflectionSection({
         ) : (
           <div className="space-y-4">
             <p className="text-sm text-slate-400 bg-slate-800/30 rounded-lg p-3">
-              {`${firstName ?? 'This student'} hasn't answered these yet. Share them before your next session so you can discuss the answers together.`}
+              {`${firstName ?? 'This student'} hasn't answered these yet. Share them before your next session so you can discuss the answers together. These eight questions are designed to surface values students hold without always knowing they hold them.`}
             </p>
             {VALUES_QUESTIONS.map((q, idx) => (
               <div key={q.key} className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-4 space-y-1">
@@ -1306,7 +1340,7 @@ function ValuesReflectionSection({
         /* Form */
         <div className="space-y-4">
           <p className="text-xs text-slate-500 bg-slate-800/30 rounded-lg p-3 leading-relaxed">
-            Answer as many questions as feel right — aim for at least three. Write freely; these answers are just for you and your counselor.
+            Answer as many questions as feel right — aim for at least four. Write freely; these answers are just for you and your counselor. There are no right answers.
           </p>
           {VALUES_QUESTIONS.map((q, idx) => (
             <div key={q.key} className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-4 space-y-2">
