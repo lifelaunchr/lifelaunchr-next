@@ -1229,7 +1229,7 @@ function ValuesReflectionSection({
   }
 
   return (
-    <div className="space-y-5 pt-6 border-t border-slate-800">
+    <div className="space-y-5">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -1624,6 +1624,7 @@ function WritingPageInner() {
                 </p>
                 {[
                   { key: 'sd-1', label: 'Know Yourself' },
+                  { key: 'sd-values', label: 'Values Reflection' },
                   { key: 'sd-2', label: 'Your Stories' },
                   { key: 'sd-3', label: 'Your Voice' },
                   { key: 'sd-4', label: 'Synthesis' },
@@ -1690,25 +1691,27 @@ function WritingPageInner() {
               </div>
             ) : (
               <>
-                {/* Know Yourself — personality assessment + values reflection */}
+                {/* Know Yourself — personality assessment */}
                 {activeSection === 'sd-1' && showSelfDiscovery && token && (
-                  <div className="space-y-8">
-                    <SelfDiscoveryTab
-                      token={token}
-                      studentId={forParam}
-                      studentName={studentDisplayName}
-                      isReadOnly={(isCounselor || isParent) && !!forParam}
-                      canRegenerate={!isParent}
-                      courses={courses}
-                    />
-                    <ValuesReflectionSection
-                      token={token}
-                      studentId={forParam}
-                      studentName={studentDisplayName}
-                      isReadOnly={(isCounselor || isParent) && !!forParam}
-                      canRegenerate={!isParent}
-                    />
-                  </div>
+                  <SelfDiscoveryTab
+                    token={token}
+                    studentId={forParam}
+                    studentName={studentDisplayName}
+                    isReadOnly={(isCounselor || isParent) && !!forParam}
+                    canRegenerate={!isParent}
+                    courses={courses}
+                  />
+                )}
+
+                {/* Values Reflection */}
+                {activeSection === 'sd-values' && showSelfDiscovery && token && (
+                  <ValuesReflectionSection
+                    token={token}
+                    studentId={forParam}
+                    studentName={studentDisplayName}
+                    isReadOnly={(isCounselor || isParent) && !!forParam}
+                    canRegenerate={!isParent}
+                  />
                 )}
 
                 {/* Your Stories / Your Voice / Synthesis — assignment lists */}
