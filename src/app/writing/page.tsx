@@ -249,13 +249,38 @@ function InterpretationCard({
       )}
 
       {text && (
-        <div className="prose prose-invert prose-sm max-w-none
-          prose-headings:text-violet-300 prose-headings:text-sm prose-headings:font-semibold prose-headings:mt-4 prose-headings:mb-1
-          prose-p:text-slate-300 prose-p:leading-relaxed prose-p:text-sm
-          prose-ul:text-slate-300 prose-li:text-sm prose-li:leading-relaxed
-          prose-strong:text-white">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
-        </div>
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          components={{
+            h2: ({children}) => (
+              <h2 className="text-violet-300 text-[11px] font-semibold uppercase tracking-widest mt-5 mb-2 first:mt-1">
+                {children}
+              </h2>
+            ),
+            p: ({children}) => (
+              <p className="text-sm text-slate-200 leading-relaxed mb-3 last:mb-0">
+                {children}
+              </p>
+            ),
+            ul: ({children}) => (
+              <ul className="mb-3 ml-4 space-y-1.5 last:mb-0">
+                {children}
+              </ul>
+            ),
+            li: ({children}) => (
+              <li className="text-sm text-slate-200 leading-relaxed list-disc marker:text-violet-400">
+                {children}
+              </li>
+            ),
+            strong: ({children}) => (
+              <strong className="text-white font-semibold">
+                {children}
+              </strong>
+            ),
+          }}
+        >
+          {text}
+        </ReactMarkdown>
       )}
 
       {loading && text && (
