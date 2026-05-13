@@ -811,21 +811,25 @@ function SelfDiscoveryTab({
   // ── If counselor, also eagerly load their OWN assessment ─────────────────
   useEffect(() => {
     if (!isReadOnly) return
-    fetch(`${API}/writing/personality-assessment`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => (r.ok ? r.json() : null))
-      .then(data => {
-        if (data?.result) {
-          setMyOwnResult(data.result)
-          if (data.interpretation) {
-            setMyOwnInterpretation(data.interpretation)
-          } else {
-            fetchInterpretation(null, false, true)
-          }
-        }
+    getToken().then(freshToken => {
+      if (!freshToken) return
+      return fetch(`${API}/writing/personality-assessment`, {
+        headers: { Authorization: `Bearer ${freshToken}` },
       })
-      .catch(() => {})
+        .then(r => (r.ok ? r.json() : null))
+        .then(data => {
+          if (data?.result) {
+            setMyOwnResult(data.result)
+            if (data.interpretation) {
+              setMyOwnInterpretation(data.interpretation)
+            } else {
+              fetchInterpretation(null, false, true)
+            }
+          }
+        })
+    }).catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, isReadOnly])
+  }, [isReadOnly])
 
   // ── Stream interpretation whenever a result becomes available ─────────────
   // forOwn=true → updates myOwnInterpretation (counselor test-mode path)
