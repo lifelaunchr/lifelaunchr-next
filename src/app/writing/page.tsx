@@ -736,11 +736,18 @@ function SelfDiscoveryTab({
       .then(data => {
         if (data?.result) {
           setExistingResult(data.result)
-          if (data.interpretation) setExistingInterpretation(data.interpretation)
+          if (data.interpretation) {
+            // Cached — set directly, no need to generate
+            setInterpretation(data.interpretation)
+          } else {
+            // No cached interpretation yet — generate now
+            fetchInterpretation(studentId)
+          }
         }
         setResultLoaded(true)
       })
       .catch(() => setResultLoaded(true))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, studentId])
 
   // ── If counselor, also eagerly load their OWN assessment ─────────────────
@@ -807,17 +814,6 @@ function SelfDiscoveryTab({
       setInterpretingLoading(false)
     }
   }
-
-  // Trigger interpretation when result first appears
-  useEffect(() => {
-    const displayResult = result || existingResult
-    if (!displayResult) return
-    if (interpretation || interpretingLoading) return
-    // Use cached interpretation from DB if available
-    if (existingInterpretation) { setInterpretation(existingInterpretation); return }
-    fetchInterpretation(studentId)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [result, existingResult])
 
   const sdCourse = courses.find(c => c.key === 'self_discovery')
 
@@ -943,9 +939,10 @@ function SelfDiscoveryTab({
               onComplete={r => {
                 setResult(r)
                 setShowRetakeForm(false)
-                // Clear old interpretation so new one is generated
+                // Clear old interpretation and generate a fresh one
                 setInterpretation(null)
                 setExistingInterpretation(null)
+                fetchInterpretation(studentId)
               }}
             />
           ) : (
