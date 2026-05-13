@@ -37,6 +37,7 @@ interface Assignment {
   description: string | null
   word_count_min: number | null
   word_count_max: number | null
+  unit_number: number
 }
 
 interface AssessmentResult {
@@ -1035,33 +1036,59 @@ function SelfDiscoveryTab({
         />
       )}
 
-      {/* Writing assignments */}
-      {sdCourse && sdCourse.assignments.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-white">Writing Assignments</h3>
-          {sdCourse.assignments.map(a => (
-            <Link
-              key={a.id}
-              href={`/writing/assignment/${a.id}${studentId ? `?for=${studentId}` : ''}`}
-              className="block bg-slate-800/50 rounded-xl border border-slate-700/50 p-4 hover:border-violet-500/40 hover:bg-slate-800 transition-all"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-white">{a.title}</span>
-                <span className="text-xs text-slate-500">
-                  {a.word_count_min && a.word_count_max
-                    ? `${a.word_count_min}–${a.word_count_max} words`
-                    : a.word_count_max
-                    ? `Up to ${a.word_count_max} words`
-                    : ''}
-                </span>
-              </div>
-              {a.description && (
-                <p className="text-xs text-slate-400 mt-1">{a.description}</p>
-              )}
-            </Link>
-          ))}
-        </div>
-      )}
+    </div>
+  )
+}
+
+// ── Unit assignment list (Units 2–4 of Self-Discovery) ─────────────────────────
+
+function UnitAssignmentList({
+  unitNumber,
+  courses,
+  studentId,
+  unitLabels,
+}: {
+  unitNumber: number
+  courses: Course[]
+  studentId?: string | null
+  unitLabels: Record<number, string>
+}) {
+  const sdCourse = courses.find(c => c.key === 'writing_self_discovery')
+  const assignments = sdCourse?.assignments.filter(a => a.unit_number === unitNumber) || []
+  const label = unitLabels[unitNumber] || `Unit ${unitNumber}`
+
+  if (assignments.length === 0) {
+    return (
+      <div className="py-12 text-center">
+        <p className="text-slate-500 text-sm">Exercises for <span className="text-slate-400">{label}</span> are coming soon.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      <h2 className="text-base font-semibold text-white">{label}</h2>
+      {assignments.map(a => (
+        <Link
+          key={a.id}
+          href={`/writing/assignment/${a.id}${studentId ? `?for=${studentId}` : ''}`}
+          className="block bg-slate-800/50 rounded-xl border border-slate-700/50 p-4 hover:border-violet-500/40 hover:bg-slate-800 transition-all"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-white">{a.title}</span>
+            <span className="text-xs text-slate-500">
+              {a.word_count_min && a.word_count_max
+                ? `${a.word_count_min}–${a.word_count_max} words`
+                : a.word_count_max
+                ? `Up to ${a.word_count_max} words`
+                : ''}
+            </span>
+          </div>
+          {a.description && (
+            <p className="text-xs text-slate-400 mt-1">{a.description}</p>
+          )}
+        </Link>
+      ))}
     </div>
   )
 }
@@ -1136,16 +1163,14 @@ function WritingPageInner() {
   const router = useRouter()
 
   const forParam = searchParams.get('for')
-  const tabParam = searchParams.get('tab') || 'self-discovery'
+  const sectionParam = searchParams.get('section')
 
   const [token, setToken] = useState<string | null>(null)
   const [usageData, setUsageData] = useState<UsageData | null>(null)
   const [studentDisplayName, setStudentDisplayName] = useState<string | null>(null)
   const [courses, setCourses] = useState<Course[]>([])
   const [loadingCourses, setLoadingCourses] = useState(true)
-  const [activeTab, setActiveTab] = useState<'self-discovery' | 'writing-practice'>(
-    tabParam === 'writing-practice' ? 'writing-practice' : 'self-discovery'
-  )
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   // Load token + usage
   useEffect(() => {
@@ -1197,19 +1222,18 @@ function WritingPageInner() {
 
   const isCounselor = usageData?.account_type === 'counselor'
   const isParent = usageData?.account_type === 'parent'
-  // studentDisplayName is set from /my-usage beneficiary OR profile fetch fallback
   const showSelfDiscovery = usageData?.writing_self_discovery_module !== false
   const showWritingPractice = usageData?.writing_practice_module !== false
+  const showEssayStatus = !!usageData?.essays_module
 
-  const tabs = [
-    ...(showSelfDiscovery ? [{ key: 'self-discovery' as const, label: '🔍 Self-Discovery' }] : []),
-    ...(showWritingPractice ? [{ key: 'writing-practice' as const, label: '✍️ Writing Practice' }] : []),
-  ]
+  const defaultSection = showSelfDiscovery ? 'sd-1' : showWritingPractice ? 'practice' : 'essays'
+  const activeSection = sectionParam || defaultSection
 
-  function setTab(t: 'self-discovery' | 'writing-practice') {
-    setActiveTab(t)
-    const params = new URLSearchParams(searchParams.toString())
-    params.set('tab', t)
+  function navigate(section: string) {
+    setSidebarOpen(false)
+    const params = new URLSearchParams()
+    params.set('section', section)
+    if (forParam) params.set('for', forParam)
     router.replace(`/writing?${params.toString()}`)
   }
 
@@ -1222,63 +1246,165 @@ function WritingPageInner() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white">
+    <div className="h-screen bg-slate-900 text-white flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="border-b border-slate-800 px-4 py-4">
-        <div className="max-w-2xl mx-auto flex items-center gap-3">
-          <Link href="/chat" className="text-slate-400 hover:text-white text-sm">← Chat</Link>
-          <span className="text-slate-700">|</span>
-          <h1 className="text-lg font-semibold">Writing</h1>
-          {(isCounselor || isParent) && forParam && (
-            <span className="text-xs bg-violet-900/40 text-violet-300 px-2 py-0.5 rounded-full border border-violet-700/50 ml-auto">
-              {studentDisplayName ? `Viewing: ${studentDisplayName}` : 'Viewing student'}
-            </span>
-          )}
-        </div>
+      <div className="border-b border-slate-800 px-4 py-3 flex items-center gap-3 flex-shrink-0">
+        {/* Hamburger — mobile only */}
+        <button
+          onClick={() => setSidebarOpen(o => !o)}
+          className="md:hidden p-1.5 -ml-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+          aria-label="Toggle menu"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <Link href="/chat" className="text-slate-400 hover:text-white text-sm">← Chat</Link>
+        <span className="text-slate-700">|</span>
+        <h1 className="text-base font-semibold">Writing</h1>
+        {(isCounselor || isParent) && forParam && studentDisplayName && (
+          <span className="text-xs bg-violet-900/40 text-violet-300 px-2 py-0.5 rounded-full border border-violet-700/50 ml-auto">
+            Viewing: {studentDisplayName}
+          </span>
+        )}
       </div>
 
-      <div className="max-w-2xl mx-auto px-4 py-6">
-        {/* Tab bar */}
-        {tabs.length > 1 && (
-          <div className="flex gap-1 bg-slate-800/50 rounded-xl p-1 mb-6">
-            {tabs.map(t => (
-              <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
-                className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
-                  activeTab === t.key
-                    ? 'bg-violet-600 text-white shadow'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* Mobile backdrop */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 z-20 bg-black/60 md:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
         )}
 
-        {/* Tab content */}
-        {loadingCourses ? (
-          <div className="flex items-center justify-center py-16">
-            <div className="w-7 h-7 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+        {/* Sidebar */}
+        <aside className={`
+          absolute md:relative z-30 md:z-auto top-0 bottom-0 left-0
+          w-52 flex-shrink-0 bg-slate-900 border-r border-slate-800
+          overflow-y-auto transition-transform duration-200
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        `}>
+          <nav className="p-3 pt-4 space-y-0.5">
+            {showSelfDiscovery && (
+              <>
+                <p className="text-[10px] uppercase tracking-widest text-slate-600 px-3 pb-1.5">
+                  Self-Discovery
+                </p>
+                {[
+                  { key: 'sd-1', label: 'Know Yourself' },
+                  { key: 'sd-2', label: 'Your Stories' },
+                  { key: 'sd-3', label: 'Your Voice' },
+                  { key: 'sd-4', label: 'Synthesis' },
+                ].map(item => (
+                  <button
+                    key={item.key}
+                    onClick={() => navigate(item.key)}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
+                      activeSection === item.key
+                        ? 'bg-violet-600/20 text-violet-300 font-medium'
+                        : 'text-slate-400 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </>
+            )}
+
+            {showWritingPractice && (
+              <>
+                <p className="text-[10px] uppercase tracking-widest text-slate-600 px-3 pt-4 pb-1.5">
+                  Writing Practice
+                </p>
+                <button
+                  onClick={() => navigate('practice')}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
+                    activeSection === 'practice'
+                      ? 'bg-violet-600/20 text-violet-300 font-medium'
+                      : 'text-slate-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  Exercises
+                </button>
+              </>
+            )}
+
+            {showEssayStatus && (
+              <>
+                <p className="text-[10px] uppercase tracking-widest text-slate-600 px-3 pt-4 pb-1.5">
+                  Essays
+                </p>
+                <button
+                  onClick={() => navigate('essays')}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
+                    activeSection === 'essays'
+                      ? 'bg-violet-600/20 text-violet-300 font-medium'
+                      : 'text-slate-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  Essay Status
+                </button>
+              </>
+            )}
+          </nav>
+        </aside>
+
+        {/* Content */}
+        <main className="flex-1 overflow-y-auto">
+          <div className="max-w-2xl mx-auto px-4 py-6">
+            {loadingCourses ? (
+              <div className="flex items-center justify-center py-16">
+                <div className="w-7 h-7 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : (
+              <>
+                {/* Know Yourself — personality assessment */}
+                {activeSection === 'sd-1' && showSelfDiscovery && token && (
+                  <SelfDiscoveryTab
+                    token={token}
+                    studentId={forParam}
+                    studentName={studentDisplayName}
+                    isReadOnly={(isCounselor || isParent) && !!forParam}
+                    canRegenerate={!isParent}
+                    courses={courses}
+                  />
+                )}
+
+                {/* Your Stories / Your Voice / Synthesis — assignment lists */}
+                {['sd-2', 'sd-3', 'sd-4'].includes(activeSection) && showSelfDiscovery && (
+                  <UnitAssignmentList
+                    unitNumber={parseInt(activeSection.split('-')[1])}
+                    courses={courses}
+                    studentId={forParam}
+                    unitLabels={{ 2: 'Your Stories', 3: 'Your Voice', 4: 'Synthesis' }}
+                  />
+                )}
+
+                {/* Writing Practice */}
+                {activeSection === 'practice' && showWritingPractice && (
+                  <WritingPracticeTab courses={courses} studentId={forParam} />
+                )}
+
+                {/* Essay Status — placeholder until Essays page is migrated here */}
+                {activeSection === 'essays' && showEssayStatus && (
+                  <div className="space-y-4">
+                    <h2 className="text-base font-semibold text-white">Essay Status</h2>
+                    <p className="text-sm text-slate-400">
+                      Your essay prompts and draft status will appear here.
+                    </p>
+                    <Link
+                      href={forParam ? `/essays?for=${forParam}` : '/essays'}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm rounded-lg transition-colors"
+                    >
+                      Open Essay Status →
+                    </Link>
+                  </div>
+                )}
+              </>
+            )}
           </div>
-        ) : (
-          <>
-            {activeTab === 'self-discovery' && showSelfDiscovery && token && (
-              <SelfDiscoveryTab
-                token={token}
-                studentId={forParam}
-                studentName={studentDisplayName}
-                isReadOnly={(isCounselor || isParent) && !!forParam}
-                canRegenerate={!isParent}
-                courses={courses}
-              />
-            )}
-            {activeTab === 'writing-practice' && showWritingPractice && (
-              <WritingPracticeTab courses={courses} studentId={forParam} />
-            )}
-          </>
-        )}
+        </main>
       </div>
     </div>
   )
