@@ -197,13 +197,15 @@ function InterpretationCard({
   error: string | null
   onRegenerate?: () => void
 }) {
+  const isEmpty = !text && !loading && !error
+
   return (
     <div className="bg-slate-800/50 rounded-xl border border-violet-700/30 p-5 space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-white flex items-center gap-2">
           <span>✨</span> Your Essay Profile
         </h3>
-        {!loading && onRegenerate && (
+        {!loading && !isEmpty && onRegenerate && (
           <button
             onClick={onRegenerate}
             className="text-xs text-slate-500 hover:text-violet-400 transition-colors"
@@ -214,14 +216,36 @@ function InterpretationCard({
       </div>
 
       {loading && !text && (
-        <div className="flex items-center gap-2 text-xs text-slate-400 py-4">
+        <div className="flex items-center gap-2 text-sm text-slate-400 py-4">
           <div className="w-4 h-4 border-2 border-violet-500 border-t-transparent rounded-full animate-spin shrink-0" />
           Analyzing your personality profile…
         </div>
       )}
 
-      {error && !text && (
-        <p className="text-xs text-red-400">{error}</p>
+      {/* Empty state — auto-trigger failed; give user a manual button */}
+      {isEmpty && onRegenerate && (
+        <div className="py-4 space-y-3">
+          <p className="text-sm text-slate-400">
+            Get a personalized interpretation of your results — what they say about how you work, connect, and what essay stories might emerge.
+          </p>
+          <button
+            onClick={onRegenerate}
+            className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm rounded-lg transition-all"
+          >
+            Generate Essay Profile →
+          </button>
+        </div>
+      )}
+
+      {error && (
+        <div className="rounded-lg bg-red-900/20 border border-red-700/40 px-4 py-3 space-y-2">
+          <p className="text-sm text-red-300">{error}</p>
+          {onRegenerate && (
+            <button onClick={onRegenerate} className="text-xs text-red-400 hover:text-red-300 underline">
+              Try again
+            </button>
+          )}
+        </div>
       )}
 
       {text && (
