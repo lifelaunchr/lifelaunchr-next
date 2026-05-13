@@ -1343,7 +1343,7 @@ function ValuesReflectionSection({
             These answers aren't going anywhere near a college application. They're for you and your counselor — to help you find stories worth telling, not to evaluate you. The most useful answer is always the honest one, even if it feels small or unflattering. The detail that feels too minor to mention is often exactly where the most authentic essays begin.
           </p>
           <p className="text-xs text-slate-600 px-1">
-            Aim for at least four answers. Skip any that don't resonate.
+            A specific memory or example — even a small one — is worth more than a general feeling. Aim for at least four answers; skip any that don't resonate.
           </p>
           {VALUES_QUESTIONS.map((q, idx) => (
             <div key={q.key} className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-4 space-y-2">
