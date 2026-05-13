@@ -263,12 +263,12 @@ function InterpretationCard({
               </p>
             ),
             ul: ({children}) => (
-              <ul className="mb-3 ml-4 space-y-1.5 last:mb-0">
+              <ul className="mb-3 pl-5 last:mb-0">
                 {children}
               </ul>
             ),
             li: ({children}) => (
-              <li className="text-sm text-slate-200 leading-relaxed list-disc marker:text-violet-400">
+              <li className="text-sm text-slate-200 leading-relaxed list-disc marker:text-violet-400 mb-2.5 last:mb-0">
                 {children}
               </li>
             ),
