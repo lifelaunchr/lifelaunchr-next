@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, Suspense } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -179,6 +181,66 @@ function RadarChart({ result }: { result: AssessmentResult }) {
         )
       })}
     </svg>
+  )
+}
+
+// ── Essay-prep interpretation card ────────────────────────────────────────────
+
+function InterpretationCard({
+  text,
+  loading,
+  error,
+  onRegenerate,
+}: {
+  text: string
+  loading: boolean
+  error: string | null
+  onRegenerate?: () => void
+}) {
+  return (
+    <div className="bg-slate-800/50 rounded-xl border border-violet-700/30 p-5 space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+          <span>✨</span> Your Essay Profile
+        </h3>
+        {!loading && onRegenerate && (
+          <button
+            onClick={onRegenerate}
+            className="text-xs text-slate-500 hover:text-violet-400 transition-colors"
+          >
+            Regenerate
+          </button>
+        )}
+      </div>
+
+      {loading && !text && (
+        <div className="flex items-center gap-2 text-xs text-slate-400 py-4">
+          <div className="w-4 h-4 border-2 border-violet-500 border-t-transparent rounded-full animate-spin shrink-0" />
+          Analyzing your personality profile…
+        </div>
+      )}
+
+      {error && !text && (
+        <p className="text-xs text-red-400">{error}</p>
+      )}
+
+      {text && (
+        <div className="prose prose-invert prose-sm max-w-none
+          prose-headings:text-violet-300 prose-headings:text-sm prose-headings:font-semibold prose-headings:mt-4 prose-headings:mb-1
+          prose-p:text-slate-300 prose-p:leading-relaxed prose-p:text-sm
+          prose-ul:text-slate-300 prose-li:text-sm prose-li:leading-relaxed
+          prose-strong:text-white">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
+        </div>
+      )}
+
+      {loading && text && (
+        <div className="flex items-center gap-1.5 text-xs text-slate-500">
+          <div className="w-3 h-3 border border-violet-500 border-t-transparent rounded-full animate-spin" />
+          Writing…
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -620,14 +682,27 @@ function SelfDiscoveryTab({
   isReadOnly?: boolean
   courses: Course[]
 }) {
+  const { getToken } = useAuth()
+
+  // Student assessment state
   const [existingResult, setExistingResult] = useState<AssessmentResult | null>(null)
+  const [existingInterpretation, setExistingInterpretation] = useState<string | null>(null)
   const [resultLoaded, setResultLoaded] = useState(false)
   const [showRetakeForm, setShowRetakeForm] = useState(false)
   const [result, setResult] = useState<AssessmentResult | null>(null)
-  // Counselor "test mode" — strip student context, take for themselves
+
+  // Counselor "test mode" — take for themselves, see their own saved result
   const [testMode, setTestMode] = useState(false)
   const [testResult, setTestResult] = useState<AssessmentResult | null>(null)
+  const [myOwnResult, setMyOwnResult] = useState<AssessmentResult | null>(null)
+  const [myOwnInterpretation, setMyOwnInterpretation] = useState<string | null>(null)
 
+  // Interpretation streaming state
+  const [interpretation, setInterpretation] = useState<string | null>(null)
+  const [interpretingLoading, setInterpretingLoading] = useState(false)
+  const [interpretingError, setInterpretingError] = useState<string | null>(null)
+
+  // ── Load student (or own) assessment on mount ─────────────────────────────
   useEffect(() => {
     const url = studentId
       ? `${API}/writing/personality-assessment?student_id=${studentId}`
@@ -635,11 +710,90 @@ function SelfDiscoveryTab({
     fetch(url, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => (r.ok ? r.json() : null))
       .then(data => {
-        if (data?.result) setExistingResult(data.result)
+        if (data?.result) {
+          setExistingResult(data.result)
+          if (data.interpretation) setExistingInterpretation(data.interpretation)
+        }
         setResultLoaded(true)
       })
       .catch(() => setResultLoaded(true))
   }, [token, studentId])
+
+  // ── If counselor, also eagerly load their OWN assessment ─────────────────
+  useEffect(() => {
+    if (!isReadOnly) return
+    fetch(`${API}/writing/personality-assessment`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => {
+        if (data?.result) {
+          setMyOwnResult(data.result)
+          if (data.interpretation) setMyOwnInterpretation(data.interpretation)
+        }
+      })
+      .catch(() => {})
+  }, [token, isReadOnly])
+
+  // ── Stream interpretation whenever a result becomes available ─────────────
+  async function fetchInterpretation(forStudentId?: string | null, forceRegenerate = false) {
+    setInterpretingLoading(true)
+    setInterpretingError(null)
+    if (forceRegenerate) setInterpretation(null)
+
+    const freshToken = await getToken()
+    if (!freshToken) { setInterpretingLoading(false); return }
+
+    const url = forStudentId
+      ? `${API}/writing/personality-assessment/interpret?student_id=${forStudentId}`
+      : `${API}/writing/personality-assessment/interpret`
+
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${freshToken}` },
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error((err as { detail?: string }).detail || 'Failed to generate interpretation')
+      }
+      const reader = res.body?.getReader()
+      if (!reader) throw new Error('No response stream')
+      const decoder = new TextDecoder()
+      let buf = ''
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buf += decoder.decode(value, { stream: true })
+        const lines = buf.split('\n')
+        buf = lines.pop() ?? ''
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          const raw = line.slice(6).trim()
+          if (!raw) continue
+          try {
+            const ev = JSON.parse(raw) as { type: string; text?: string; msg?: string }
+            if (ev.type === 'chunk' && ev.text) setInterpretation(prev => (prev ?? '') + ev.text)
+            else if (ev.type === 'text' && ev.text) setInterpretation(ev.text)   // cached
+            else if (ev.type === 'error') throw new Error(ev.msg ?? 'Generation failed')
+          } catch { /* skip parse errors */ }
+        }
+      }
+    } catch (e) {
+      setInterpretingError(e instanceof Error ? e.message : 'Failed to generate essay profile')
+    } finally {
+      setInterpretingLoading(false)
+    }
+  }
+
+  // Trigger interpretation when result first appears
+  useEffect(() => {
+    const displayResult = result || existingResult
+    if (!displayResult) return
+    if (interpretation || interpretingLoading) return
+    // Use cached interpretation from DB if available
+    if (existingInterpretation) { setInterpretation(existingInterpretation); return }
+    fetchInterpretation(studentId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result, existingResult])
 
   const sdCourse = courses.find(c => c.key === 'self_discovery')
 
@@ -653,6 +807,9 @@ function SelfDiscoveryTab({
 
   const displayResult = result || existingResult
   const firstName = studentName ? studentName.split(' ')[0] : null
+
+  // Which interpretation to show in test mode
+  const testInterpretation = myOwnInterpretation
 
   return (
     <div className="space-y-6">
@@ -687,18 +844,28 @@ function SelfDiscoveryTab({
 
         {/* Content */}
         {testMode ? (
-          /* Counselor test mode — form runs against their own profile (no studentId) */
-          testResult ? (
+          /* Counselor test mode — shows their own saved result if available */
+          (testResult || myOwnResult) ? (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-amber-400 bg-amber-900/30 border border-amber-700/40 px-2 py-0.5 rounded-full">
                   Your personal result — not {firstName ?? "the student"}&apos;s
                 </span>
-                <button onClick={() => { setTestMode(false); setTestResult(null) }} className="text-xs text-slate-500 hover:text-slate-300">
-                  Exit test mode
-                </button>
+                <div className="flex items-center gap-3">
+                  {(testResult || myOwnResult) && (
+                    <button
+                      onClick={() => { setTestResult(null); setMyOwnResult(null); setMyOwnInterpretation(null) }}
+                      className="text-xs text-violet-400 hover:text-violet-300"
+                    >
+                      Retake
+                    </button>
+                  )}
+                  <button onClick={() => { setTestMode(false); setTestResult(null) }} className="text-xs text-slate-500 hover:text-slate-300">
+                    Exit test mode
+                  </button>
+                </div>
               </div>
-              <AssessmentResults result={testResult} />
+              <AssessmentResults result={(testResult || myOwnResult)!} />
             </div>
           ) : (
             <div className="space-y-3">
@@ -713,7 +880,7 @@ function SelfDiscoveryTab({
               <PersonalityAssessmentForm
                 token={token}
                 studentId={null}
-                onComplete={r => setTestResult(r)}
+                onComplete={r => { setTestResult(r); setMyOwnResult(r) }}
               />
             </div>
           )
@@ -752,6 +919,9 @@ function SelfDiscoveryTab({
               onComplete={r => {
                 setResult(r)
                 setShowRetakeForm(false)
+                // Clear old interpretation so new one is generated
+                setInterpretation(null)
+                setExistingInterpretation(null)
               }}
             />
           ) : (
@@ -772,6 +942,25 @@ function SelfDiscoveryTab({
           </div>
         )}
       </div>
+
+      {/* Essay profile interpretation — shown below results for student view and counselor read-only */}
+      {!testMode && displayResult && (
+        <InterpretationCard
+          text={interpretation ?? ''}
+          loading={interpretingLoading}
+          error={interpretingError}
+          onRegenerate={() => fetchInterpretation(studentId, true)}
+        />
+      )}
+
+      {/* Test mode interpretation — counselor's own essay profile */}
+      {testMode && (testResult || myOwnResult) && (
+        <InterpretationCard
+          text={testInterpretation ?? ''}
+          loading={false}
+          error={null}
+        />
+      )}
 
       {/* Writing assignments */}
       {sdCourse && sdCourse.assignments.length > 0 && (
