@@ -811,15 +811,13 @@ function SelfDiscoveryTab({
   // ── If counselor, also eagerly load their OWN assessment ─────────────────
   useEffect(() => {
     if (!isReadOnly) return
-    console.log('[SelfDiscovery] fetching own assessment, isReadOnly=', isReadOnly)
     getToken().then(freshToken => {
-      if (!freshToken) { console.log('[SelfDiscovery] no token'); return }
+      if (!freshToken) return
       return fetch(`${API}/writing/personality-assessment`, {
         headers: { Authorization: `Bearer ${freshToken}` },
       })
-        .then(r => { console.log('[SelfDiscovery] own assessment status:', r.status); return r.ok ? r.json() : null })
+        .then(r => (r.ok ? r.json() : null))
         .then(data => {
-          console.log('[SelfDiscovery] own assessment data:', data)
           if (data?.result) {
             setMyOwnResult(data.result)
             if (data.interpretation) {
@@ -829,7 +827,7 @@ function SelfDiscoveryTab({
             }
           }
         })
-    }).catch(e => console.error('[SelfDiscovery] own assessment error:', e))
+    }).catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isReadOnly])
 
