@@ -88,6 +88,7 @@ function AssignPanel({
 }) {
   const [exercises, setExercises] = useState<LibraryExercise[]>([])
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [note, setNote] = useState('')
   const [assigning, setAssigning] = useState<number | null>(null)
   const [assigned, setAssigned] = useState<Set<number>>(new Set())
@@ -96,9 +97,12 @@ function AssignPanel({
     fetch(`${API}/writing/library?section_key=${sectionKey}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) throw new Error(`${r.status}`)
+        return r.json()
+      })
       .then(data => { setExercises(data.exercises || []); setLoading(false) })
-      .catch(() => setLoading(false))
+      .catch(err => { setFetchError(err.message || 'Failed to load'); setLoading(false) })
   }, [sectionKey, token])
 
   const assign = async (exerciseId: number) => {
@@ -150,6 +154,8 @@ function AssignPanel({
             <div className="flex items-center justify-center py-8">
               <div className="w-6 h-6 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
             </div>
+          ) : fetchError ? (
+            <p className="text-red-400 text-sm text-center py-8">Error loading exercises ({fetchError}). Check that the seed has been run.</p>
           ) : exercises.length === 0 ? (
             <p className="text-slate-400 text-sm text-center py-8">No exercises available for this section yet.</p>
           ) : (
