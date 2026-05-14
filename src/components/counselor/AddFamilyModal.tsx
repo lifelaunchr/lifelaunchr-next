@@ -70,12 +70,12 @@ export default function AddFamilyModal({ open, onClose, onSuccess, counselors }:
   const [actualEndDate, setActualEndDate] = useState('')
   const [graduationYear, setGraduationYear] = useState('')
 
-  // Module flags: null = inherit tenant (access if tenant has it), false = explicitly deny
-  const [essayFlags, setEssayFlags] = useState<Record<EssayFlagKey, boolean | null>>({
-    essay_list_enabled: null,
-    commonapp_enabled:  null,
-    uc_piqs_enabled:    null,
-    why_essays_enabled: null,
+  // Module flags: false = denied (default for new students), true = explicitly granted
+  const [essayFlags, setEssayFlags] = useState<Record<EssayFlagKey, boolean>>({  // false = denied, true = granted
+    essay_list_enabled: false,
+    commonapp_enabled:  false,
+    uc_piqs_enabled:    false,
+    why_essays_enabled: false,
   })
 
   // Editate
@@ -114,7 +114,7 @@ export default function AddFamilyModal({ open, onClose, onSuccess, counselors }:
     setExpectedEndDate('')
     setActualEndDate('')
     setGraduationYear('')
-    setEssayFlags({ essay_list_enabled: null, commonapp_enabled: null, uc_piqs_enabled: null, why_essays_enabled: null })
+    setEssayFlags({ essay_list_enabled: false, commonapp_enabled: false, uc_piqs_enabled: false, why_essays_enabled: false })
     setEditateEnabled(false)
     setEditateReviewLimit('')
     setWritingEnroll({ self_discovery: true, writing_practice: true })
@@ -178,11 +178,11 @@ export default function AddFamilyModal({ open, onClose, onSuccess, counselors }:
         ...(hasModule('editate') && editateEnabled        ? { editate_enabled: true }                          : {}),
         ...(hasModule('editate') && editateReviewLimit.trim()
                                               ? { editate_review_limit: parseInt(editateReviewLimit, 10) }  : {}),
-        // Module flags — only send false (explicit deny); omit null (= inherit tenant)
-        ...(hasModule('essay_list')      && essayFlags.essay_list_enabled === false ? { essay_list_enabled: false } : {}),
-        ...(hasModule('commonapp_essays') && essayFlags.commonapp_enabled  === false ? { commonapp_enabled:  false } : {}),
-        ...(hasModule('uc_piqs')         && essayFlags.uc_piqs_enabled     === false ? { uc_piqs_enabled:    false } : {}),
-        ...(hasModule('why_essays')      && essayFlags.why_essays_enabled  === false ? { why_essays_enabled: false } : {}),
+        // Module flags — send true/false based on what the admin set
+        ...(hasModule('essay_list')       ? { essay_list_enabled: essayFlags.essay_list_enabled } : {}),
+        ...(hasModule('commonapp_essays') ? { commonapp_enabled:  essayFlags.commonapp_enabled  } : {}),
+        ...(hasModule('uc_piqs')          ? { uc_piqs_enabled:    essayFlags.uc_piqs_enabled    } : {}),
+        ...(hasModule('why_essays')       ? { why_essays_enabled: essayFlags.why_essays_enabled } : {}),
       }
 
       const body = isTenantAdmin
@@ -439,10 +439,10 @@ export default function AddFamilyModal({ open, onClose, onSuccess, counselors }:
                             <label key={f.field} className="flex items-center gap-2 cursor-pointer">
                               <input
                                 type="checkbox"
-                                checked={essayFlags[f.field] !== false}
+                                checked={essayFlags[f.field]}
                                 onChange={e => setEssayFlags(prev => ({
                                   ...prev,
-                                  [f.field]: e.target.checked ? null : false,
+                                  [f.field]: e.target.checked,
                                 }))}
                                 className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                               />
@@ -504,7 +504,7 @@ export default function AddFamilyModal({ open, onClose, onSuccess, counselors }:
                     )}
 
                     <p className="text-xs text-gray-400">
-                      Checked essay tools = student inherits tenant access. Uncheck to explicitly deny.
+                      Essay tools are off by default. Check to grant access based on the student&apos;s package.
                       All settings can be adjusted later in the admin panel.
                     </p>
                   </div>
