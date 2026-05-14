@@ -1355,13 +1355,13 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                 </Link>
               )}
 
-              {/* Writing link — any writing or essay module enabled; counselors must have a student selected */}
+              {/* Writing link — any writing or essay module enabled */}
               {(usageData?.writing_self_discovery_module || usageData?.writing_practice_module ||
                 usageData?.essays_module || usageData?.essay_list_module || usageData?.editate_module ||
                 usageData?.commonapp_module || usageData?.uc_piqs_module || usageData?.why_essays_module
-              ) && !(isCounselor && !forStudentId) && (
+              ) && (
                 <Link
-                  href={forStudentId && (isCounselor || isParent) ? `/writing?for=${forStudentId}` : '/writing'}
+                  href="/writing"
                   className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
                 >
                   <span className="text-base leading-none">📝</span>
