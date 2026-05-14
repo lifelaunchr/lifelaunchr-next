@@ -53,10 +53,15 @@ interface UsageData {
   is_admin?: boolean
   is_tenant_admin?: boolean
   scheduling_link?: string | null
-  essays_module?: boolean      // essay prompts available (any tenant with module)
+  essays_module?: boolean                  // legacy: editate/essay_list (any tenant with module)
+  essay_list_module?: boolean              // essay prompt browser (no Editate auth required)
+  editate_module?: boolean                 // Editate magic links enabled
+  commonapp_module?: boolean               // CommonApp Essay section in writing hub
+  uc_piqs_module?: boolean                 // UC PIQ section in writing hub
+  why_essays_module?: boolean              // Why Major + Why College in writing hub
   writing_self_discovery_module?: boolean  // Self-Discovery Journey writing course
   writing_practice_module?: boolean        // Writing Practice course
-  editate_available?: boolean  // editate link + drafts (LifeLaunchr + editate_enabled)
+  editate_available?: boolean              // editate link + drafts (LifeLaunchr + editate_enabled)
   sessions_used?: number          // caller's own pool — always present
   session_limit?: number | null
   session_reset_date?: string | null
@@ -1350,19 +1355,11 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                 </Link>
               )}
 
-              {/* Essays link — essays module enabled; counselors must have a student selected */}
-              {usageData?.essays_module && !(isCounselor && !forStudentId) && (
-                <Link
-                  href={forStudentId && (isCounselor || isParent) ? `/essays?for=${forStudentId}` : '/essays'}
-                  className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
-                >
-                  <span className="text-base leading-none">✏️</span>
-                  <span>Essays</span>
-                </Link>
-              )}
-
-              {/* Writing link — writing module enabled; students and counselors with student selected */}
-              {(usageData?.writing_self_discovery_module || usageData?.writing_practice_module) && !(isCounselor && !forStudentId) && (
+              {/* Writing link — any writing or essay module enabled; counselors must have a student selected */}
+              {(usageData?.writing_self_discovery_module || usageData?.writing_practice_module ||
+                usageData?.essays_module || usageData?.essay_list_module || usageData?.editate_module ||
+                usageData?.commonapp_module || usageData?.uc_piqs_module || usageData?.why_essays_module
+              ) && !(isCounselor && !forStudentId) && (
                 <Link
                   href={forStudentId && (isCounselor || isParent) ? `/writing?for=${forStudentId}` : '/writing'}
                   className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"

@@ -14,6 +14,12 @@ interface UsageData {
   writing_self_discovery_module?: boolean
   writing_practice_module?: boolean
   essays_module?: boolean
+  essay_list_module?: boolean
+  editate_module?: boolean
+  commonapp_module?: boolean
+  uc_piqs_module?: boolean
+  why_essays_module?: boolean
+  editate_available?: boolean
   beneficiary?: {
     user_id: number
     full_name?: string | null
@@ -1543,6 +1549,51 @@ function WritingPracticeTab({
   )
 }
 
+function EssaySectionTab({
+  sectionKey,
+  label,
+  description,
+  assignments,
+  studentId,
+  isCounselor,
+}: {
+  sectionKey: string
+  label: string
+  description: string
+  assignments: WritingAssignment[]
+  studentId?: string | null
+  isCounselor?: boolean
+}) {
+  const sectionAssignments = assignments.filter(a => a.section_key === sectionKey)
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-base font-semibold text-white mb-1">{label}</h2>
+        <p className="text-xs text-slate-500 leading-relaxed">{description}</p>
+      </div>
+
+      {sectionAssignments.length > 0 ? (
+        <div className="space-y-3">
+          {sectionAssignments.map(a => (
+            <AssignmentCard key={a.id} a={a} studentId={studentId} />
+          ))}
+        </div>
+      ) : (
+        <div className="py-12 text-center bg-slate-800/30 rounded-xl border border-slate-700/30">
+          {isCounselor ? (
+            <p className="text-slate-500 text-sm">No exercises assigned yet.<br />
+              <span className="text-slate-600 text-xs mt-1 block">Use the exercise library to assign {label.toLowerCase()} exercises.</span>
+            </p>
+          ) : (
+            <p className="text-slate-500 text-sm">Your coach hasn&apos;t assigned any {label.toLowerCase()} exercises yet.</p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 function WritingPageInner() {
@@ -1611,11 +1662,15 @@ function WritingPageInner() {
 
   const isCounselor = usageData?.account_type === 'counselor'
   const isParent = usageData?.account_type === 'parent'
-  const showSelfDiscovery = usageData?.writing_self_discovery_module !== false
+  const showSelfDiscovery   = usageData?.writing_self_discovery_module !== false
   const showWritingPractice = usageData?.writing_practice_module !== false
-  const showEssayStatus = !!usageData?.essays_module
+  const showEssayStatus     = !!(usageData?.essays_module || usageData?.essay_list_module || usageData?.editate_module)
+  const showCommonApp       = !!usageData?.commonapp_module
+  const showUCPIQs          = !!usageData?.uc_piqs_module
+  const showWhyEssays       = !!usageData?.why_essays_module
+  const showEssayHub        = showEssayStatus || showCommonApp || showUCPIQs || showWhyEssays
 
-  const defaultSection = showSelfDiscovery ? 'sd-1' : showWritingPractice ? 'practice' : 'essays'
+  const defaultSection = showSelfDiscovery ? 'sd-1' : showWritingPractice ? 'practice' : showCommonApp ? 'commonapp' : showUCPIQs ? 'uc_piqs' : 'essays'
   const activeSection = sectionParam || defaultSection
 
   function navigate(section: string) {
@@ -1720,21 +1775,71 @@ function WritingPageInner() {
               </>
             )}
 
-            {showEssayStatus && (
+            {showEssayHub && (
               <>
                 <p className="text-[10px] uppercase tracking-widest text-slate-600 px-3 pt-4 pb-1.5">
                   Essays
                 </p>
-                <button
-                  onClick={() => navigate('essays')}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
-                    activeSection === 'essays'
-                      ? 'bg-violet-600/20 text-violet-300 font-medium'
-                      : 'text-slate-400 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  Essay Status
-                </button>
+                {showCommonApp && (
+                  <button
+                    onClick={() => navigate('commonapp')}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
+                      activeSection === 'commonapp'
+                        ? 'bg-violet-600/20 text-violet-300 font-medium'
+                        : 'text-slate-400 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    CommonApp Essay
+                  </button>
+                )}
+                {showUCPIQs && (
+                  <button
+                    onClick={() => navigate('uc_piqs')}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
+                      activeSection === 'uc_piqs'
+                        ? 'bg-violet-600/20 text-violet-300 font-medium'
+                        : 'text-slate-400 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    UC Personal Insight
+                  </button>
+                )}
+                {showWhyEssays && (
+                  <>
+                    <button
+                      onClick={() => navigate('why_major')}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
+                        activeSection === 'why_major'
+                          ? 'bg-violet-600/20 text-violet-300 font-medium'
+                          : 'text-slate-400 hover:text-white hover:bg-white/5'
+                      }`}
+                    >
+                      Why Major
+                    </button>
+                    <button
+                      onClick={() => navigate('why_college')}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
+                        activeSection === 'why_college'
+                          ? 'bg-violet-600/20 text-violet-300 font-medium'
+                          : 'text-slate-400 hover:text-white hover:bg-white/5'
+                      }`}
+                    >
+                      Why College
+                    </button>
+                  </>
+                )}
+                {showEssayStatus && (
+                  <button
+                    onClick={() => navigate('essays')}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
+                      activeSection === 'essays'
+                        ? 'bg-violet-600/20 text-violet-300 font-medium'
+                        : 'text-slate-400 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    Prompts &amp; Drafts
+                  </button>
+                )}
               </>
             )}
           </nav>
@@ -1800,18 +1905,68 @@ function WritingPageInner() {
                   <WritingPracticeTab assignments={assignments} studentId={forParam} isCounselor={isCounselor} />
                 )}
 
-                {/* Essay Status — placeholder until Essays page is migrated here */}
+                {/* CommonApp Essay */}
+                {activeSection === 'commonapp' && showCommonApp && (
+                  <EssaySectionTab
+                    sectionKey="commonapp"
+                    label="CommonApp Personal Statement"
+                    description="Brainstorm ideas, find your angle, and develop your Common Application personal statement. Start with the brainstorm exercise, then move to drafting once you've found your story."
+                    assignments={assignments}
+                    studentId={forParam}
+                    isCounselor={isCounselor}
+                  />
+                )}
+
+                {/* UC Personal Insight Questions */}
+                {activeSection === 'uc_piqs' && showUCPIQs && (
+                  <EssaySectionTab
+                    sectionKey="uc_piqs"
+                    label="UC Personal Insight Questions"
+                    description="Plan your four UC PIQ responses. Use the outline exercise to map a story to each prompt before you start writing."
+                    assignments={assignments}
+                    studentId={forParam}
+                    isCounselor={isCounselor}
+                  />
+                )}
+
+                {/* Why Major */}
+                {activeSection === 'why_major' && showWhyEssays && (
+                  <EssaySectionTab
+                    sectionKey="why_major"
+                    label="Why Major"
+                    description="Articulate your academic interest, preparation, and goals for your intended major. This inventory feeds your Why Major essays across multiple schools."
+                    assignments={assignments}
+                    studentId={forParam}
+                    isCounselor={isCounselor}
+                  />
+                )}
+
+                {/* Why College */}
+                {activeSection === 'why_college' && showWhyEssays && (
+                  <EssaySectionTab
+                    sectionKey="why_college"
+                    label="Why College"
+                    description="Write compelling Why College essays grounded in your actual research. Each exercise is tied to a specific school on your list."
+                    assignments={assignments}
+                    studentId={forParam}
+                    isCounselor={isCounselor}
+                  />
+                )}
+
+                {/* Prompts & Drafts — Editate integration */}
                 {activeSection === 'essays' && showEssayStatus && (
                   <div className="space-y-4">
-                    <h2 className="text-base font-semibold text-white">Essay Status</h2>
-                    <p className="text-sm text-slate-400">
-                      Your essay prompts and draft status will appear here.
-                    </p>
+                    <div>
+                      <h2 className="text-base font-semibold text-white mb-1">Essay Prompts &amp; Drafts</h2>
+                      <p className="text-sm text-slate-400">
+                        Browse all essay prompts for your college list and track your drafts in one place.
+                      </p>
+                    </div>
                     <Link
                       href={forParam ? `/essays?for=${forParam}` : '/essays'}
                       className="inline-flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm rounded-lg transition-colors"
                     >
-                      Open Essay Status →
+                      Open Essay Tracker →
                     </Link>
                   </div>
                 )}
