@@ -55,7 +55,9 @@ export default function AddFamilyModal({ open, onClose, onSuccess, counselors }:
   const hasModule = (key: string) => tenantModules.includes(key)
   const hasAnyEssayModule = ESSAY_FLAGS.some(f => hasModule(f.module)) || hasModule('editate')
   const hasAnyWritingModule = WRITING_SECTIONS.some(s => hasModule(s.module))
-  const showAccessSection = hasAnyEssayModule || hasAnyWritingModule
+  // Only tenant admins (and platform admins/super-admins) can set module access at creation time.
+  // Regular counselors skip this section; the student inherits tenant defaults (all flags = null).
+  const showAccessSection = isTenantAdmin && (hasAnyEssayModule || hasAnyWritingModule)
 
   // ── Form state ────────────────────────────────────────────────────────────
   const [studentName, setStudentName] = useState('')
