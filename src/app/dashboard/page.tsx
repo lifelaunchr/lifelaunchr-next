@@ -177,6 +177,53 @@ function EditPanel({
   const [inviteLoading, setInviteLoading] = useState(false)
   const [copied, setCopied] = useState(false)
 
+  // Writing section enrollment state
+  const [writingSections, setWritingSections] = useState<{key: string; title: string}[]>([])
+  const [enrolledSections, setEnrolledSections] = useState<Set<string>>(new Set())
+  const [enrollmentLoading, setEnrollmentLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchWritingSections() {
+      try {
+        const token = await getToken()
+        const res = await fetch(`${apiUrl}/writing/sections?student_id=${student.id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setWritingSections((data.sections || []).map((s: {key: string; title: string}) => ({ key: s.key, title: s.title })))
+          const enrolled = new Set<string>(
+            (data.sections || []).filter((s: {enrolled?: boolean}) => s.enrolled).map((s: {key: string}) => s.key)
+          )
+          setEnrolledSections(enrolled)
+        }
+      } catch { /* ignore */ }
+      finally { setEnrollmentLoading(false) }
+    }
+    fetchWritingSections()
+  }, [student.id, getToken])
+
+  const toggleEnrollment = async (sectionKey: string, enroll: boolean) => {
+    const prev = new Set(enrolledSections)
+    // Optimistic update
+    if (enroll) {
+      setEnrolledSections(s => { const n = new Set(s); n.add(sectionKey); return n })
+    } else {
+      setEnrolledSections(s => { const n = new Set(s); n.delete(sectionKey); return n })
+    }
+    try {
+      const token = await getToken()
+      await fetch(`${apiUrl}/writing/enroll`, {
+        method: enroll ? 'POST' : 'DELETE',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ student_id: student.id, section_key: sectionKey }),
+      })
+    } catch {
+      // Revert on error
+      setEnrolledSections(prev)
+    }
+  }
+
   const set = (k: keyof DashboardStudent, v: unknown) =>
     setForm(p => ({ ...p, [k]: v }))
 
@@ -349,6 +396,31 @@ function EditPanel({
               <p className="text-xs text-gray-400 mt-1">Overrides the default scheduling link for this student only.</p>
             </Field>
           </section>
+
+          {/* Writing & Essays Access */}
+          {writingSections.length > 0 && (
+          <section>
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Writing &amp; Essays</h3>
+            <p className="text-xs text-gray-400 mb-3">Check the sections this student can access.</p>
+            {enrollmentLoading ? (
+              <p className="text-xs text-gray-400">Loading…</p>
+            ) : (
+              <div className="space-y-1.5">
+                {writingSections.map(s => (
+                  <label key={s.key} className="flex items-center gap-2.5 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={enrolledSections.has(s.key)}
+                      onChange={e => toggleEnrollment(s.key, e.target.checked)}
+                      className="rounded text-blue-600"
+                    />
+                    <span className="text-sm text-gray-700 group-hover:text-gray-900">{s.title}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </section>
+          )}
 
           {/* Notes */}
           <section>
