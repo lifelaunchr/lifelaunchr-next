@@ -1,5 +1,29 @@
 @AGENTS.md
 
+## 🚨 ACTIVE FEATURE IN PROGRESS — READ BEFORE ANY COMMIT
+
+**`main` is NOT stable. Do NOT push anything to `production`.**
+
+The Writing & Essays hub (app#119 / next#52 / next#53) is partially deployed to `main` and has not been fully tested. Until the user explicitly says "looks good on staging" and approves a production push, all of the following are prohibited:
+- `git push --force-with-lease origin main:production`
+- Any cherry-pick to `production`
+- Any tagging of a new version
+
+**What's in-flight on `main` (as of 2026-05-14):**
+- New writing hub sections: CommonApp Essay, UC PIQs, Why Major, Why College
+- Coach exercise assignment panel (`AssignPanel` component in `/writing`)
+- Student writing access checkboxes in the dashboard edit panel
+- New module keys (`essay_list`, `editate`, `commonapp_essays`, `uc_piqs`, `why_essays`) seeded on LifeLaunchr tenant
+- Meeting brief now includes writing/essay assignment status
+- `DELETE /writing/enroll` unenroll endpoint
+- app#123 fix: parent CC bug (`notify_parent_session_reports IS NULL`)
+
+**Lesson learned:** Update CLAUDE.md with an active-feature notice BEFORE starting any multi-session feature work. This prevents a future Claude session from treating `main` as stable and pushing to production.
+
+When this feature is tested and approved for production, remove this section and tag v1.0.38.
+
+---
+
 ## ⚠️ CRITICAL — TWO REPO RULE (READ FIRST, EVERY SESSION)
 
 **This repo (`lifelaunchr-next`) is FRONTEND ONLY (Next.js → Vercel).**
