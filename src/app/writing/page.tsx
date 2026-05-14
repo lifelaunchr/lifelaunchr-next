@@ -6,6 +6,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { WritingCoachView } from '@/components/writing/WritingCoachView'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -1770,6 +1771,7 @@ function WritingPageInner() {
 
   const forParam = searchParams.get('for')
   const sectionParam = searchParams.get('section')
+  const fromParam = searchParams.get('from')
 
   const [token, setToken] = useState<string | null>(null)
   const [usageData, setUsageData] = useState<UsageData | null>(null)
@@ -1854,10 +1856,26 @@ function WritingPageInner() {
     router.replace(`/writing?${params.toString()}`)
   }
 
-  if (!isLoaded || !token) {
+  if (!isLoaded || !token || !usageData) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  // Counselors and parents without a ?for= param → writing coach/parent view
+  if (!forParam && (isCounselor || isParent)) {
+    return (
+      <div className="h-screen bg-slate-900 text-white flex flex-col overflow-hidden">
+        <div className="border-b border-slate-800 px-4 py-3 flex items-center gap-3 flex-shrink-0">
+          <Link href="/chat" className="text-slate-400 hover:text-white text-sm">← Chat</Link>
+          <span className="text-slate-700">|</span>
+          <h1 className="text-base font-semibold">
+            {isParent ? 'Writing Progress' : 'Writing Assignments'}
+          </h1>
+        </div>
+        <WritingCoachView token={token} readOnly={isParent} />
       </div>
     )
   }
@@ -1876,7 +1894,11 @@ function WritingPageInner() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
-        <Link href="/chat" className="text-slate-400 hover:text-white text-sm">← Chat</Link>
+        {fromParam === 'writing' ? (
+          <Link href="/writing" className="text-slate-400 hover:text-white text-sm">← Writing</Link>
+        ) : (
+          <Link href="/chat" className="text-slate-400 hover:text-white text-sm">← Chat</Link>
+        )}
         <span className="text-slate-700">|</span>
         <h1 className="text-base font-semibold">Writing</h1>
         {(isCounselor || isParent) && forParam && studentDisplayName && (
