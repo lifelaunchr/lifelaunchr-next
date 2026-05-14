@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '@clerk/nextjs'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
@@ -20,14 +20,44 @@ interface Props {
   counselors?: CounselorOption[]
 }
 
+// Map writing section keys to the tenant module that gates them
+const WRITING_SECTIONS = [
+  { key: 'self_discovery',   title: 'Self-Discovery Journey', module: 'writing_self_discovery' },
+  { key: 'writing_practice', title: 'Writing Practice',        module: 'writing_practice'       },
+] as const
+
+// Essay module flags: { fieldKey, label, tenantModule }
+const ESSAY_FLAGS = [
+  { field: 'essay_list_enabled',  label: 'Essay List',                         module: 'essay_list'      },
+  { field: 'commonapp_enabled',   label: 'CommonApp Essay',                    module: 'commonapp_essays' },
+  { field: 'uc_piqs_enabled',     label: 'UC Personal Insight Questions',      module: 'uc_piqs'          },
+  { field: 'why_essays_enabled',  label: 'Why Major / Why College Essays',     module: 'why_essays'       },
+] as const
+
+type EssayFlagKey = 'essay_list_enabled' | 'commonapp_enabled' | 'uc_piqs_enabled' | 'why_essays_enabled'
+
 export default function AddFamilyModal({ open, onClose, onSuccess, counselors }: Props) {
   const { getToken } = useAuth()
   const isTenantAdmin = counselors !== undefined && counselors.length > 0
-  // counselors is guaranteed populated on mount because dashboard passes key={tenantCounselors ? 'ta' : 'c'}
-  // which forces a remount after the async fetch completes.
   const [selectedCounselorId, setSelectedCounselorId] = useState<number | null>(
     isTenantAdmin ? counselors[0].id : null
   )
+
+  // ── Tenant modules (fetched once on mount) ────────────────────────────────
+  const [tenantModules, setTenantModules] = useState<string[]>([])
+  useEffect(() => {
+    fetch(API + '/tenant-config')
+      .then(r => r.json())
+      .then(d => setTenantModules(d.enabled_modules || []))
+      .catch(() => {/* non-critical */})
+  }, [])
+
+  const hasModule = (key: string) => tenantModules.includes(key)
+  const hasAnyEssayModule = ESSAY_FLAGS.some(f => hasModule(f.module)) || hasModule('editate')
+  const hasAnyWritingModule = WRITING_SECTIONS.some(s => hasModule(s.module))
+  const showAccessSection = hasAnyEssayModule || hasAnyWritingModule
+
+  // ── Form state ────────────────────────────────────────────────────────────
   const [studentName, setStudentName] = useState('')
   const [studentEmail, setStudentEmail] = useState('')
   const [parents, setParents] = useState<ParentEntry[]>([{ full_name: '', email: '' }])
@@ -36,9 +66,27 @@ export default function AddFamilyModal({ open, onClose, onSuccess, counselors }:
   const [startDate, setStartDate] = useState('')
   const [expectedEndDate, setExpectedEndDate] = useState('')
   const [actualEndDate, setActualEndDate] = useState('')
+  const [graduationYear, setGraduationYear] = useState('')
+
+  // Module flags: null = inherit tenant (access if tenant has it), false = explicitly deny
+  const [essayFlags, setEssayFlags] = useState<Record<EssayFlagKey, boolean | null>>({
+    essay_list_enabled: null,
+    commonapp_enabled:  null,
+    uc_piqs_enabled:    null,
+    why_essays_enabled: null,
+  })
+
+  // Editate
   const [editateEnabled, setEditateEnabled] = useState(false)
   const [editateReviewLimit, setEditateReviewLimit] = useState('')
-  const [graduationYear, setGraduationYear] = useState('')
+
+  // Writing section enrollment (post-creation)
+  const [writingEnroll, setWritingEnroll] = useState<Record<string, boolean>>({
+    self_discovery:   true,
+    writing_practice: true,
+  })
+
+  // ── Result / UI state ─────────────────────────────────────────────────────
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState<FamilyResult | null>(null)
@@ -63,9 +111,11 @@ export default function AddFamilyModal({ open, onClose, onSuccess, counselors }:
     setStartDate('')
     setExpectedEndDate('')
     setActualEndDate('')
+    setGraduationYear('')
+    setEssayFlags({ essay_list_enabled: null, commonapp_enabled: null, uc_piqs_enabled: null, why_essays_enabled: null })
     setEditateEnabled(false)
     setEditateReviewLimit('')
-    setGraduationYear('')
+    setWritingEnroll({ self_discovery: true, writing_practice: true })
     setError('')
     setResult(null)
     setResultNames({ studentName: '', parentNames: [] })
@@ -113,16 +163,26 @@ export default function AddFamilyModal({ open, onClose, onSuccess, counselors }:
       const token = await getToken()
       const fp = parents.filter(p => p.full_name.trim() && p.email.trim())
       const endpoint = isTenantAdmin ? '/tenant-admin/families' : '/counselors/me/families'
+
+      // Build engagement + access fields
       const engagementFields = {
-        ...(engagementType                    ? { engagement_type:       engagementType }                           : {}),
-        ...(packageName.trim()                ? { coaching_package_name: packageName.trim() }                       : {}),
-        ...(startDate                         ? { start_date:            startDate }                                : {}),
-        ...(expectedEndDate                   ? { expected_end_date:     expectedEndDate }                          : {}),
-        ...(actualEndDate                     ? { actual_end_date:       actualEndDate }                            : {}),
-        ...(editateEnabled                    ? { editate_enabled:       true }                                     : {}),
-        ...(editateReviewLimit.trim()         ? { editate_review_limit:  parseInt(editateReviewLimit, 10) }         : {}),
-        ...(graduationYear.trim()             ? { graduation_year:       parseInt(graduationYear, 10) }             : {}),
+        ...(engagementType                    ? { engagement_type:       engagementType }                   : {}),
+        ...(packageName.trim()                ? { coaching_package_name: packageName.trim() }               : {}),
+        ...(startDate                         ? { start_date:            startDate }                        : {}),
+        ...(expectedEndDate                   ? { expected_end_date:     expectedEndDate }                  : {}),
+        ...(actualEndDate                     ? { actual_end_date:       actualEndDate }                    : {}),
+        ...(graduationYear.trim()             ? { graduation_year:       parseInt(graduationYear, 10) }     : {}),
+        // Editate (only send if module is active for this tenant)
+        ...(hasModule('editate') && editateEnabled        ? { editate_enabled: true }                          : {}),
+        ...(hasModule('editate') && editateReviewLimit.trim()
+                                              ? { editate_review_limit: parseInt(editateReviewLimit, 10) }  : {}),
+        // Module flags — only send false (explicit deny); omit null (= inherit tenant)
+        ...(hasModule('essay_list')      && essayFlags.essay_list_enabled === false ? { essay_list_enabled: false } : {}),
+        ...(hasModule('commonapp_essays') && essayFlags.commonapp_enabled  === false ? { commonapp_enabled:  false } : {}),
+        ...(hasModule('uc_piqs')         && essayFlags.uc_piqs_enabled     === false ? { uc_piqs_enabled:    false } : {}),
+        ...(hasModule('why_essays')      && essayFlags.why_essays_enabled  === false ? { why_essays_enabled: false } : {}),
       }
+
       const body = isTenantAdmin
         ? {
             counselor_id: selectedCounselorId,
@@ -135,11 +195,13 @@ export default function AddFamilyModal({ open, onClose, onSuccess, counselors }:
             parents: fp.map(p => ({ full_name: p.full_name.trim(), email: p.email.trim() })),
             ...engagementFields,
           }
+
       const res = await fetch(API + endpoint, {
         method: 'POST',
         headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
+
       if (!res.ok) {
         const d = await res.json().catch(() => ({}))
         const detail = d.detail
@@ -155,7 +217,27 @@ export default function AddFamilyModal({ open, onClose, onSuccess, counselors }:
         }
         throw new Error(typeof detail === 'string' ? detail : 'Error ' + res.status)
       }
+
       const data: FamilyResult = await res.json()
+
+      // ── Writing section enrollment (fire-and-forget after creation) ──────
+      const studentId = data.student.id
+      const sectionsToEnroll = WRITING_SECTIONS.filter(
+        s => hasModule(s.module) && writingEnroll[s.key]
+      )
+      if (sectionsToEnroll.length > 0) {
+        // Best-effort; don't block or fail the modal if enrollment fails
+        Promise.all(
+          sectionsToEnroll.map(s =>
+            fetch(API + '/writing/enroll', {
+              method: 'POST',
+              headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ student_id: studentId, section_key: s.key }),
+            })
+          )
+        ).catch(() => {/* non-critical */})
+      }
+
       setResult(data)
       setResultNames({ studentName: studentName.trim(), parentNames: fp.map(p => p.full_name.trim()) })
     } catch (e: unknown) {
@@ -221,6 +303,8 @@ export default function AddFamilyModal({ open, onClose, onSuccess, counselors }:
           ) : (
             <div>
               {error && <div className="mb-4 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>}
+
+              {/* ── Counselor selector (tenant admin only) ── */}
               {isTenantAdmin && (
                 <div className="mb-5">
                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Assign to Counselor</label>
@@ -235,6 +319,8 @@ export default function AddFamilyModal({ open, onClose, onSuccess, counselors }:
                   </select>
                 </div>
               )}
+
+              {/* ── Student ── */}
               <div className="mb-5">
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Student</label>
                 <div className="space-y-3">
@@ -242,6 +328,8 @@ export default function AddFamilyModal({ open, onClose, onSuccess, counselors }:
                   <input type="email" placeholder="Email address" value={studentEmail} onChange={e => setStudentEmail(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
               </div>
+
+              {/* ── Parents ── */}
               <div className="mb-5">
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Parents / Guardians</label>
                 <div className="space-y-3">
@@ -257,6 +345,8 @@ export default function AddFamilyModal({ open, onClose, onSuccess, counselors }:
                 </div>
                 {parents.length < 4 && <button onClick={addParent} className="mt-2 text-sm text-blue-600 hover:text-blue-700 font-medium">+ Add another parent</button>}
               </div>
+
+              {/* ── Engagement Details ── */}
               <div className="mb-5">
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Engagement Details <span className="font-normal normal-case text-gray-400">(optional)</span></label>
                 <div className="space-y-3">
@@ -326,31 +416,99 @@ export default function AddFamilyModal({ open, onClose, onSuccess, counselors }:
                         className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">Feedback Rounds</label>
-                      <input
-                        type="number"
-                        placeholder="e.g. 3"
-                        min={0}
-                        max={99}
-                        value={editateReviewLimit}
-                        onChange={e => setEditateReviewLimit(e.target.value)}
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2 pb-2">
-                      <input
-                        id="editate-enabled"
-                        type="checkbox"
-                        checked={editateEnabled}
-                        onChange={e => setEditateEnabled(e.target.checked)}
-                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <label htmlFor="editate-enabled" className="text-sm text-gray-700 cursor-pointer">Editate enabled</label>
-                    </div>
                   </div>
                 </div>
               </div>
+
+              {/* ── Writing & Essay Access (only shown when tenant has relevant modules) ── */}
+              {showAccessSection && (
+                <div className="mb-5">
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                    Writing &amp; Essay Access <span className="font-normal normal-case text-gray-400">(optional)</span>
+                  </label>
+                  <div className="bg-gray-50 rounded-lg p-3 space-y-4">
+
+                    {/* Essay module flags */}
+                    {hasAnyEssayModule && (
+                      <div>
+                        <p className="text-xs font-medium text-gray-600 mb-2">Essay Tools</p>
+                        <div className="space-y-1.5">
+                          {ESSAY_FLAGS.filter(f => hasModule(f.module)).map(f => (
+                            <label key={f.field} className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={essayFlags[f.field] !== false}
+                                onChange={e => setEssayFlags(prev => ({
+                                  ...prev,
+                                  [f.field]: e.target.checked ? null : false,
+                                }))}
+                                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              />
+                              <span className="text-sm text-gray-700">{f.label}</span>
+                            </label>
+                          ))}
+                          {/* Editate */}
+                          {hasModule('editate') && (
+                            <div className="mt-2 pt-2 border-t border-gray-200">
+                              <label className="flex items-center gap-2 cursor-pointer mb-2">
+                                <input
+                                  id="add-editate-enabled"
+                                  type="checkbox"
+                                  checked={editateEnabled}
+                                  onChange={e => setEditateEnabled(e.target.checked)}
+                                  className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                />
+                                <span className="text-sm text-gray-700">Enable Editate essay feedback</span>
+                              </label>
+                              {editateEnabled && (
+                                <div className="ml-6">
+                                  <label className="block text-xs text-gray-500 mb-1">Max Feedback Rounds</label>
+                                  <input
+                                    type="number"
+                                    placeholder="e.g. 3"
+                                    min={0}
+                                    max={99}
+                                    value={editateReviewLimit}
+                                    onChange={e => setEditateReviewLimit(e.target.value)}
+                                    className="w-32 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Writing coaching enrollment */}
+                    {hasAnyWritingModule && (
+                      <div className={hasAnyEssayModule ? 'pt-3 border-t border-gray-200' : ''}>
+                        <p className="text-xs font-medium text-gray-600 mb-2">Writing Coaching</p>
+                        <p className="text-xs text-gray-400 mb-2">Checked sections will be auto-enrolled when the student is created.</p>
+                        <div className="space-y-1.5">
+                          {WRITING_SECTIONS.filter(s => hasModule(s.module)).map(s => (
+                            <label key={s.key} className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={writingEnroll[s.key] ?? true}
+                                onChange={e => setWritingEnroll(prev => ({ ...prev, [s.key]: e.target.checked }))}
+                                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              />
+                              <span className="text-sm text-gray-700">{s.title}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <p className="text-xs text-gray-400">
+                      Checked essay tools = student inherits tenant access. Uncheck to explicitly deny.
+                      All settings can be adjusted later in the admin panel.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="flex gap-3">
                 <button onClick={onClose} className="flex-1 px-4 py-2.5 text-sm font-medium border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button>
                 <button onClick={handleSubmit} disabled={submitting} className="flex-1 px-4 py-2.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">{submitting ? 'Adding...' : 'Add Family'}</button>
