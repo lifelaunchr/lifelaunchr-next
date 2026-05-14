@@ -21,24 +21,27 @@ interface UsageData {
   }
 }
 
-interface Course {
+interface WritingAssignment {
   id: number
-  key: string
-  title: string
-  description: string | null
-  sort_order: number
-  enrolled: boolean
-  assignments: Assignment[]
-}
-
-interface Assignment {
-  id: number
-  sort_order: number
-  title: string
-  description: string | null
-  word_count_min: number | null
-  word_count_max: number | null
-  unit_number: number
+  exercise_id: number
+  status: 'assigned' | 'in_progress' | 'submitted' | 'reviewed'
+  note_to_student: string | null
+  due_date: string | null
+  college_list_id: number | null
+  assigned_at: string
+  exercise_title: string
+  prompt_text: string | null
+  framing_content: string | null
+  exercise_type: string
+  word_limit: number | null
+  time_limit_minutes: number | null
+  is_timed: boolean
+  response_schema: object | null
+  unit_title: string
+  section_key: string
+  section_title: string
+  latest_revision: number | null
+  last_submitted_at: string | null
 }
 
 interface AssessmentResult {
@@ -754,14 +757,12 @@ function SelfDiscoveryTab({
   studentName,
   isReadOnly,
   canRegenerate = true,
-  courses,
 }: {
   token: string
   studentId?: string | null
   studentName?: string | null
   isReadOnly?: boolean
   canRegenerate?: boolean
-  courses: Course[]
 }) {
   const { getToken } = useAuth()
 
@@ -890,7 +891,7 @@ function SelfDiscoveryTab({
     }
   }
 
-  const sdCourse = courses.find(c => c.key === 'self_discovery')
+  // sdCourse removed — enrollment gated at section level now
 
   if (!resultLoaded) {
     return (
@@ -1419,25 +1420,74 @@ function ValuesReflectionSection({
 
 // ── Unit assignment list (Units 2–4 of Self-Discovery) ─────────────────────────
 
-function UnitAssignmentList({
-  unitNumber,
-  courses,
-  studentId,
-  unitLabels,
-}: {
-  unitNumber: number
-  courses: Course[]
-  studentId?: string | null
-  unitLabels: Record<number, string>
-}) {
-  const sdCourse = courses.find(c => c.key === 'writing_self_discovery')
-  const assignments = sdCourse?.assignments.filter(a => a.unit_number === unitNumber) || []
-  const label = unitLabels[unitNumber] || `Unit ${unitNumber}`
+const STATUS_BADGE: Record<string, { label: string; className: string }> = {
+  assigned:    { label: 'Not started',  className: 'text-slate-500' },
+  in_progress: { label: 'In progress',  className: 'text-amber-400' },
+  submitted:   { label: 'Submitted',    className: 'text-violet-400' },
+  reviewed:    { label: 'Reviewed ✓',   className: 'text-green-400' },
+}
 
-  if (assignments.length === 0) {
+function AssignmentCard({ a, studentId }: { a: WritingAssignment; studentId?: string | null }) {
+  const badge = STATUS_BADGE[a.status] || STATUS_BADGE.assigned
+  return (
+    <Link
+      href={`/writing/assignment/${a.id}${studentId ? `?for=${studentId}` : ''}`}
+      className="block bg-slate-800/50 rounded-xl border border-slate-700/50 p-4 hover:border-violet-500/40 hover:bg-slate-800 transition-all"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <span className="text-sm text-white">{a.exercise_title}</span>
+        <span className={`text-xs flex-shrink-0 ${badge.className}`}>{badge.label}</span>
+      </div>
+      {a.note_to_student && (
+        <p className="text-xs text-slate-400 mt-1 italic">"{a.note_to_student}"</p>
+      )}
+      <div className="flex items-center gap-3 mt-2">
+        {a.word_limit && (
+          <span className="text-xs text-slate-600">Up to {a.word_limit} words</span>
+        )}
+        {a.is_timed && a.time_limit_minutes && (
+          <span className="text-xs text-slate-600">⏱ {a.time_limit_minutes} min</span>
+        )}
+        {a.due_date && (
+          <span className="text-xs text-slate-600">Due {new Date(a.due_date).toLocaleDateString()}</span>
+        )}
+      </div>
+    </Link>
+  )
+}
+
+function UnitAssignmentList({
+  sectionKey,
+  unitTitle,
+  label,
+  assignments,
+  studentId,
+  isCounselor,
+}: {
+  sectionKey: string
+  unitTitle: string
+  label: string
+  assignments: WritingAssignment[]
+  studentId?: string | null
+  isCounselor?: boolean
+}) {
+  const unitAssignments = assignments.filter(
+    a => a.section_key === sectionKey && a.unit_title === unitTitle
+  )
+
+  if (unitAssignments.length === 0) {
     return (
-      <div className="py-12 text-center">
-        <p className="text-slate-500 text-sm">Exercises for <span className="text-slate-400">{label}</span> are coming soon.</p>
+      <div className="space-y-4">
+        <h2 className="text-base font-semibold text-white">{label}</h2>
+        <div className="py-12 text-center bg-slate-800/30 rounded-xl border border-slate-700/30">
+          {isCounselor ? (
+            <p className="text-slate-500 text-sm">No exercises assigned yet.<br />
+              <span className="text-slate-600 text-xs mt-1 block">Assign exercises from the exercise library.</span>
+            </p>
+          ) : (
+            <p className="text-slate-500 text-sm">Your coach hasn&apos;t assigned any exercises here yet.</p>
+          )}
+        </div>
       </div>
     )
   }
@@ -1445,26 +1495,8 @@ function UnitAssignmentList({
   return (
     <div className="space-y-3">
       <h2 className="text-base font-semibold text-white">{label}</h2>
-      {assignments.map(a => (
-        <Link
-          key={a.id}
-          href={`/writing/assignment/${a.id}${studentId ? `?for=${studentId}` : ''}`}
-          className="block bg-slate-800/50 rounded-xl border border-slate-700/50 p-4 hover:border-violet-500/40 hover:bg-slate-800 transition-all"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-white">{a.title}</span>
-            <span className="text-xs text-slate-500">
-              {a.word_count_min && a.word_count_max
-                ? `${a.word_count_min}–${a.word_count_max} words`
-                : a.word_count_max
-                ? `Up to ${a.word_count_max} words`
-                : ''}
-            </span>
-          </div>
-          {a.description && (
-            <p className="text-xs text-slate-400 mt-1">{a.description}</p>
-          )}
-        </Link>
+      {unitAssignments.map(a => (
+        <AssignmentCard key={a.id} a={a} studentId={studentId} />
       ))}
     </div>
   )
@@ -1473,59 +1505,38 @@ function UnitAssignmentList({
 // ── Writing Practice tab ───────────────────────────────────────────────────────
 
 function WritingPracticeTab({
-  courses,
+  assignments,
   studentId,
+  isCounselor,
 }: {
-  courses: Course[]
+  assignments: WritingAssignment[]
   studentId?: string | null
+  isCounselor?: boolean
 }) {
-  const wpCourse = courses.find(c => c.key === 'writing_practice')
-
-  if (!wpCourse) {
-    return (
-      <div className="text-center py-16 text-slate-500 text-sm">
-        Writing Practice course not available.
-      </div>
-    )
-  }
+  const practiceAssignments = assignments.filter(a => a.section_key === 'writing_practice')
 
   return (
     <div className="space-y-4">
-      <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-5">
-        <h3 className="text-base font-semibold text-white mb-2">Writing Practice</h3>
-        <p className="text-xs text-slate-400">
-          Structured exercises to sharpen your voice and storytelling skills before diving into application essays.
-        </p>
-      </div>
+      <h2 className="text-base font-semibold text-white">Writing Practice</h2>
+      <p className="text-xs text-slate-500">
+        Structured exercises to develop your voice and storytelling skills before diving into application essays.
+      </p>
 
-      {wpCourse.assignments.length > 0 ? (
+      {practiceAssignments.length > 0 ? (
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-white">Exercises</h3>
-          {wpCourse.assignments.map(a => (
-            <Link
-              key={a.id}
-              href={`/writing/assignment/${a.id}${studentId ? `?for=${studentId}` : ''}`}
-              className="block bg-slate-800/50 rounded-xl border border-slate-700/50 p-4 hover:border-violet-500/40 hover:bg-slate-800 transition-all"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-white">{a.title}</span>
-                <span className="text-xs text-slate-500">
-                  {a.word_count_min && a.word_count_max
-                    ? `${a.word_count_min}–${a.word_count_max} words`
-                    : a.word_count_max
-                    ? `Up to ${a.word_count_max} words`
-                    : ''}
-                </span>
-              </div>
-              {a.description && (
-                <p className="text-xs text-slate-400 mt-1">{a.description}</p>
-              )}
-            </Link>
+          {practiceAssignments.map(a => (
+            <AssignmentCard key={a.id} a={a} studentId={studentId} />
           ))}
         </div>
       ) : (
-        <div className="text-center py-8 text-slate-500 text-sm">
-          No exercises available yet.
+        <div className="py-12 text-center bg-slate-800/30 rounded-xl border border-slate-700/30">
+          {isCounselor ? (
+            <p className="text-slate-500 text-sm">No exercises assigned yet.<br />
+              <span className="text-slate-600 text-xs mt-1 block">Browse the exercise library to assign writing practice prompts.</span>
+            </p>
+          ) : (
+            <p className="text-slate-500 text-sm">Your coach hasn&apos;t assigned any writing practice exercises yet.</p>
+          )}
         </div>
       )}
     </div>
@@ -1545,8 +1556,8 @@ function WritingPageInner() {
   const [token, setToken] = useState<string | null>(null)
   const [usageData, setUsageData] = useState<UsageData | null>(null)
   const [studentDisplayName, setStudentDisplayName] = useState<string | null>(null)
-  const [courses, setCourses] = useState<Course[]>([])
-  const [loadingCourses, setLoadingCourses] = useState(true)
+  const [assignments, setAssignments] = useState<WritingAssignment[]>([])
+  const [loadingAssignments, setLoadingAssignments] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   // Load token + usage
@@ -1584,17 +1595,18 @@ function WritingPageInner() {
       .catch(() => {})
   }, [isLoaded, getToken, forParam])
 
-  // Load courses
+  // Load assignments
   useEffect(() => {
     if (!token) return
-    const url = `${API}/writing/courses${forParam ? `?student_id=${forParam}` : ''}`
+    const sid = forParam || undefined
+    const url = `${API}/writing/assignments${sid ? `?student_id=${sid}` : ''}`
     fetch(url, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(data => {
-        setCourses(data.courses || [])
-        setLoadingCourses(false)
+        setAssignments(data.assignments || [])
+        setLoadingAssignments(false)
       })
-      .catch(() => setLoadingCourses(false))
+      .catch(() => setLoadingAssignments(false))
   }, [token, forParam])
 
   const isCounselor = usageData?.account_type === 'counselor'
@@ -1731,7 +1743,7 @@ function WritingPageInner() {
         {/* Content */}
         <main className="flex-1 overflow-y-auto">
           <div className="max-w-2xl mx-auto px-4 py-6">
-            {loadingCourses ? (
+            {loadingAssignments ? (
               <div className="flex items-center justify-center py-16">
                 <div className="w-7 h-7 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
               </div>
@@ -1745,7 +1757,6 @@ function WritingPageInner() {
                     studentName={studentDisplayName}
                     isReadOnly={(isCounselor || isParent) && !!forParam}
                     canRegenerate={!isParent}
-                    courses={courses}
                   />
                 )}
 
@@ -1760,19 +1771,33 @@ function WritingPageInner() {
                   />
                 )}
 
-                {/* Your Stories / Your Voice / Synthesis — assignment lists */}
-                {['sd-2', 'sd-3', 'sd-4'].includes(activeSection) && showSelfDiscovery && (
+                {/* Your Stories */}
+                {activeSection === 'sd-2' && showSelfDiscovery && (
                   <UnitAssignmentList
-                    unitNumber={parseInt(activeSection.split('-')[1])}
-                    courses={courses}
-                    studentId={forParam}
-                    unitLabels={{ 2: 'Your Stories', 3: 'Your Voice', 4: 'Synthesis' }}
+                    sectionKey="self_discovery" unitTitle="Your Stories" label="Your Stories"
+                    assignments={assignments} studentId={forParam} isCounselor={isCounselor}
+                  />
+                )}
+
+                {/* Your Voice */}
+                {activeSection === 'sd-3' && showSelfDiscovery && (
+                  <UnitAssignmentList
+                    sectionKey="self_discovery" unitTitle="Your Voice" label="Your Voice"
+                    assignments={assignments} studentId={forParam} isCounselor={isCounselor}
+                  />
+                )}
+
+                {/* Synthesis */}
+                {activeSection === 'sd-4' && showSelfDiscovery && (
+                  <UnitAssignmentList
+                    sectionKey="self_discovery" unitTitle="Synthesis" label="Synthesis"
+                    assignments={assignments} studentId={forParam} isCounselor={isCounselor}
                   />
                 )}
 
                 {/* Writing Practice */}
                 {activeSection === 'practice' && showWritingPractice && (
-                  <WritingPracticeTab courses={courses} studentId={forParam} />
+                  <WritingPracticeTab assignments={assignments} studentId={forParam} isCounselor={isCounselor} />
                 )}
 
                 {/* Essay Status — placeholder until Essays page is migrated here */}
