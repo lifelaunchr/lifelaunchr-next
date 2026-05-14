@@ -140,6 +140,16 @@ type TabType = 'users' | 'tiers' | 'tenants' | 'tenant' | 'requests'
 
 const PAGE_SIZE = 25
 
+// Maps writing section keys (from /writing/sections) to the tenant module that gates them
+const SECTION_MODULE_MAP: Record<string, string> = {
+  self_discovery:   'writing_self_discovery',
+  writing_practice: 'writing_practice',
+  commonapp:        'commonapp_essays',
+  uc_piqs:          'uc_piqs',
+  why_major:        'why_essays',
+  why_college:      'why_essays',
+}
+
 /** Normalise a hex color input to #rrggbb. Accepts with/without #, 6 or 8 chars. */
 function normalizeColor(raw: string): string {
   const s = raw.trim().replace(/^#/, '')
@@ -195,6 +205,10 @@ export default function AdminPage() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [isTenantAdmin, setIsTenantAdmin] = useState(false)
 
+  // Tenant modules — used to gate student-facing feature fields in the edit modal.
+  // Platform admins (isAdmin/isSuperAdmin) bypass the gate and see all fields.
+  const [tenantModules, setTenantModules] = useState<string[]>([])
+
   // Tenant settings tab
   const [tenantSettings, setTenantSettings] = useState<TenantSettings | null>(null)
   const [tenantCCEmails, setTenantCCEmails] = useState('')
@@ -244,6 +258,13 @@ export default function AdminPage() {
         setLoading(false)
         return
       }
+
+      // Fetch tenant modules so the edit modal can gate feature fields.
+      // Public endpoint — no auth needed.
+      fetch(`${apiUrl}/tenant-config`)
+        .then(r => r.json())
+        .then(d => setTenantModules(d.enabled_modules || []))
+        .catch(() => {/* non-critical */})
 
       const wrap = (label: string, p: Promise<unknown>) =>
         p.catch(e => { console.error(`[admin] ${label} failed:`, e); throw e })
@@ -707,6 +728,10 @@ export default function AdminPage() {
   )
 
   const roleLabel = isSuperAdmin ? 'Super-admin' : isAdmin ? 'Admin' : 'Tenant admin'
+  // Platform admins see all module fields (they manage all tenants).
+  // Tenant admins only see fields for modules their tenant has enabled.
+  const isPlatformAdmin = isAdmin || isSuperAdmin
+  const hasAdminModule = (key: string) => isPlatformAdmin || tenantModules.includes(key)
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -1310,20 +1335,20 @@ export default function AdminPage() {
                     </div>
                   </div>
 
-                  {/* Writing & Essay access */}
+                  {/* Writing & Essay access — only shown when tenant has relevant modules (platform admins always see it) */}
+                  {(hasAdminModule('essay_list') || hasAdminModule('commonapp_essays') || hasAdminModule('uc_piqs') || hasAdminModule('why_essays') || hasAdminModule('writing_self_discovery') || hasAdminModule('writing_practice')) && (
                   <div className="border-t border-gray-100 pt-4">
                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Writing &amp; Essay Access</p>
                     <p className="text-xs text-gray-400 mb-3">
-                      Toggle which modules this student can access. Tenant must also have the module enabled.
-                      Unchecked = no access; checked = access granted.
+                      Unchecked = denied; checked = access granted. Greyed-out fields are not enabled for this tenant.
                     </p>
                     <div className="space-y-2">
                       {[
-                        { field: 'essay_list_enabled' as const, label: 'Essay Hub (prompts & drafts)' },
-                        { field: 'commonapp_enabled' as const, label: 'CommonApp Essay Coaching' },
-                        { field: 'uc_piqs_enabled' as const, label: 'UC PIQ Coaching' },
-                        { field: 'why_essays_enabled' as const, label: 'Why Major / Why College Coaching' },
-                      ].map(({ field, label }) => (
+                        { field: 'essay_list_enabled' as const, label: 'Essay Hub (prompts & drafts)',       module: 'essay_list'       },
+                        { field: 'commonapp_enabled'  as const, label: 'CommonApp Essay Coaching',           module: 'commonapp_essays'  },
+                        { field: 'uc_piqs_enabled'    as const, label: 'UC PIQ Coaching',                   module: 'uc_piqs'           },
+                        { field: 'why_essays_enabled' as const, label: 'Why Major / Why College Coaching',  module: 'why_essays'        },
+                      ].filter(({ module }) => hasAdminModule(module)).map(({ field, label }) => (
                         <label key={field} className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
                           <input
                             type="checkbox"
@@ -1337,11 +1362,13 @@ export default function AdminPage() {
                     {/* Writing section enrollments */}
                     {adminWritingLoading ? (
                       <p className="text-xs text-gray-400 mt-3">Loading writing sections…</p>
-                    ) : adminWritingSections.length > 0 && (
+                    ) : adminWritingSections.filter(s => hasAdminModule(SECTION_MODULE_MAP[s.key] ?? '')).length > 0 && (
                       <div className="mt-3 pt-3 border-t border-gray-50">
                         <p className="text-xs font-medium text-gray-500 mb-2">Writing course enrollments</p>
                         <div className="space-y-2">
-                          {adminWritingSections.map(s => (
+                          {adminWritingSections
+                            .filter(s => hasAdminModule(SECTION_MODULE_MAP[s.key] ?? ''))
+                            .map(s => (
                             <label key={s.key} className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
                               <input
                                 type="checkbox"
@@ -1355,8 +1382,10 @@ export default function AdminPage() {
                       </div>
                     )}
                   </div>
+                  )}
 
-                  {/* Editate (Essay Review) — student only */}
+                  {/* Editate (Essay Review) — only shown when tenant has editate module */}
+                  {hasAdminModule('editate') && (
                   <div className="border-t border-gray-100 pt-4">
                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Editate (Essay Review)</p>
                     <div className="space-y-3">
@@ -1424,6 +1453,7 @@ export default function AdminPage() {
                       </div>
                     </div>
                   </div>
+                  )}
                 </>
               )}
 
