@@ -2,10 +2,12 @@
 
 ## 🚨 ACTIVE FEATURE IN PROGRESS — READ BEFORE ANY COMMIT
 
-**`main` is NOT stable. Do NOT push anything to `production`.**
+**`main` is NOT stable. Do NOT push anything to `production`. Real users are on the system.**
 
-The Writing & Essays hub (app#119 / next#52 / next#53) is partially deployed to `main` and has not been fully tested. Until the user explicitly says "looks good on staging" and approves a production push, all of the following are prohibited:
-- `git push --force-with-lease origin main:production`
+The Writing & Essays hub (app#119 / next#52 / next#53) is partially deployed to `main` and has not been fully tested. The backend CLAUDE.md deployment workflow already requires that **Claude must never run the production push command** — Claude writes out the command and stops; the user runs it manually. That rule applies here with extra force:
+
+Until the user explicitly says "looks good on staging" and approves a production push, all of the following are absolutely prohibited — no exceptions, no rationalizations:
+- Running `git push --force-with-lease origin main:production`
 - Any cherry-pick to `production`
 - Any tagging of a new version
 
