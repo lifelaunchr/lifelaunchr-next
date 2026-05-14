@@ -35,6 +35,18 @@ interface UserRow {
   tier_display_name: string | null
   clerk_user_id: string | null
   invite_url: string | null
+  // Per-user module access flags (students only; NULL = follow tenant)
+  essay_list_enabled: boolean | null
+  commonapp_enabled: boolean | null
+  uc_piqs_enabled: boolean | null
+  why_essays_enabled: boolean | null
+  // Student-counselor relationship fields (students only)
+  engagement_type: string | null
+  coaching_package_name: string | null
+  start_date: string | null
+  expected_end_date: string | null
+  actual_end_date: string | null
+  billing_status: string | null
 }
 
 interface TierRow {
@@ -174,6 +186,10 @@ export default function AdminPage() {
   const [saveMsg, setSaveMsg] = useState('')
   const [copiedInvite, setCopiedInvite] = useState(false)
 
+  // Writing section enrollments for student edit modal
+  const [adminWritingSections, setAdminWritingSections] = useState<{key: string; title: string; enrolled: boolean}[]>([])
+  const [adminWritingLoading, setAdminWritingLoading] = useState(false)
+
   // Role flags
   const [isSuperAdmin, setIsSuperAdmin] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
@@ -275,6 +291,54 @@ export default function AdminPage() {
 
   useEffect(() => { load() }, [])
 
+  // Fetch writing sections + enrollment status when opening a student in the edit modal
+  useEffect(() => {
+    if (!editingUser || editingUser.account_type !== 'student') {
+      setAdminWritingSections([])
+      return
+    }
+    const fetchSections = async () => {
+      setAdminWritingLoading(true)
+      try {
+        const token = await getToken()
+        const res = await fetch(`${apiUrl}/writing/sections?student_id=${editingUser.id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setAdminWritingSections((data.sections || []).map((s: {key: string; title: string; enrolled: boolean}) => ({
+            key: s.key,
+            title: s.title,
+            enrolled: s.enrolled ?? false,
+          })))
+        }
+      } catch (e) {
+        console.error('[admin] writing sections load failed:', e)
+      }
+      setAdminWritingLoading(false)
+    }
+    fetchSections()
+  }, [editingUser?.id])
+
+  const toggleAdminEnrollment = async (sectionKey: string, enroll: boolean) => {
+    if (!editingUser) return
+    // Optimistic update
+    setAdminWritingSections(prev => prev.map(s => s.key === sectionKey ? { ...s, enrolled: enroll } : s))
+    try {
+      const token = await getToken()
+      const method = enroll ? 'POST' : 'DELETE'
+      await fetch(`${apiUrl}/writing/enroll`, {
+        method,
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ student_id: editingUser.id, section_key: sectionKey }),
+      })
+    } catch (e) {
+      console.error('[admin] enrollment toggle failed:', e)
+      // Revert on error
+      setAdminWritingSections(prev => prev.map(s => s.key === sectionKey ? { ...s, enrolled: !enroll } : s))
+    }
+  }
+
   const loadRequests = async () => {
     setRequestsLoading(true)
     try {
@@ -364,6 +428,20 @@ export default function AdminPage() {
           consultation_link: editingUser.consultation_link || null,
           scheduling_link_comprehensive: editingUser.scheduling_link_comprehensive || null,
           scheduling_link_hourly: editingUser.scheduling_link_hourly || null,
+          // Student module access flags
+          ...(editingUser.account_type === 'student' ? {
+            essay_list_enabled: editingUser.essay_list_enabled,
+            commonapp_enabled: editingUser.commonapp_enabled,
+            uc_piqs_enabled: editingUser.uc_piqs_enabled,
+            why_essays_enabled: editingUser.why_essays_enabled,
+            // Student-counselor relationship fields
+            engagement_type: editingUser.engagement_type || null,
+            coaching_package_name: editingUser.coaching_package_name || null,
+            start_date: editingUser.start_date || null,
+            expected_end_date: editingUser.expected_end_date || null,
+            actual_end_date: editingUser.actual_end_date || null,
+            billing_status: editingUser.billing_status || null,
+          } : {}),
         })
       })
       if (res.ok) {
@@ -1148,74 +1226,206 @@ export default function AdminPage() {
                 </>
               )}
 
-              {/* Editate section */}
-              <div className="border-t border-gray-100 pt-4">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Editate (Essay Review)</p>
-                <div className="space-y-3">
-                  <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={editingUser.editate_enabled ?? false}
-                      onChange={e => setEditingUser({ ...editingUser, editate_enabled: e.target.checked })}
-                    />
-                    Editate enabled (student can access Editate link &amp; drafts)
-                  </label>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Editate User ID <span className="text-gray-400 font-normal">(leave blank to auto-generate on first access)</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={editingUser.editate_student_id ?? ''}
-                      onChange={e => setEditingUser({ ...editingUser, editate_student_id: e.target.value || null })}
-                      placeholder="Auto-generated"
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
-                    />
+              {/* ── Student-only sections ── */}
+              {editingUser.account_type === 'student' && (
+                <>
+                  {/* Engagement & Package */}
+                  <div className="border-t border-gray-100 pt-4">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Engagement &amp; Package</p>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Engagement type</label>
+                        <select
+                          value={editingUser.engagement_type ?? ''}
+                          onChange={e => setEditingUser({ ...editingUser, engagement_type: e.target.value || null })}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                        >
+                          <option value="">— not set —</option>
+                          <option value="not_a_client_yet">Not a client yet</option>
+                          <option value="comprehensive">Comprehensive</option>
+                          <option value="stay_on_track">Stay on Track</option>
+                          <option value="hourly_on_demand">Hourly / On-demand</option>
+                          <option value="test_prep">Test Prep</option>
+                          <option value="essay">Essay</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Package name</label>
+                        <input
+                          type="text"
+                          value={editingUser.coaching_package_name ?? ''}
+                          onChange={e => setEditingUser({ ...editingUser, coaching_package_name: e.target.value || null })}
+                          placeholder="e.g. Diamond Package"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Billing status</label>
+                        <select
+                          value={editingUser.billing_status ?? ''}
+                          onChange={e => setEditingUser({ ...editingUser, billing_status: e.target.value || null })}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                        >
+                          <option value="">— not set —</option>
+                          <option value="current">Current</option>
+                          <option value="past_due">Past due</option>
+                          <option value="paused">Paused</option>
+                          <option value="cancelled">Cancelled</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Feedback rounds included <span className="text-gray-400 font-normal">(can only increase)</span>
-                    </label>
-                    <input
-                      type="number"
-                      min={editingUser.editate_review_limit ?? 0}
-                      value={editingUser.editate_review_limit ?? ''}
-                      onChange={e => setEditingUser({ ...editingUser, editate_review_limit: e.target.value ? parseInt(e.target.value) : null })}
-                      placeholder="0 = no limit shown"
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
-                    />
+
+                  {/* Engagement dates */}
+                  <div className="border-t border-gray-100 pt-4">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Engagement Dates</p>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Start date</label>
+                        <input
+                          type="date"
+                          value={editingUser.start_date ?? ''}
+                          onChange={e => setEditingUser({ ...editingUser, start_date: e.target.value || null })}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Expected end date</label>
+                        <input
+                          type="date"
+                          value={editingUser.expected_end_date ?? ''}
+                          onChange={e => setEditingUser({ ...editingUser, expected_end_date: e.target.value || null })}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Actual end date</label>
+                        <input
+                          type="date"
+                          value={editingUser.actual_end_date ?? ''}
+                          onChange={e => setEditingUser({ ...editingUser, actual_end_date: e.target.value || null })}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">College list selectivity</label>
-                    <select
-                      value={editingUser.editate_school_selectivity ?? ''}
-                      onChange={e => setEditingUser({ ...editingUser, editate_school_selectivity: e.target.value || null })}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
-                    >
-                      <option value="">— not set —</option>
-                      <option value="most_selective">Most Selective</option>
-                      <option value="very_selective">Very Selective</option>
-                      <option value="moderately_selective">Moderately Selective</option>
-                      <option value="minimally_selective">Minimally Selective</option>
-                      <option value="least_selective">Least Selective</option>
-                    </select>
+
+                  {/* Writing & Essay access */}
+                  <div className="border-t border-gray-100 pt-4">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Writing &amp; Essay Access</p>
+                    <p className="text-xs text-gray-400 mb-3">
+                      Toggle which modules this student can access. Tenant must also have the module enabled.
+                      Unchecked = no access; checked = access granted.
+                    </p>
+                    <div className="space-y-2">
+                      {[
+                        { field: 'essay_list_enabled' as const, label: 'Essay Hub (prompts & drafts)' },
+                        { field: 'commonapp_enabled' as const, label: 'CommonApp Essay Coaching' },
+                        { field: 'uc_piqs_enabled' as const, label: 'UC PIQ Coaching' },
+                        { field: 'why_essays_enabled' as const, label: 'Why Major / Why College Coaching' },
+                      ].map(({ field, label }) => (
+                        <label key={field} className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={editingUser[field] !== false}
+                            onChange={e => setEditingUser({ ...editingUser, [field]: e.target.checked ? null : false })}
+                          />
+                          {label}
+                        </label>
+                      ))}
+                    </div>
+                    {/* Writing section enrollments */}
+                    {adminWritingLoading ? (
+                      <p className="text-xs text-gray-400 mt-3">Loading writing sections…</p>
+                    ) : adminWritingSections.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-gray-50">
+                        <p className="text-xs font-medium text-gray-500 mb-2">Writing course enrollments</p>
+                        <div className="space-y-2">
+                          {adminWritingSections.map(s => (
+                            <label key={s.key} className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={s.enrolled}
+                                onChange={e => toggleAdminEnrollment(s.key, e.target.checked)}
+                              />
+                              {s.title}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Feedback preferences</label>
-                    <select
-                      value={editingUser.editate_feedback_preferences ?? ''}
-                      onChange={e => setEditingUser({ ...editingUser, editate_feedback_preferences: e.target.value || null })}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
-                    >
-                      <option value="">— not set —</option>
-                      <option value="most_open">Open to Rewriting or Major Changes</option>
-                      <option value="open">Open to Some Changes, But Keep the Topic</option>
-                      <option value="somewhat_open">Open to Select Changes</option>
-                      <option value="not_open">Just Polish Essays</option>
-                    </select>
+
+                  {/* Editate (Essay Review) — student only */}
+                  <div className="border-t border-gray-100 pt-4">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Editate (Essay Review)</p>
+                    <div className="space-y-3">
+                      <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={editingUser.editate_enabled ?? false}
+                          onChange={e => setEditingUser({ ...editingUser, editate_enabled: e.target.checked })}
+                        />
+                        Editate enabled (student can access Editate link &amp; drafts)
+                      </label>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Editate User ID <span className="text-gray-400 font-normal">(leave blank to auto-generate on first access)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={editingUser.editate_student_id ?? ''}
+                          onChange={e => setEditingUser({ ...editingUser, editate_student_id: e.target.value || null })}
+                          placeholder="Auto-generated"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Feedback rounds included <span className="text-gray-400 font-normal">(can only increase)</span>
+                        </label>
+                        <input
+                          type="number"
+                          min={editingUser.editate_review_limit ?? 0}
+                          value={editingUser.editate_review_limit ?? ''}
+                          onChange={e => setEditingUser({ ...editingUser, editate_review_limit: e.target.value ? parseInt(e.target.value) : null })}
+                          placeholder="0 = no limit shown"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">College list selectivity</label>
+                        <select
+                          value={editingUser.editate_school_selectivity ?? ''}
+                          onChange={e => setEditingUser({ ...editingUser, editate_school_selectivity: e.target.value || null })}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                        >
+                          <option value="">— not set —</option>
+                          <option value="most_selective">Most Selective</option>
+                          <option value="very_selective">Very Selective</option>
+                          <option value="moderately_selective">Moderately Selective</option>
+                          <option value="minimally_selective">Minimally Selective</option>
+                          <option value="least_selective">Least Selective</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Feedback preferences</label>
+                        <select
+                          value={editingUser.editate_feedback_preferences ?? ''}
+                          onChange={e => setEditingUser({ ...editingUser, editate_feedback_preferences: e.target.value || null })}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                        >
+                          <option value="">— not set —</option>
+                          <option value="most_open">Open to Rewriting or Major Changes</option>
+                          <option value="open">Open to Some Changes, But Keep the Topic</option>
+                          <option value="somewhat_open">Open to Select Changes</option>
+                          <option value="not_open">Just Polish Essays</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
+                </>
+              )}
 
               {/* Scheduling links — counselors only */}
               {editingUser.account_type === 'counselor' && (

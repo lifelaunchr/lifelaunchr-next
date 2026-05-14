@@ -177,53 +177,6 @@ function EditPanel({
   const [inviteLoading, setInviteLoading] = useState(false)
   const [copied, setCopied] = useState(false)
 
-  // Writing section enrollment state
-  const [writingSections, setWritingSections] = useState<{key: string; title: string}[]>([])
-  const [enrolledSections, setEnrolledSections] = useState<Set<string>>(new Set())
-  const [enrollmentLoading, setEnrollmentLoading] = useState(true)
-
-  useEffect(() => {
-    async function fetchWritingSections() {
-      try {
-        const token = await getToken()
-        const res = await fetch(`${apiUrl}/writing/sections?student_id=${student.id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        if (res.ok) {
-          const data = await res.json()
-          setWritingSections((data.sections || []).map((s: {key: string; title: string}) => ({ key: s.key, title: s.title })))
-          const enrolled = new Set<string>(
-            (data.sections || []).filter((s: {enrolled?: boolean}) => s.enrolled).map((s: {key: string}) => s.key)
-          )
-          setEnrolledSections(enrolled)
-        }
-      } catch { /* ignore */ }
-      finally { setEnrollmentLoading(false) }
-    }
-    fetchWritingSections()
-  }, [student.id, getToken])
-
-  const toggleEnrollment = async (sectionKey: string, enroll: boolean) => {
-    const prev = new Set(enrolledSections)
-    // Optimistic update
-    if (enroll) {
-      setEnrolledSections(s => { const n = new Set(s); n.add(sectionKey); return n })
-    } else {
-      setEnrolledSections(s => { const n = new Set(s); n.delete(sectionKey); return n })
-    }
-    try {
-      const token = await getToken()
-      await fetch(`${apiUrl}/writing/enroll`, {
-        method: enroll ? 'POST' : 'DELETE',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ student_id: student.id, section_key: sectionKey }),
-      })
-    } catch {
-      // Revert on error
-      setEnrolledSections(prev)
-    }
-  }
-
   const set = (k: keyof DashboardStudent, v: unknown) =>
     setForm(p => ({ ...p, [k]: v }))
 
@@ -323,29 +276,33 @@ function EditPanel({
             </Field>
           </section>
 
-          {/* Engagement */}
+          {/* Engagement — read-only (set by admin) */}
+          {(student.engagement_type || student.coaching_package_name) && (
           <section>
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Engagement</h3>
-            <Field label="Engagement Type">
-              <PanelSelect form={form} set={set} field="engagement_type" options={ENGAGEMENT_LABELS} />
-            </Field>
-            <Field label="Package Name">
-              <input
-                type="text"
-                value={(form.coaching_package_name as string) || ''}
-                onChange={e => set('coaching_package_name', e.target.value || null)}
-                placeholder="e.g. Diamond Package"
-                className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </Field>
+            {student.engagement_type && (
+              <Field label="Engagement Type">
+                <p className="text-sm text-gray-700 py-1.5">
+                  {ENGAGEMENT_LABELS[student.engagement_type as keyof typeof ENGAGEMENT_LABELS] || student.engagement_type}
+                </p>
+              </Field>
+            )}
+            {student.coaching_package_name && (
+              <Field label="Package">
+                <p className="text-sm text-gray-700 py-1.5">{student.coaching_package_name}</p>
+              </Field>
+            )}
+            <p className="text-xs text-gray-400 mt-1">
+              Package and engagement settings are managed by your account admin.
+            </p>
+          </section>
+          )}
+
+          {/* Contacts */}
+          <section>
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Contact</h3>
             <Field label="Primary Contact">
               <PanelSelect form={form} set={set} field="primary_contact" options={{ student: 'Student', parent: 'Parent' }} />
-            </Field>
-            <Field label="Start Date"><DateInput form={form} set={set} field="start_date" /></Field>
-            <Field label="Expected End Date"><DateInput form={form} set={set} field="expected_end_date" /></Field>
-            <Field label="Actual End Date"><DateInput form={form} set={set} field="actual_end_date" /></Field>
-            <Field label="Billing Status">
-              <PanelSelect form={form} set={set} field="billing_status" options={BILLING_LABELS} />
             </Field>
           </section>
 
@@ -396,31 +353,6 @@ function EditPanel({
               <p className="text-xs text-gray-400 mt-1">Overrides the default scheduling link for this student only.</p>
             </Field>
           </section>
-
-          {/* Writing & Essays Access */}
-          {writingSections.length > 0 && (
-          <section>
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Writing &amp; Essays</h3>
-            <p className="text-xs text-gray-400 mb-3">Check the sections this student can access.</p>
-            {enrollmentLoading ? (
-              <p className="text-xs text-gray-400">Loading…</p>
-            ) : (
-              <div className="space-y-1.5">
-                {writingSections.map(s => (
-                  <label key={s.key} className="flex items-center gap-2.5 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      checked={enrolledSections.has(s.key)}
-                      onChange={e => toggleEnrollment(s.key, e.target.checked)}
-                      className="rounded text-blue-600"
-                    />
-                    <span className="text-sm text-gray-700 group-hover:text-gray-900">{s.title}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-          </section>
-          )}
 
           {/* Notes */}
           <section>
