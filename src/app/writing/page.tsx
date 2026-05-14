@@ -1514,10 +1514,12 @@ function WritingPracticeTab({
   assignments,
   studentId,
   isCounselor,
+  onAssignRequest,
 }: {
   assignments: WritingAssignment[]
   studentId?: string | null
   isCounselor?: boolean
+  onAssignRequest?: () => void
 }) {
   const practiceAssignments = assignments.filter(a => a.section_key === 'writing_practice')
 
@@ -1533,18 +1535,167 @@ function WritingPracticeTab({
           {practiceAssignments.map(a => (
             <AssignmentCard key={a.id} a={a} studentId={studentId} />
           ))}
+          {isCounselor && onAssignRequest && (
+            <button
+              onClick={onAssignRequest}
+              className="w-full py-2 text-xs text-violet-400 hover:text-violet-300 border border-violet-500/20 rounded-lg hover:border-violet-500/40 transition-all"
+            >
+              + Assign another exercise
+            </button>
+          )}
         </div>
       ) : (
         <div className="py-12 text-center bg-slate-800/30 rounded-xl border border-slate-700/30">
-          {isCounselor ? (
-            <p className="text-slate-500 text-sm">No exercises assigned yet.<br />
-              <span className="text-slate-600 text-xs mt-1 block">Browse the exercise library to assign writing practice prompts.</span>
-            </p>
+          {isCounselor && onAssignRequest ? (
+            <div className="space-y-3">
+              <p className="text-slate-500 text-sm">No exercises assigned yet.</p>
+              <button
+                onClick={onAssignRequest}
+                className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm rounded-lg transition-all"
+              >
+                Assign Exercise
+              </button>
+            </div>
           ) : (
             <p className="text-slate-500 text-sm">Your coach hasn&apos;t assigned any writing practice exercises yet.</p>
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+interface LibraryExercise {
+  id: number
+  title: string
+  prompt_text: string | null
+  exercise_type: string
+  word_limit: number | null
+  time_limit_minutes: number | null
+  is_timed: boolean
+  unit_title: string
+  section_key: string
+}
+
+function AssignPanel({
+  sectionKey,
+  sectionLabel,
+  studentId,
+  token,
+  onAssigned,
+  onClose,
+}: {
+  sectionKey: string
+  sectionLabel: string
+  studentId: string
+  token: string
+  onAssigned: () => void
+  onClose: () => void
+}) {
+  const [exercises, setExercises] = useState<LibraryExercise[]>([])
+  const [loading, setLoading] = useState(true)
+  const [note, setNote] = useState('')
+  const [assigning, setAssigning] = useState<number | null>(null)
+  const [assigned, setAssigned] = useState<Set<number>>(new Set())
+
+  useEffect(() => {
+    fetch(`${API}/writing/library?section_key=${sectionKey}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.json())
+      .then(data => {
+        setExercises(data.exercises || [])
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }, [sectionKey, token])
+
+  const assign = async (exerciseId: number) => {
+    setAssigning(exerciseId)
+    try {
+      const res = await fetch(`${API}/writing/assignments`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ student_id: parseInt(studentId), exercise_id: exerciseId, note_to_student: note || null }),
+      })
+      if (res.ok) {
+        setAssigned(s => { const n = new Set(s); n.add(exerciseId); return n })
+        onAssigned()
+      }
+    } finally {
+      setAssigning(null)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative w-full max-w-lg bg-slate-800 rounded-t-2xl sm:rounded-2xl border border-slate-700 max-h-[80vh] flex flex-col overflow-hidden shadow-2xl">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700">
+          <div>
+            <h3 className="text-sm font-semibold text-white">Assign Exercise</h3>
+            <p className="text-xs text-slate-400 mt-0.5">{sectionLabel}</p>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-white text-xl leading-none">×</button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          {/* Optional note */}
+          <div>
+            <label className="text-xs text-slate-400 block mb-1">Note to student (optional)</label>
+            <textarea
+              value={note}
+              onChange={e => setNote(e.target.value)}
+              rows={2}
+              placeholder="Add context or specific instructions…"
+              className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-violet-500/50 resize-none"
+            />
+          </div>
+
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="w-6 h-6 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : exercises.length === 0 ? (
+            <p className="text-slate-400 text-sm text-center py-8">No exercises available for this section yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {exercises.map(ex => {
+                const isAssigned = assigned.has(ex.id)
+                return (
+                  <div key={ex.id} className={`bg-slate-700/40 rounded-xl border p-4 ${isAssigned ? 'border-green-500/30' : 'border-slate-600/40'}`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white leading-tight">{ex.title}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{ex.unit_title}</p>
+                        {ex.prompt_text && (
+                          <p className="text-xs text-slate-400 mt-1 line-clamp-2">{ex.prompt_text}</p>
+                        )}
+                        <div className="flex gap-2 mt-1.5 flex-wrap">
+                          <span className="text-[10px] text-slate-600 bg-slate-700 px-1.5 py-0.5 rounded">{ex.exercise_type}</span>
+                          {ex.word_limit && <span className="text-[10px] text-slate-600">{ex.word_limit}w</span>}
+                          {ex.is_timed && ex.time_limit_minutes && <span className="text-[10px] text-slate-600">⏱ {ex.time_limit_minutes}min</span>}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => assign(ex.id)}
+                        disabled={isAssigned || assigning === ex.id}
+                        className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                          isAssigned
+                            ? 'bg-green-500/20 text-green-400 cursor-default'
+                            : 'bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-50'
+                        }`}
+                      >
+                        {isAssigned ? 'Assigned ✓' : assigning === ex.id ? '…' : 'Assign'}
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
@@ -1556,6 +1707,7 @@ function EssaySectionTab({
   assignments,
   studentId,
   isCounselor,
+  onAssignRequest,
 }: {
   sectionKey: string
   label: string
@@ -1563,6 +1715,7 @@ function EssaySectionTab({
   assignments: WritingAssignment[]
   studentId?: string | null
   isCounselor?: boolean
+  onAssignRequest?: () => void
 }) {
   const sectionAssignments = assignments.filter(a => a.section_key === sectionKey)
 
@@ -1578,13 +1731,27 @@ function EssaySectionTab({
           {sectionAssignments.map(a => (
             <AssignmentCard key={a.id} a={a} studentId={studentId} />
           ))}
+          {isCounselor && onAssignRequest && (
+            <button
+              onClick={onAssignRequest}
+              className="w-full py-2 text-xs text-violet-400 hover:text-violet-300 border border-violet-500/20 rounded-lg hover:border-violet-500/40 transition-all"
+            >
+              + Assign another exercise
+            </button>
+          )}
         </div>
       ) : (
         <div className="py-12 text-center bg-slate-800/30 rounded-xl border border-slate-700/30">
-          {isCounselor ? (
-            <p className="text-slate-500 text-sm">No exercises assigned yet.<br />
-              <span className="text-slate-600 text-xs mt-1 block">Use the exercise library to assign {label.toLowerCase()} exercises.</span>
-            </p>
+          {isCounselor && onAssignRequest ? (
+            <div className="space-y-3">
+              <p className="text-slate-500 text-sm">No exercises assigned yet.</p>
+              <button
+                onClick={onAssignRequest}
+                className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm rounded-lg transition-all"
+              >
+                Assign Exercise
+              </button>
+            </div>
           ) : (
             <p className="text-slate-500 text-sm">Your coach hasn&apos;t assigned any {label.toLowerCase()} exercises yet.</p>
           )}
@@ -1610,6 +1777,7 @@ function WritingPageInner() {
   const [assignments, setAssignments] = useState<WritingAssignment[]>([])
   const [loadingAssignments, setLoadingAssignments] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [assignPanel, setAssignPanel] = useState<{ sectionKey: string; sectionLabel: string } | null>(null)
 
   // Load token + usage
   useEffect(() => {
@@ -1647,17 +1815,22 @@ function WritingPageInner() {
   }, [isLoaded, getToken, forParam])
 
   // Load assignments
+  const loadAssignments = useRef<() => void>(() => {})
   useEffect(() => {
     if (!token) return
     const sid = forParam || undefined
     const url = `${API}/writing/assignments${sid ? `?student_id=${sid}` : ''}`
-    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
-      .then(data => {
-        setAssignments(data.assignments || [])
-        setLoadingAssignments(false)
-      })
-      .catch(() => setLoadingAssignments(false))
+    const doFetch = () => {
+      fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.json())
+        .then(data => {
+          setAssignments(data.assignments || [])
+          setLoadingAssignments(false)
+        })
+        .catch(() => setLoadingAssignments(false))
+    }
+    loadAssignments.current = doFetch
+    doFetch()
   }, [token, forParam])
 
   const isCounselor = usageData?.account_type === 'counselor'
@@ -1902,7 +2075,10 @@ function WritingPageInner() {
 
                 {/* Writing Practice */}
                 {activeSection === 'practice' && showWritingPractice && (
-                  <WritingPracticeTab assignments={assignments} studentId={forParam} isCounselor={isCounselor} />
+                  <WritingPracticeTab
+                    assignments={assignments} studentId={forParam} isCounselor={isCounselor}
+                    onAssignRequest={isCounselor && forParam ? () => setAssignPanel({ sectionKey: 'writing_practice', sectionLabel: 'Writing Practice' }) : undefined}
+                  />
                 )}
 
                 {/* CommonApp Essay */}
@@ -1911,9 +2087,8 @@ function WritingPageInner() {
                     sectionKey="commonapp"
                     label="CommonApp Personal Statement"
                     description="Brainstorm ideas, find your angle, and develop your Common Application personal statement. Start with the brainstorm exercise, then move to drafting once you've found your story."
-                    assignments={assignments}
-                    studentId={forParam}
-                    isCounselor={isCounselor}
+                    assignments={assignments} studentId={forParam} isCounselor={isCounselor}
+                    onAssignRequest={isCounselor && forParam ? () => setAssignPanel({ sectionKey: 'commonapp', sectionLabel: 'CommonApp Personal Statement' }) : undefined}
                   />
                 )}
 
@@ -1923,9 +2098,8 @@ function WritingPageInner() {
                     sectionKey="uc_piqs"
                     label="UC Personal Insight Questions"
                     description="Plan your four UC PIQ responses. Use the outline exercise to map a story to each prompt before you start writing."
-                    assignments={assignments}
-                    studentId={forParam}
-                    isCounselor={isCounselor}
+                    assignments={assignments} studentId={forParam} isCounselor={isCounselor}
+                    onAssignRequest={isCounselor && forParam ? () => setAssignPanel({ sectionKey: 'uc_piqs', sectionLabel: 'UC Personal Insight Questions' }) : undefined}
                   />
                 )}
 
@@ -1935,9 +2109,8 @@ function WritingPageInner() {
                     sectionKey="why_major"
                     label="Why Major"
                     description="Articulate your academic interest, preparation, and goals for your intended major. This inventory feeds your Why Major essays across multiple schools."
-                    assignments={assignments}
-                    studentId={forParam}
-                    isCounselor={isCounselor}
+                    assignments={assignments} studentId={forParam} isCounselor={isCounselor}
+                    onAssignRequest={isCounselor && forParam ? () => setAssignPanel({ sectionKey: 'why_major', sectionLabel: 'Why Major' }) : undefined}
                   />
                 )}
 
@@ -1947,9 +2120,8 @@ function WritingPageInner() {
                     sectionKey="why_college"
                     label="Why College"
                     description="Write compelling Why College essays grounded in your actual research. Each exercise is tied to a specific school on your list."
-                    assignments={assignments}
-                    studentId={forParam}
-                    isCounselor={isCounselor}
+                    assignments={assignments} studentId={forParam} isCounselor={isCounselor}
+                    onAssignRequest={isCounselor && forParam ? () => setAssignPanel({ sectionKey: 'why_college', sectionLabel: 'Why College' }) : undefined}
                   />
                 )}
 
@@ -1975,6 +2147,18 @@ function WritingPageInner() {
           </div>
         </main>
       </div>
+
+      {/* Assign Exercise Panel */}
+      {assignPanel && token && forParam && (
+        <AssignPanel
+          sectionKey={assignPanel.sectionKey}
+          sectionLabel={assignPanel.sectionLabel}
+          studentId={forParam}
+          token={token}
+          onAssigned={() => loadAssignments.current()}
+          onClose={() => setAssignPanel(null)}
+        />
+      )}
     </div>
   )
 }
