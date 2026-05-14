@@ -81,6 +81,8 @@ export default function AddFamilyModal({ open, onClose, onSuccess, counselors }:
   // Editate
   const [editateEnabled, setEditateEnabled] = useState(false)
   const [editateReviewLimit, setEditateReviewLimit] = useState('')
+  const [editateSelectivity, setEditateSelectivity] = useState('')
+  const [editateFeedbackPrefs, setEditateFeedbackPrefs] = useState('')
 
   // Writing section enrollment (post-creation)
   const [writingEnroll, setWritingEnroll] = useState<Record<string, boolean>>({
@@ -117,6 +119,8 @@ export default function AddFamilyModal({ open, onClose, onSuccess, counselors }:
     setEssayFlags({ essay_list_enabled: false, commonapp_enabled: false, uc_piqs_enabled: false, why_essays_enabled: false })
     setEditateEnabled(false)
     setEditateReviewLimit('')
+    setEditateSelectivity('')
+    setEditateFeedbackPrefs('')
     setWritingEnroll({ self_discovery: true, writing_practice: true })
     setError('')
     setResult(null)
@@ -175,9 +179,10 @@ export default function AddFamilyModal({ open, onClose, onSuccess, counselors }:
         ...(actualEndDate                     ? { actual_end_date:       actualEndDate }                    : {}),
         ...(graduationYear.trim()             ? { graduation_year:       parseInt(graduationYear, 10) }     : {}),
         // Editate (only send if module is active for this tenant)
-        ...(hasModule('editate') && editateEnabled        ? { editate_enabled: true }                          : {}),
-        ...(hasModule('editate') && editateReviewLimit.trim()
-                                              ? { editate_review_limit: parseInt(editateReviewLimit, 10) }  : {}),
+        ...(hasModule('editate') && editateEnabled                   ? { editate_enabled: true }                                    : {}),
+        ...(hasModule('editate') && editateReviewLimit.trim()        ? { editate_review_limit: parseInt(editateReviewLimit, 10) }   : {}),
+        ...(hasModule('editate') && editateSelectivity               ? { editate_school_selectivity: editateSelectivity }           : {}),
+        ...(hasModule('editate') && editateFeedbackPrefs             ? { editate_feedback_preferences: editateFeedbackPrefs }       : {}),
         // Module flags — send true/false based on what the admin set
         ...(hasModule('essay_list')       ? { essay_list_enabled: essayFlags.essay_list_enabled } : {}),
         ...(hasModule('commonapp_essays') ? { commonapp_enabled:  essayFlags.commonapp_enabled  } : {}),
@@ -463,17 +468,46 @@ export default function AddFamilyModal({ open, onClose, onSuccess, counselors }:
                                 <span className="text-sm text-gray-700">Enable Editate essay feedback</span>
                               </label>
                               {editateEnabled && (
-                                <div className="ml-6">
-                                  <label className="block text-xs text-gray-500 mb-1">Max Feedback Rounds</label>
-                                  <input
-                                    type="number"
-                                    placeholder="e.g. 3"
-                                    min={0}
-                                    max={99}
-                                    value={editateReviewLimit}
-                                    onChange={e => setEditateReviewLimit(e.target.value)}
-                                    className="w-32 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                  />
+                                <div className="ml-6 space-y-3">
+                                  <div>
+                                    <label className="block text-xs text-gray-500 mb-1">Max Feedback Rounds</label>
+                                    <input
+                                      type="number"
+                                      placeholder="e.g. 3"
+                                      min={0}
+                                      max={99}
+                                      value={editateReviewLimit}
+                                      onChange={e => setEditateReviewLimit(e.target.value)}
+                                      className="w-32 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs text-gray-500 mb-1">College list selectivity</label>
+                                    <select
+                                      value={editateSelectivity}
+                                      onChange={e => setEditateSelectivity(e.target.value)}
+                                      className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    >
+                                      <option value="">— not set —</option>
+                                      <option value="most_selective">Most Selective</option>
+                                      <option value="selective">Selective</option>
+                                      <option value="less_selective">Less Selective</option>
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs text-gray-500 mb-1">Feedback preferences</label>
+                                    <select
+                                      value={editateFeedbackPrefs}
+                                      onChange={e => setEditateFeedbackPrefs(e.target.value)}
+                                      className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    >
+                                      <option value="">— not set —</option>
+                                      <option value="most_open">Open to Rewriting or Major Changes</option>
+                                      <option value="open">Open to Some Changes, But Keep the Topic</option>
+                                      <option value="somewhat_open">Open to Select Changes</option>
+                                      <option value="not_open">Just Polish Essays</option>
+                                    </select>
+                                  </div>
                                 </div>
                               )}
                             </div>
