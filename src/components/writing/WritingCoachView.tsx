@@ -455,14 +455,17 @@ function ReviewPanel({
 }
 
 // ── Section options — filtered by track + enabled modules ─────────────────────
+// Always in canonical order: SD → WP → CommonApp → UC PIQs → Why Major → Why College
+// 'foundation' track = long-form SD + WP only
+// 'essay_prep' track = all sections (SD + WP + essay sections, same order)
 
 const ALL_SECTION_OPTIONS = [
-  { key: 'self_discovery',   label: 'Self-Discovery',        track: 'long_form' as const, module: 'selfDiscovery' as const },
-  { key: 'writing_practice', label: 'Writing Practice',      track: 'long_form' as const, module: 'writingPractice' as const },
-  { key: 'commonapp',        label: 'CommonApp Essay',        track: 'sprint'    as const, module: 'commonApp' as const },
-  { key: 'uc_piqs',          label: 'UC Personal Insight',   track: 'sprint'    as const, module: 'ucPiqs' as const },
-  { key: 'why_major',        label: 'Why Major',              track: 'sprint'    as const, module: 'whyEssays' as const },
-  { key: 'why_college',      label: 'Why College',            track: 'sprint'    as const, module: 'whyEssays' as const },
+  { key: 'self_discovery',   label: 'Self-Discovery',        group: 'foundation' as const, module: 'selfDiscovery' as const },
+  { key: 'writing_practice', label: 'Writing Practice',      group: 'foundation' as const, module: 'writingPractice' as const },
+  { key: 'commonapp',        label: 'CommonApp Essay',        group: 'essay_prep' as const, module: 'commonApp' as const },
+  { key: 'uc_piqs',          label: 'UC Personal Insight',   group: 'essay_prep' as const, module: 'ucPiqs' as const },
+  { key: 'why_major',        label: 'Why Major',              group: 'essay_prep' as const, module: 'whyEssays' as const },
+  { key: 'why_college',      label: 'Why College',            group: 'essay_prep' as const, module: 'whyEssays' as const },
 ]
 
 function getSectionOptions(
@@ -470,17 +473,12 @@ function getSectionOptions(
   modules: EnabledModules,
   hasEssayModules: boolean,
 ) {
-  // No track set yet, or no essay modules — show SD + WP only
-  if (!track || !hasEssayModules) {
-    return ALL_SECTION_OPTIONS.filter(s => s.track === 'long_form' && modules[s.module])
+  if (!hasEssayModules || !track || track === 'long_form') {
+    // Foundation track (or no essay modules): SD + WP only
+    return ALL_SECTION_OPTIONS.filter(s => s.group === 'foundation' && modules[s.module])
   }
-  if (track === 'long_form') {
-    return ALL_SECTION_OPTIONS.filter(s => s.track === 'long_form' && modules[s.module])
-  }
-  // Sprint: essay sections first (enabled ones), then SD + WP collapsed at bottom
-  const sprint = ALL_SECTION_OPTIONS.filter(s => s.track === 'sprint' && modules[s.module])
-  const longForm = ALL_SECTION_OPTIONS.filter(s => s.track === 'long_form' && modules[s.module])
-  return [...sprint, ...longForm]
+  // Essay Prep track: all sections in canonical order, filtered by enabled modules
+  return ALL_SECTION_OPTIONS.filter(s => modules[s.module])
 }
 
 // ── StudentAssignmentPanel ────────────────────────────────────────────────────
@@ -606,7 +604,7 @@ function StudentAssignmentPanel({
                     : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
                 }`}
               >
-                Long-form
+                Foundation
               </button>
               <button
                 onClick={() => saveTrack('sprint')}
@@ -617,7 +615,7 @@ function StudentAssignmentPanel({
                     : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
                 }`}
               >
-                Sprint
+                Essay Prep
               </button>
             </div>
           )}
@@ -711,14 +709,14 @@ function StudentAssignmentPanel({
                 </h3>
                 <div className="flex flex-col gap-2">
                   {sectionOptions.map((s, i) => {
-                    // Visual separator before the long-form sections in sprint mode
-                    const isFirstLongForm = track === 'sprint' && s.track === 'long_form' &&
-                      (i === 0 || sectionOptions[i - 1].track !== 'long_form')
+                    // Visual separator before essay sections in Essay Prep mode
+                    const isFirstEssay = track === 'sprint' && s.group === 'essay_prep' &&
+                      (i === 0 || sectionOptions[i - 1].group !== 'essay_prep')
                     return (
                       <div key={s.key}>
-                        {isFirstLongForm && (
+                        {isFirstEssay && (
                           <p className="text-[10px] text-slate-600 uppercase tracking-wider mt-1 mb-1">
-                            Additional exercises
+                            Essay sections
                           </p>
                         )}
                         <button
