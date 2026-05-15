@@ -87,26 +87,36 @@ function AssignPanel({
 }) {
   const { getToken } = useAuth()
   const [exercises, setExercises] = useState<LibraryExercise[]>([])
+  const [previouslyAssigned, setPreviouslyAssigned] = useState<Set<number>>(new Set())
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [note, setNote] = useState('')
   const [assigning, setAssigning] = useState<number | null>(null)
-  const [assigned, setAssigned] = useState<Set<number>>(new Set())
+  const [newlyAssigned, setNewlyAssigned] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     getToken().then(tok => {
       if (!tok) { setFetchError('Not authenticated'); setLoading(false); return }
-      fetch(`${API}/writing/library?section_key=${sectionKey}`, {
-        headers: { Authorization: `Bearer ${tok}` },
-      })
-        .then(r => {
-          if (!r.ok) throw new Error(`${r.status}`)
-          return r.json()
+      // Fetch library exercises and student's existing assignments in parallel
+      Promise.all([
+        fetch(`${API}/writing/library?section_key=${sectionKey}`, {
+          headers: { Authorization: `Bearer ${tok}` },
+        }).then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json() }),
+        fetch(`${API}/writing/assignments?student_id=${studentId}`, {
+          headers: { Authorization: `Bearer ${tok}` },
+        }).then(r => r.ok ? r.json() : { assignments: [] }),
+      ])
+        .then(([libData, assignData]) => {
+          setExercises(libData.exercises || [])
+          const ids = new Set<number>(
+            (assignData.assignments || []).map((a: WritingAssignment) => a.exercise_id)
+          )
+          setPreviouslyAssigned(ids)
+          setLoading(false)
         })
-        .then(data => { setExercises(data.exercises || []); setLoading(false) })
         .catch(err => { setFetchError(err.message || 'Failed to load'); setLoading(false) })
     })
-  }, [sectionKey, getToken])
+  }, [sectionKey, studentId, getToken])
 
   const assign = async (exerciseId: number) => {
     setAssigning(exerciseId)
@@ -123,7 +133,7 @@ function AssignPanel({
         }),
       })
       if (res.ok) {
-        setAssigned(s => { const n = new Set(s); n.add(exerciseId); return n })
+        setNewlyAssigned(s => { const n = new Set(s); n.add(exerciseId); return n })
         onAssigned()
       }
     } finally {
@@ -131,10 +141,25 @@ function AssignPanel({
     }
   }
 
+  // Group exercises by unit, preserving display order
+  const unitOrder: string[] = []
+  const unitMap: Record<string, LibraryExercise[]> = {}
+  for (const ex of exercises) {
+    if (!unitMap[ex.unit_title]) {
+      unitMap[ex.unit_title] = []
+      unitOrder.push(ex.unit_title)
+    }
+    unitMap[ex.unit_title].push(ex)
+  }
+
+  // "Suggested next" = first unit that has at least one unassigned exercise
+  const isAssigned = (id: number) => previouslyAssigned.has(id) || newlyAssigned.has(id)
+  const suggestedUnit = unitOrder.find(u => unitMap[u].some(ex => !isAssigned(ex.id)))
+
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative w-full max-w-lg bg-slate-800 rounded-t-2xl sm:rounded-2xl border border-slate-700 max-h-[80vh] flex flex-col overflow-hidden shadow-2xl">
+      <div className="relative w-full max-w-lg bg-slate-800 rounded-t-2xl sm:rounded-2xl border border-slate-700 max-h-[85vh] flex flex-col overflow-hidden shadow-2xl">
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700">
           <div>
             <h3 className="text-sm font-semibold text-white">Assign Exercise</h3>
@@ -143,65 +168,93 @@ function AssignPanel({
           <button onClick={onClose} className="text-slate-400 hover:text-white text-xl leading-none">×</button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5 space-y-4">
-          <div>
-            <label className="text-xs text-slate-400 block mb-1">Note to student (optional)</label>
-            <textarea
-              value={note}
-              onChange={e => setNote(e.target.value)}
-              rows={2}
-              placeholder="Add context or specific instructions…"
-              className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-violet-500/50 resize-none"
-            />
-          </div>
+        {/* Note field — sticky above scrollable list */}
+        <div className="px-5 pt-4 pb-3 border-b border-slate-700/50 flex-shrink-0">
+          <label className="text-xs text-slate-400 block mb-1">Note to student (optional)</label>
+          <textarea
+            value={note}
+            onChange={e => setNote(e.target.value)}
+            rows={2}
+            placeholder="Add context or specific instructions…"
+            className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-violet-500/50 resize-none"
+          />
+        </div>
 
+        <div className="flex-1 overflow-y-auto p-5">
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <div className="w-6 h-6 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
             </div>
           ) : fetchError ? (
-            <p className="text-red-400 text-sm text-center py-8">Error loading exercises ({fetchError}). Check that the seed has been run.</p>
+            <p className="text-red-400 text-sm text-center py-8">Error loading exercises ({fetchError}).</p>
           ) : exercises.length === 0 ? (
             <p className="text-slate-400 text-sm text-center py-8">No exercises available for this section yet.</p>
           ) : (
-            <div className="space-y-2">
-              {exercises.map(ex => {
-                const isAssigned = assigned.has(ex.id)
+            <div className="space-y-5">
+              {unitOrder.map(unitTitle => {
+                const isSuggested = unitTitle === suggestedUnit
                 return (
-                  <div
-                    key={ex.id}
-                    className={`bg-slate-700/40 rounded-xl border p-4 ${isAssigned ? 'border-green-500/30' : 'border-slate-600/40'}`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-white leading-tight">{ex.title}</p>
-                        <p className="text-xs text-slate-500 mt-0.5">{ex.unit_title}</p>
-                        {ex.prompt_text && (
-                          <p className="text-xs text-slate-400 mt-1 line-clamp-2">{ex.prompt_text}</p>
-                        )}
-                        <div className="flex gap-2 mt-1.5 flex-wrap">
-                          <span className="text-[10px] text-slate-600 bg-slate-700 px-1.5 py-0.5 rounded">
-                            {ex.exercise_type}
-                          </span>
-                          {ex.word_limit && (
-                            <span className="text-[10px] text-slate-600">{ex.word_limit}w</span>
-                          )}
-                          {ex.is_timed && ex.time_limit_minutes && (
-                            <span className="text-[10px] text-slate-600">⏱ {ex.time_limit_minutes}min</span>
-                          )}
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => assign(ex.id)}
-                        disabled={isAssigned || assigning === ex.id}
-                        className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                          isAssigned
-                            ? 'bg-green-500/20 text-green-400 cursor-default'
-                            : 'bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-50'
-                        }`}
-                      >
-                        {isAssigned ? 'Assigned ✓' : assigning === ex.id ? '…' : 'Assign'}
-                      </button>
+                  <div key={unitTitle}>
+                    {/* Unit header */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                        {unitTitle}
+                      </h4>
+                      {isSuggested && (
+                        <span className="text-[10px] bg-violet-500/20 text-violet-300 border border-violet-500/30 px-1.5 py-0.5 rounded-full font-medium">
+                          suggested next
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Exercises in this unit */}
+                    <div className="space-y-2">
+                      {unitMap[unitTitle].map(ex => {
+                        const done = isAssigned(ex.id)
+                        return (
+                          <div
+                            key={ex.id}
+                            className={`rounded-xl border p-3.5 transition-all ${
+                              done
+                                ? 'bg-slate-800/30 border-slate-700/30 opacity-50'
+                                : 'bg-slate-700/40 border-slate-600/40'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <p className={`text-sm font-medium leading-tight ${done ? 'text-slate-400' : 'text-white'}`}>
+                                  {ex.title}
+                                </p>
+                                {ex.prompt_text && !done && (
+                                  <p className="text-xs text-slate-400 mt-1 line-clamp-2">{ex.prompt_text}</p>
+                                )}
+                                <div className="flex gap-2 mt-1.5 flex-wrap">
+                                  <span className="text-[10px] text-slate-600 bg-slate-700/60 px-1.5 py-0.5 rounded">
+                                    {ex.exercise_type}
+                                  </span>
+                                  {ex.word_limit && !done && (
+                                    <span className="text-[10px] text-slate-600">{ex.word_limit}w</span>
+                                  )}
+                                  {ex.is_timed && ex.time_limit_minutes && !done && (
+                                    <span className="text-[10px] text-slate-600">⏱ {ex.time_limit_minutes}min</span>
+                                  )}
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => !done && assign(ex.id)}
+                                disabled={done || assigning === ex.id}
+                                className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                                  done
+                                    ? 'bg-green-500/10 text-green-500/60 cursor-default'
+                                    : 'bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-50'
+                                }`}
+                              >
+                                {done ? '✓' : assigning === ex.id ? '…' : 'Assign'}
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
                 )
@@ -540,7 +593,7 @@ function StudentAssignmentPanel({
                 <h3 className="text-xs font-medium uppercase tracking-wider text-slate-500 mb-2">
                   Assign Exercise
                 </h3>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="flex flex-col gap-2">
                   {SECTION_OPTIONS.map(s => (
                     <button
                       key={s.key}
