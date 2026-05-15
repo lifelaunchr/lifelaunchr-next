@@ -1905,7 +1905,17 @@ function WritingPageInner() {
             {isParent ? 'Writing Progress' : 'Writing Assignments'}
           </h1>
         </div>
-        <WritingCoachView token={token} readOnly={isParent} />
+        <WritingCoachView
+          token={token}
+          readOnly={isParent}
+          enabledModules={{
+            selfDiscovery:   showSelfDiscovery,
+            writingPractice: showWritingPractice,
+            commonApp:       showCommonApp,
+            ucPiqs:          showUCPIQs,
+            whyEssays:       showWhyEssays,
+          }}
+        />
       </div>
     )
   }

@@ -12,6 +12,15 @@ interface Student {
   id: number
   full_name: string | null
   email: string | null
+  writing_track: 'long_form' | 'sprint' | null
+}
+
+interface EnabledModules {
+  selfDiscovery: boolean
+  writingPractice: boolean
+  commonApp: boolean
+  ucPiqs: boolean
+  whyEssays: boolean
 }
 
 interface WritingAssignment {
@@ -76,12 +85,14 @@ function AssignPanel({
   sectionKey,
   sectionLabel,
   studentId,
+  track,
   onAssigned,
   onClose,
 }: {
   sectionKey: string
   sectionLabel: string
   studentId: number
+  track: 'long_form' | 'sprint' | null
   onAssigned: () => void
   onClose: () => void
 }) {
@@ -193,6 +204,18 @@ function AssignPanel({
             <div className="space-y-5">
               {unitOrder.map(unitTitle => {
                 const isSuggested = unitTitle === suggestedUnit
+                const unitExercises = unitMap[unitTitle]
+                const allAssigned = unitExercises.every(ex => isAssigned(ex.id))
+                const unassignedInUnit = unitExercises.filter(ex => !isAssigned(ex.id))
+                // Show "Assign all" for sprint track on multi-exercise units
+                const showAssignAll = track === 'sprint' && unassignedInUnit.length > 1
+
+                const assignAll = async () => {
+                  for (const ex of unassignedInUnit) {
+                    await assign(ex.id)
+                  }
+                }
+
                 return (
                   <div key={unitTitle}>
                     {/* Unit header */}
@@ -204,6 +227,14 @@ function AssignPanel({
                         <span className="text-[10px] bg-violet-500/20 text-violet-300 border border-violet-500/30 px-1.5 py-0.5 rounded-full font-medium">
                           suggested next
                         </span>
+                      )}
+                      {showAssignAll && !allAssigned && (
+                        <button
+                          onClick={assignAll}
+                          className="ml-auto text-[10px] bg-violet-600/20 hover:bg-violet-600/40 text-violet-300 border border-violet-500/30 px-2 py-0.5 rounded-full font-medium transition-all"
+                        >
+                          Assign all ({unassignedInUnit.length})
+                        </button>
                       )}
                     </div>
 
@@ -423,16 +454,34 @@ function ReviewPanel({
   )
 }
 
-// ── Section options for assignment ────────────────────────────────────────────
+// ── Section options — filtered by track + enabled modules ─────────────────────
 
-const SECTION_OPTIONS = [
-  { key: 'self_discovery',   label: 'Self-Discovery' },
-  { key: 'writing_practice', label: 'Writing Practice' },
-  { key: 'commonapp',        label: 'CommonApp Essay' },
-  { key: 'uc_piqs',          label: 'UC Personal Insight' },
-  { key: 'why_major',        label: 'Why Major' },
-  { key: 'why_college',      label: 'Why College' },
+const ALL_SECTION_OPTIONS = [
+  { key: 'self_discovery',   label: 'Self-Discovery',        track: 'long_form' as const, module: 'selfDiscovery' as const },
+  { key: 'writing_practice', label: 'Writing Practice',      track: 'long_form' as const, module: 'writingPractice' as const },
+  { key: 'commonapp',        label: 'CommonApp Essay',        track: 'sprint'    as const, module: 'commonApp' as const },
+  { key: 'uc_piqs',          label: 'UC Personal Insight',   track: 'sprint'    as const, module: 'ucPiqs' as const },
+  { key: 'why_major',        label: 'Why Major',              track: 'sprint'    as const, module: 'whyEssays' as const },
+  { key: 'why_college',      label: 'Why College',            track: 'sprint'    as const, module: 'whyEssays' as const },
 ]
+
+function getSectionOptions(
+  track: 'long_form' | 'sprint' | null,
+  modules: EnabledModules,
+  hasEssayModules: boolean,
+) {
+  // No track set yet, or no essay modules — show SD + WP only
+  if (!track || !hasEssayModules) {
+    return ALL_SECTION_OPTIONS.filter(s => s.track === 'long_form' && modules[s.module])
+  }
+  if (track === 'long_form') {
+    return ALL_SECTION_OPTIONS.filter(s => s.track === 'long_form' && modules[s.module])
+  }
+  // Sprint: essay sections first (enabled ones), then SD + WP collapsed at bottom
+  const sprint = ALL_SECTION_OPTIONS.filter(s => s.track === 'sprint' && modules[s.module])
+  const longForm = ALL_SECTION_OPTIONS.filter(s => s.track === 'long_form' && modules[s.module])
+  return [...sprint, ...longForm]
+}
 
 // ── StudentAssignmentPanel ────────────────────────────────────────────────────
 
@@ -441,17 +490,44 @@ function StudentAssignmentPanel({
   readOnly,
   onBack,
   onCountChanged,
+  enabledModules,
+  onTrackChange,
 }: {
   student: Student
   readOnly: boolean
   onBack: () => void
   onCountChanged: (studentId: number, total: number, submitted: number) => void
+  enabledModules: EnabledModules
+  onTrackChange: (studentId: number, track: 'long_form' | 'sprint' | null) => void
 }) {
   const { getToken } = useAuth()
   const [assignments, setAssignments] = useState<WritingAssignment[]>([])
   const [loading, setLoading] = useState(true)
   const [assignPanel, setAssignPanel] = useState<{ sectionKey: string; sectionLabel: string } | null>(null)
   const [reviewAssignment, setReviewAssignment] = useState<WritingAssignment | null>(null)
+  const [track, setTrack] = useState<'long_form' | 'sprint' | null>(student.writing_track)
+  const [savingTrack, setSavingTrack] = useState(false)
+
+  const hasEssayModules = enabledModules.commonApp || enabledModules.ucPiqs || enabledModules.whyEssays
+
+  const saveTrack = async (newTrack: 'long_form' | 'sprint' | null) => {
+    setSavingTrack(true)
+    setTrack(newTrack)
+    try {
+      const tok = await getToken()
+      if (!tok) return
+      await fetch(`${API}/writing/students/${student.id}/track`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${tok}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ writing_track: newTrack }),
+      })
+      onTrackChange(student.id, newTrack)
+    } finally {
+      setSavingTrack(false)
+    }
+  }
+
+  const sectionOptions = getSectionOptions(track, enabledModules, hasEssayModules)
 
   const loadData = useCallback(() => {
     setLoading(true)
@@ -517,14 +593,43 @@ function StudentAssignmentPanel({
           )}
         </div>
 
-        {!readOnly && (
-          <Link
-            href={`/writing?for=${student.id}&from=writing`}
-            className="text-xs text-violet-400 hover:text-violet-300 transition-colors flex-shrink-0 whitespace-nowrap"
-          >
-            View full hub →
-          </Link>
-        )}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Track chooser — only for coaches when essay modules are enabled */}
+          {!readOnly && hasEssayModules && (
+            <div className="flex items-center rounded-lg border border-slate-700 overflow-hidden text-[10px] font-medium">
+              <button
+                onClick={() => saveTrack('long_form')}
+                disabled={savingTrack}
+                className={`px-2.5 py-1.5 transition-all ${
+                  track === 'long_form'
+                    ? 'bg-violet-600 text-white'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                }`}
+              >
+                Long-form
+              </button>
+              <button
+                onClick={() => saveTrack('sprint')}
+                disabled={savingTrack}
+                className={`px-2.5 py-1.5 transition-all border-l border-slate-700 ${
+                  track === 'sprint'
+                    ? 'bg-violet-600 text-white'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                }`}
+              >
+                Sprint
+              </button>
+            </div>
+          )}
+          {!readOnly && (
+            <Link
+              href={`/writing?for=${student.id}&from=writing`}
+              className="text-xs text-violet-400 hover:text-violet-300 transition-colors whitespace-nowrap"
+            >
+              View full hub →
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Parent privacy banner */}
@@ -605,15 +710,26 @@ function StudentAssignmentPanel({
                   Assign Exercise
                 </h3>
                 <div className="flex flex-col gap-2">
-                  {SECTION_OPTIONS.map(s => (
-                    <button
-                      key={s.key}
-                      onClick={() => setAssignPanel({ sectionKey: s.key, sectionLabel: s.label })}
-                      className="text-xs px-3 py-2 bg-slate-800/60 border border-slate-700/40 rounded-lg text-slate-300 hover:text-white hover:border-violet-500/40 hover:bg-violet-500/10 transition-all text-left"
-                    >
-                      + {s.label}
-                    </button>
-                  ))}
+                  {sectionOptions.map((s, i) => {
+                    // Visual separator before the long-form sections in sprint mode
+                    const isFirstLongForm = track === 'sprint' && s.track === 'long_form' &&
+                      (i === 0 || sectionOptions[i - 1].track !== 'long_form')
+                    return (
+                      <div key={s.key}>
+                        {isFirstLongForm && (
+                          <p className="text-[10px] text-slate-600 uppercase tracking-wider mt-1 mb-1">
+                            Additional exercises
+                          </p>
+                        )}
+                        <button
+                          onClick={() => setAssignPanel({ sectionKey: s.key, sectionLabel: s.label })}
+                          className="w-full text-xs px-3 py-2 bg-slate-800/60 border border-slate-700/40 rounded-lg text-slate-300 hover:text-white hover:border-violet-500/40 hover:bg-violet-500/10 transition-all text-left"
+                        >
+                          + {s.label}
+                        </button>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             )}
@@ -627,6 +743,7 @@ function StudentAssignmentPanel({
           sectionKey={assignPanel.sectionKey}
           sectionLabel={assignPanel.sectionLabel}
           studentId={student.id}
+          track={track}
           onAssigned={() => { loadData(); setAssignPanel(null) }}
           onClose={() => setAssignPanel(null)}
         />
@@ -648,9 +765,11 @@ function StudentAssignmentPanel({
 
 export function WritingCoachView({
   readOnly = false,
+  enabledModules = { selfDiscovery: true, writingPractice: true, commonApp: false, ucPiqs: false, whyEssays: false },
 }: {
   token?: string   // kept for API compatibility; fresh tokens fetched internally
   readOnly?: boolean
+  enabledModules?: EnabledModules
 }) {
   const { getToken } = useAuth()
   const [students, setStudents] = useState<Student[]>([])
@@ -704,6 +823,10 @@ export function WritingCoachView({
 
   const refreshStudentCount = useCallback((studentId: number, total: number, submitted: number) => {
     setAssignmentCounts(prev => ({ ...prev, [studentId]: { total, submitted } }))
+  }, [])
+
+  const handleTrackChange = useCallback((studentId: number, track: 'long_form' | 'sprint' | null) => {
+    setStudents(prev => prev.map(s => s.id === studentId ? { ...s, writing_track: track } : s))
   }, [])
 
   const filteredStudents = search.trim()
@@ -829,6 +952,8 @@ export function WritingCoachView({
             readOnly={readOnly}
             onBack={() => setSelectedStudent(null)}
             onCountChanged={refreshStudentCount}
+            enabledModules={enabledModules}
+            onTrackChange={handleTrackChange}
           />
         ) : (
           <div className="flex-1 flex items-center justify-center text-center p-8">
