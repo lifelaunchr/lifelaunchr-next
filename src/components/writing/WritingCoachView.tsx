@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useAuth } from '@clerk/nextjs'
 import Link from 'next/link'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'https://lifelaunchr.onrender.com'
@@ -75,17 +76,16 @@ function AssignPanel({
   sectionKey,
   sectionLabel,
   studentId,
-  token,
   onAssigned,
   onClose,
 }: {
   sectionKey: string
   sectionLabel: string
   studentId: number
-  token: string
   onAssigned: () => void
   onClose: () => void
 }) {
+  const { getToken } = useAuth()
   const [exercises, setExercises] = useState<LibraryExercise[]>([])
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
@@ -94,23 +94,28 @@ function AssignPanel({
   const [assigned, setAssigned] = useState<Set<number>>(new Set())
 
   useEffect(() => {
-    fetch(`${API}/writing/library?section_key=${sectionKey}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(r => {
-        if (!r.ok) throw new Error(`${r.status}`)
-        return r.json()
+    getToken().then(tok => {
+      if (!tok) { setFetchError('Not authenticated'); setLoading(false); return }
+      fetch(`${API}/writing/library?section_key=${sectionKey}`, {
+        headers: { Authorization: `Bearer ${tok}` },
       })
-      .then(data => { setExercises(data.exercises || []); setLoading(false) })
-      .catch(err => { setFetchError(err.message || 'Failed to load'); setLoading(false) })
-  }, [sectionKey, token])
+        .then(r => {
+          if (!r.ok) throw new Error(`${r.status}`)
+          return r.json()
+        })
+        .then(data => { setExercises(data.exercises || []); setLoading(false) })
+        .catch(err => { setFetchError(err.message || 'Failed to load'); setLoading(false) })
+    })
+  }, [sectionKey, getToken])
 
   const assign = async (exerciseId: number) => {
     setAssigning(exerciseId)
     try {
+      const tok = await getToken()
+      if (!tok) return
       const res = await fetch(`${API}/writing/assignments`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        headers: { Authorization: `Bearer ${tok}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           student_id: studentId,
           exercise_id: exerciseId,
@@ -213,15 +218,14 @@ function AssignPanel({
 
 function ReviewPanel({
   assignment,
-  token,
   onClose,
   onReviewed,
 }: {
   assignment: WritingAssignment
-  token: string
   onClose: () => void
   onReviewed: () => void
 }) {
+  const { getToken } = useAuth()
   const [responses, setResponses] = useState<AssignmentResponse[]>([])
   const [loadingResponses, setLoadingResponses] = useState(true)
   const [note, setNote] = useState(assignment.note_to_student || '')
@@ -230,21 +234,26 @@ function ReviewPanel({
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
-    fetch(`${API}/writing/assignments/${assignment.id}/responses`, {
-      headers: { Authorization: `Bearer ${token}` },
+    getToken().then(tok => {
+      if (!tok) { setLoadingResponses(false); return }
+      fetch(`${API}/writing/assignments/${assignment.id}/responses`, {
+        headers: { Authorization: `Bearer ${tok}` },
+      })
+        .then(r => r.json())
+        .then(data => { setResponses(data.responses || []); setLoadingResponses(false) })
+        .catch(() => setLoadingResponses(false))
     })
-      .then(r => r.json())
-      .then(data => { setResponses(data.responses || []); setLoadingResponses(false) })
-      .catch(() => setLoadingResponses(false))
-  }, [assignment.id, token])
+  }, [assignment.id, getToken])
 
   const saveNote = async () => {
     setSaving(true)
     setSaved(false)
     try {
+      const tok = await getToken()
+      if (!tok) return
       await fetch(`${API}/writing/assignments/${assignment.id}`, {
         method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        headers: { Authorization: `Bearer ${tok}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ note_to_student: note }),
       })
       setSaved(true)
@@ -257,9 +266,11 @@ function ReviewPanel({
   const markReviewed = async () => {
     setMarking(true)
     try {
+      const tok = await getToken()
+      if (!tok) return
       const res = await fetch(`${API}/writing/assignments/${assignment.id}`, {
         method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        headers: { Authorization: `Bearer ${tok}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ note_to_student: note, status: 'reviewed' }),
       })
       if (res.ok) {
@@ -374,15 +385,14 @@ const SECTION_OPTIONS = [
 
 function StudentAssignmentPanel({
   student,
-  token,
   readOnly,
   onBack,
 }: {
   student: Student
-  token: string
   readOnly: boolean
   onBack: () => void
 }) {
+  const { getToken } = useAuth()
   const [assignments, setAssignments] = useState<WritingAssignment[]>([])
   const [loading, setLoading] = useState(true)
   const [assignPanel, setAssignPanel] = useState<{ sectionKey: string; sectionLabel: string } | null>(null)
@@ -390,13 +400,16 @@ function StudentAssignmentPanel({
 
   const loadData = useCallback(() => {
     setLoading(true)
-    fetch(`${API}/writing/assignments?student_id=${student.id}`, {
-      headers: { Authorization: `Bearer ${token}` },
+    getToken().then(tok => {
+      if (!tok) { setLoading(false); return }
+      fetch(`${API}/writing/assignments?student_id=${student.id}`, {
+        headers: { Authorization: `Bearer ${tok}` },
+      })
+        .then(r => r.json())
+        .then(data => { setAssignments(data.assignments || []); setLoading(false) })
+        .catch(() => setLoading(false))
     })
-      .then(r => r.json())
-      .then(data => { setAssignments(data.assignments || []); setLoading(false) })
-      .catch(() => setLoading(false))
-  }, [student.id, token])
+  }, [student.id, getToken])
 
   useEffect(() => { loadData() }, [loadData])
 
@@ -550,7 +563,6 @@ function StudentAssignmentPanel({
           sectionKey={assignPanel.sectionKey}
           sectionLabel={assignPanel.sectionLabel}
           studentId={student.id}
-          token={token}
           onAssigned={() => { loadData(); setAssignPanel(null) }}
           onClose={() => setAssignPanel(null)}
         />
@@ -560,7 +572,6 @@ function StudentAssignmentPanel({
       {reviewAssignment && (
         <ReviewPanel
           assignment={reviewAssignment}
-          token={token}
           onClose={() => setReviewAssignment(null)}
           onReviewed={loadData}
         />
@@ -572,12 +583,12 @@ function StudentAssignmentPanel({
 // ── Main WritingCoachView ─────────────────────────────────────────────────────
 
 export function WritingCoachView({
-  token,
   readOnly = false,
 }: {
-  token: string
+  token?: string   // kept for API compatibility; fresh tokens fetched internally
   readOnly?: boolean
 }) {
+  const { getToken } = useAuth()
   const [students, setStudents] = useState<Student[]>([])
   const [loadingStudents, setLoadingStudents] = useState(true)
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
@@ -586,37 +597,43 @@ export function WritingCoachView({
 
   // Load student list
   useEffect(() => {
-    fetch(`${API}/my-students`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
-      .then(data => {
-        const list: Student[] = Array.isArray(data) ? data : (data.students || [])
-        setStudents(list)
-        setLoadingStudents(false)
-      })
-      .catch(() => setLoadingStudents(false))
-  }, [token])
+    getToken().then(tok => {
+      if (!tok) { setLoadingStudents(false); return }
+      fetch(`${API}/my-students`, { headers: { Authorization: `Bearer ${tok}` } })
+        .then(r => r.json())
+        .then(data => {
+          const list: Student[] = Array.isArray(data) ? data : (data.students || [])
+          setStudents(list)
+          setLoadingStudents(false)
+        })
+        .catch(() => setLoadingStudents(false))
+    })
+  }, [getToken])
 
   // Load assignment counts (for sidebar badges)
   useEffect(() => {
     if (students.length === 0) return
-    const counts: Record<number, { total: number; submitted: number }> = {}
-    Promise.allSettled(
-      students.map(s =>
-        fetch(`${API}/writing/assignments?student_id=${s.id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-          .then(r => r.json())
-          .then(data => {
-            const items: WritingAssignment[] = data.assignments || []
-            counts[s.id] = {
-              total: items.length,
-              submitted: items.filter(a => a.status === 'submitted').length,
-            }
+    getToken().then(tok => {
+      if (!tok) return
+      const counts: Record<number, { total: number; submitted: number }> = {}
+      Promise.allSettled(
+        students.map(s =>
+          fetch(`${API}/writing/assignments?student_id=${s.id}`, {
+            headers: { Authorization: `Bearer ${tok}` },
           })
-          .catch(() => {})
-      )
-    ).then(() => setAssignmentCounts({ ...counts }))
-  }, [students, token])
+            .then(r => r.json())
+            .then(data => {
+              const items: WritingAssignment[] = data.assignments || []
+              counts[s.id] = {
+                total: items.length,
+                submitted: items.filter(a => a.status === 'submitted').length,
+              }
+            })
+            .catch(() => {})
+        )
+      ).then(() => setAssignmentCounts({ ...counts }))
+    })
+  }, [students, getToken])
 
   const studentName = (s: Student) => s.full_name || s.email || `Student ${s.id}`
   const totalSubmitted = Object.values(assignmentCounts).reduce((sum, c) => sum + c.submitted, 0)
@@ -741,7 +758,6 @@ export function WritingCoachView({
         {selectedStudent ? (
           <StudentAssignmentPanel
             student={selectedStudent}
-            token={token}
             readOnly={readOnly}
             onBack={() => setSelectedStudent(null)}
           />
