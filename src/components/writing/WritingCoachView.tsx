@@ -440,10 +440,12 @@ function StudentAssignmentPanel({
   student,
   readOnly,
   onBack,
+  onCountChanged,
 }: {
   student: Student
   readOnly: boolean
   onBack: () => void
+  onCountChanged: (studentId: number, total: number, submitted: number) => void
 }) {
   const { getToken } = useAuth()
   const [assignments, setAssignments] = useState<WritingAssignment[]>([])
@@ -459,10 +461,19 @@ function StudentAssignmentPanel({
         headers: { Authorization: `Bearer ${tok}` },
       })
         .then(r => r.json())
-        .then(data => { setAssignments(data.assignments || []); setLoading(false) })
+        .then(data => {
+          const items: WritingAssignment[] = data.assignments || []
+          setAssignments(items)
+          setLoading(false)
+          onCountChanged(
+            student.id,
+            items.length,
+            items.filter(a => a.status === 'submitted').length,
+          )
+        })
         .catch(() => setLoading(false))
     })
-  }, [student.id, getToken])
+  }, [student.id, getToken, onCountChanged])
 
   useEffect(() => { loadData() }, [loadData])
 
@@ -691,6 +702,10 @@ export function WritingCoachView({
   const studentName = (s: Student) => s.full_name || s.email || `Student ${s.id}`
   const totalSubmitted = Object.values(assignmentCounts).reduce((sum, c) => sum + c.submitted, 0)
 
+  const refreshStudentCount = useCallback((studentId: number, total: number, submitted: number) => {
+    setAssignmentCounts(prev => ({ ...prev, [studentId]: { total, submitted } }))
+  }, [])
+
   const filteredStudents = search.trim()
     ? students.filter(s => {
         const q = search.toLowerCase()
@@ -813,6 +828,7 @@ export function WritingCoachView({
             student={selectedStudent}
             readOnly={readOnly}
             onBack={() => setSelectedStudent(null)}
+            onCountChanged={refreshStudentCount}
           />
         ) : (
           <div className="flex-1 flex items-center justify-center text-center p-8">
