@@ -791,30 +791,10 @@ export function WritingCoachView({
     })
   }, [getToken])
 
-  // Load assignment counts (for sidebar badges)
-  useEffect(() => {
-    if (students.length === 0) return
-    getToken().then(tok => {
-      if (!tok) return
-      const counts: Record<number, { total: number; submitted: number }> = {}
-      Promise.allSettled(
-        students.map(s =>
-          fetch(`${API}/writing/assignments?student_id=${s.id}`, {
-            headers: { Authorization: `Bearer ${tok}` },
-          })
-            .then(r => r.json())
-            .then(data => {
-              const items: WritingAssignment[] = data.assignments || []
-              counts[s.id] = {
-                total: items.length,
-                submitted: items.filter(a => a.status === 'submitted').length,
-              }
-            })
-            .catch(() => {})
-        )
-      ).then(() => setAssignmentCounts({ ...counts }))
-    })
-  }, [students, getToken])
+  // Assignment counts are populated lazily via onCountChanged when each student
+  // is selected — do NOT batch-load for all students on mount. Firing one request
+  // per student simultaneously exhausts the DB connection pool and makes the page
+  // unresponsive. Counts will appear in the sidebar after each student is visited.
 
   const studentName = (s: Student) => s.full_name || s.email || `Student ${s.id}`
   const totalSubmitted = Object.values(assignmentCounts).reduce((sum, c) => sum + c.submitted, 0)
