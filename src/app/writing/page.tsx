@@ -1434,31 +1434,61 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   reviewed:    { label: 'Reviewed ✓',   className: 'text-green-400' },
 }
 
+// Content and milestone types show different status labels
+const CONTENT_STATUS: Record<string, { label: string; className: string }> = {
+  assigned:    { label: 'Unread',       className: 'text-slate-500' },
+  in_progress: { label: 'In progress',  className: 'text-amber-400' },
+  submitted:   { label: 'Complete ✓',   className: 'text-green-400' },
+  reviewed:    { label: 'Complete ✓',   className: 'text-green-400' },
+}
+
+const MILESTONE_STATUS: Record<string, { label: string; className: string }> = {
+  assigned:    { label: 'Schedule',     className: 'text-blue-400' },
+  in_progress: { label: 'Schedule',     className: 'text-blue-400' },
+  submitted:   { label: 'Scheduled ✓', className: 'text-green-400' },
+  reviewed:    { label: 'Scheduled ✓', className: 'text-green-400' },
+}
+
 function AssignmentCard({ a, studentId }: { a: WritingAssignment; studentId?: string | null }) {
-  const badge = STATUS_BADGE[a.status] || STATUS_BADGE.assigned
+  const isContent = a.exercise_type === 'content'
+  const isMilestone = a.exercise_type === 'milestone'
+  const badgeMap = isMilestone ? MILESTONE_STATUS : isContent ? CONTENT_STATUS : STATUS_BADGE
+  const badge = badgeMap[a.status] || badgeMap.assigned
+
   return (
     <Link
       href={`/writing/assignment/${a.id}${studentId ? `?for=${studentId}` : ''}`}
-      className="block bg-slate-800/50 rounded-xl border border-slate-700/50 p-4 hover:border-violet-500/40 hover:bg-slate-800 transition-all"
+      className={[
+        'block rounded-xl border p-4 transition-all',
+        isMilestone
+          ? 'bg-blue-900/10 border-blue-700/30 hover:border-blue-500/50 hover:bg-blue-900/20'
+          : 'bg-slate-800/50 border-slate-700/50 hover:border-violet-500/40 hover:bg-slate-800',
+      ].join(' ')}
     >
       <div className="flex items-start justify-between gap-2">
-        <span className="text-sm text-white">{a.exercise_title}</span>
+        <div className="flex items-center gap-2 min-w-0">
+          {isMilestone && <span className="text-base leading-none flex-shrink-0">📅</span>}
+          {isContent && <span className="text-base leading-none flex-shrink-0">📖</span>}
+          <span className="text-sm text-white">{a.exercise_title}</span>
+        </div>
         <span className={`text-xs flex-shrink-0 ${badge.className}`}>{badge.label}</span>
       </div>
       {a.note_to_student && (
         <p className="text-xs text-slate-400 mt-1 italic">"{a.note_to_student}"</p>
       )}
-      <div className="flex items-center gap-3 mt-2">
-        {a.word_limit && (
-          <span className="text-xs text-slate-600">Up to {a.word_limit} words</span>
-        )}
-        {a.is_timed && a.time_limit_minutes && (
-          <span className="text-xs text-slate-600">⏱ {a.time_limit_minutes} min</span>
-        )}
-        {a.due_date && (
-          <span className="text-xs text-slate-600">Due {new Date(a.due_date).toLocaleDateString()}</span>
-        )}
-      </div>
+      {!isContent && !isMilestone && (
+        <div className="flex items-center gap-3 mt-2">
+          {a.word_limit && (
+            <span className="text-xs text-slate-600">Up to {a.word_limit} words</span>
+          )}
+          {a.is_timed && a.time_limit_minutes && (
+            <span className="text-xs text-slate-600">⏱ {a.time_limit_minutes} min</span>
+          )}
+          {a.due_date && (
+            <span className="text-xs text-slate-600">Due {new Date(a.due_date).toLocaleDateString()}</span>
+          )}
+        </div>
+      )}
     </Link>
   )
 }
