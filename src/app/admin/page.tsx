@@ -87,6 +87,9 @@ interface TenantSettings {
   id: number
   display_name: string
   session_report_cc_emails: string | null
+  editate_auth_token: string | null
+  editate_org_id: string | null
+  soar_writing_observations_enabled: boolean | null
 }
 
 interface TenantFormData {
@@ -213,6 +216,11 @@ export default function AdminPage() {
   const [tenantSettings, setTenantSettings] = useState<TenantSettings | null>(null)
   const [tenantCCEmails, setTenantCCEmails] = useState('')
   const [tenantLoading, setTenantLoading] = useState(false)
+  const [tenantEditateToken, setTenantEditateToken] = useState('')
+  const [tenantEditateOrg, setTenantEditateOrg] = useState('')
+  const [tenantObsEnabled, setTenantObsEnabled] = useState(true)
+  const [tenantWritingLoading, setTenantWritingLoading] = useState(false)
+  const [tenantWritingMsg, setTenantWritingMsg] = useState('')
 
   // Create / Edit tenant modal
   const [tenantModalOpen, setTenantModalOpen] = useState(false)
@@ -295,7 +303,15 @@ export default function AdminPage() {
       fetches.push(
         wrap('my-tenant', fetch(`${apiUrl}/admin/my-tenant`, { headers })
           .then(r => { console.log('[admin] my-tenant status', r.status); return r.ok ? r.json() : null })
-          .then(t => { if (t) { setTenantSettings(t); setTenantCCEmails(t.session_report_cc_emails || '') } }))
+          .then(t => {
+            if (t) {
+              setTenantSettings(t)
+              setTenantCCEmails(t.session_report_cc_emails || '')
+              setTenantEditateToken('')  // never pre-fill token — leave blank to keep existing
+              setTenantEditateOrg(t.editate_org_id || '')
+              setTenantObsEnabled(t.soar_writing_observations_enabled ?? true)
+            }
+          }))
       )
 
       const results = await Promise.allSettled(fetches)
@@ -551,6 +567,34 @@ export default function AdminPage() {
     } catch { setSaveMsg('Error saving tenant settings.') }
     setTenantLoading(false)
     setTimeout(() => setSaveMsg(''), 3000)
+  }
+
+  const saveTenantWritingSettings = async () => {
+    if (!tenantSettings) return
+    setTenantWritingLoading(true)
+    try {
+      const token = await getToken()
+      const body: Record<string, unknown> = {
+        editate_org_id: tenantEditateOrg.trim() || null,
+        soar_writing_observations_enabled: tenantObsEnabled,
+      }
+      // Only send token if the field has a value — blank means "keep existing"
+      if (tenantEditateToken.trim()) body.editate_auth_token = tenantEditateToken.trim()
+      const res = await fetch(`${apiUrl}/admin/tenants/${tenantSettings.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
+      })
+      if (res.ok) {
+        setTenantWritingMsg('Writing settings saved!')
+        setTenantEditateToken('')  // clear token field after save
+        setTenantSettings({ ...tenantSettings, editate_org_id: tenantEditateOrg.trim() || null, soar_writing_observations_enabled: tenantObsEnabled })
+      } else {
+        setTenantWritingMsg('Error saving writing settings.')
+      }
+    } catch { setTenantWritingMsg('Error saving writing settings.') }
+    setTenantWritingLoading(false)
+    setTimeout(() => setTenantWritingMsg(''), 3000)
   }
 
   const openCreateTenant = () => {
@@ -1147,6 +1191,68 @@ export default function AdminPage() {
                   className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-300 text-white rounded-lg px-5 py-2 text-sm font-medium transition-colors"
                 >
                   {tenantLoading ? 'Saving…' : 'Save settings'}
+                </button>
+              </div>
+            </div>
+
+            {/* Writing & Essays card */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <h2 className="text-base font-semibold text-gray-800 mb-1">Writing &amp; Essays</h2>
+              <p className="text-sm text-gray-400 mb-6">Configure writing hub and essay integration settings.</p>
+              <div className="space-y-5">
+                {/* Soar observations toggle */}
+                <div>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={tenantObsEnabled}
+                      onChange={e => setTenantObsEnabled(e.target.checked)}
+                      className="w-4 h-4 accent-indigo-600"
+                    />
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Enable Soar writing observations</p>
+                      <p className="text-xs text-gray-400">Coaches can generate AI observations on student submissions. Never shown to students.</p>
+                    </div>
+                  </label>
+                </div>
+                {/* Editate API token */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Editate API token
+                  </label>
+                  <input
+                    type="password"
+                    value={tenantEditateToken}
+                    onChange={e => setTenantEditateToken(e.target.value)}
+                    placeholder="Leave blank to keep existing token"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">Required to generate Editate access links for students.</p>
+                </div>
+                {/* Editate Org ID */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Editate Org ID
+                  </label>
+                  <input
+                    type="text"
+                    value={tenantEditateOrg}
+                    onChange={e => setTenantEditateOrg(e.target.value)}
+                    placeholder="e.g. Lifelaunchr"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                  />
+                </div>
+                {tenantWritingMsg && (
+                  <p className={`text-sm ${tenantWritingMsg.startsWith('Error') ? 'text-red-600' : 'text-green-600'}`}>
+                    {tenantWritingMsg}
+                  </p>
+                )}
+                <button
+                  onClick={saveTenantWritingSettings}
+                  disabled={tenantWritingLoading || !tenantSettings}
+                  className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-300 text-white rounded-lg px-5 py-2 text-sm font-medium transition-colors"
+                >
+                  {tenantWritingLoading ? 'Saving…' : 'Save writing settings'}
                 </button>
               </div>
             </div>
