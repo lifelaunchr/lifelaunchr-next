@@ -455,7 +455,7 @@ function AssignmentPageInner() {
                     <p className="text-sm text-slate-400 leading-relaxed max-w-xs mx-auto">
                       Your coach will review your work and send feedback. You&apos;ll see their notes here when ready.
                     </p>
-                    <p className="text-xs text-slate-600">Check the History tab to see your submission.</p>
+                    <p className="text-xs text-slate-600">Check the Drafts tab to see your submission.</p>
                   </div>
                 )}
                 {/* Structured exercise — render each field as a labeled textarea */}
