@@ -515,10 +515,13 @@ function AssignmentPageInner() {
                 )}
                 <div className="pt-2">
                   <button
-                    onClick={() => setActiveTab('write')}
+                    onClick={() => {
+                      if (isTimedWrite && !isAlreadyDone) startTimer()
+                      setActiveTab('write')
+                    }}
                     className="w-full py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm rounded-lg transition-all"
                   >
-                    Start Writing →
+                    {isTimedWrite && !isAlreadyDone ? 'Start Writing — Timer Begins →' : 'Start Writing →'}
                   </button>
                 </div>
               </div>
@@ -541,29 +544,15 @@ function AssignmentPageInner() {
                 {/* ── Timed write ── */}
                 {!isSubmitted && isTimedWrite && (
                   <>
-                    {/* Pre-start card — shown until timer begins (and no previous draft) */}
+                    {/* Not yet started and no previous draft — prompt back to Context tab */}
                     {!timerStarted && !isAlreadyDone && (
-                      <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6 space-y-5 text-center">
-                        <div className="text-4xl">⏱</div>
-                        <div className="space-y-1">
-                          <p className="text-base font-semibold text-white">
-                            {assignment.time_limit_minutes ?? 10}-minute timed write
-                          </p>
-                          <p className="text-sm text-slate-400 leading-relaxed">
-                            Once you start, don&apos;t stop and don&apos;t edit — just write. The goal is flow, not polish.
-                          </p>
-                        </div>
-                        {assignment.prompt_text && (
-                          <div className="text-left bg-slate-900/50 rounded-lg px-4 py-3 border border-slate-700/40">
-                            <p className="text-xs text-slate-500 uppercase tracking-wide font-medium mb-1">Your prompt</p>
-                            <p className="text-sm text-slate-200 leading-relaxed">{assignment.prompt_text}</p>
-                          </div>
-                        )}
+                      <div className="bg-slate-800/40 border border-slate-700/40 rounded-xl px-5 py-8 text-center space-y-3">
+                        <p className="text-sm text-slate-400">Go to the Context tab to read the prompt, then click <span className="text-white font-medium">Start Writing</span> when you&apos;re ready.</p>
                         <button
-                          onClick={() => { startTimer(); setActiveTab('write') }}
-                          className="w-full py-3 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-xl transition-all"
+                          onClick={() => setActiveTab('guide')}
+                          className="text-xs text-violet-400 hover:text-violet-300"
                         >
-                          Start Timer →
+                          ← Back to Context
                         </button>
                       </div>
                     )}
