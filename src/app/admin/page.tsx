@@ -1178,7 +1178,7 @@ export default function AdminPage() {
                     type="text"
                     value={tenantCCEmails}
                     onChange={e => setTenantCCEmails(e.target.value)}
-                    placeholder="e.g. swami@lifelaunchr.com, manager@firm.com"
+                    placeholder="e.g. admin@firm.com, manager@firm.com"
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
                   />
                   <p className="text-xs text-gray-400 mt-1">
