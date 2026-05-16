@@ -122,13 +122,14 @@ function AssignmentPageInner() {
 
   // Mark a content/milestone exercise complete by posting a sentinel response
   async function handleComplete(sentinel: string) {
-    if (!token) return
+    const freshToken = await getToken()
+    if (!freshToken) return
     setSaving(true)
     setError(null)
     try {
       const res = await fetch(`${API}/writing/assignments/${assignmentId}/responses`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        headers: { Authorization: `Bearer ${freshToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: sentinel }),
       })
       if (!res.ok) throw new Error('Failed to save')
@@ -147,7 +148,9 @@ function AssignmentPageInner() {
     const hasContent = isStructured
       ? Object.values(structuredBody).some(v => v.trim())
       : body.trim()
-    if (!token || !hasContent) return
+    if (!hasContent) return
+    const freshToken = await getToken()
+    if (!freshToken) return
     setSaving(true)
     setError(null)
     const content = isStructured ? JSON.stringify(structuredBody) : body
@@ -155,7 +158,7 @@ function AssignmentPageInner() {
       const res = await fetch(`${API}/writing/assignments/${assignmentId}/responses`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${freshToken}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ content }),
