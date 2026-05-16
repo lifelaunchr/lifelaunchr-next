@@ -777,6 +777,7 @@ function SelfDiscoveryTab({
   const [existingResult, setExistingResult] = useState<AssessmentResult | null>(null)
   const [existingInterpretation, setExistingInterpretation] = useState<string | null>(null)
   const [resultLoaded, setResultLoaded] = useState(false)
+  const [resultLoadError, setResultLoadError] = useState(false)
   const [showRetakeForm, setShowRetakeForm] = useState(false)
   const [result, setResult] = useState<AssessmentResult | null>(null)
 
@@ -797,9 +798,24 @@ function SelfDiscoveryTab({
     const url = studentId
       ? `${API}/writing/personality-assessment?student_id=${studentId}`
       : `${API}/writing/personality-assessment`
-    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => (r.ok ? r.json() : null))
-      .then(data => {
+    // Always get a fresh token — the prop may be stale if Clerk has refreshed
+    // in the background since the parent first fetched it.
+    getToken()
+      .then(freshToken => {
+        if (!freshToken) throw new Error('not signed in')
+        return fetch(url, { headers: { Authorization: `Bearer ${freshToken}` } })
+      })
+      .then(async r => {
+        if (r.status === 404) {
+          // No assessment on file — expected for new students
+          setResultLoaded(true)
+          return
+        }
+        if (!r.ok) {
+          // Server/network error — surface it so user can retry
+          throw new Error(`server error ${r.status}`)
+        }
+        const data = await r.json()
         if (data?.result) {
           setExistingResult(data.result)
           if (data.interpretation) {
@@ -812,9 +828,15 @@ function SelfDiscoveryTab({
         }
         setResultLoaded(true)
       })
-      .catch(() => setResultLoaded(true))
+      .catch(() => {
+        // Network/server error — show retry rather than silently showing the
+        // "no data" state, which misleads users into thinking they need to
+        // retake the assessment.
+        setResultLoaded(true)
+        setResultLoadError(true)
+      })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, studentId])
+  }, [studentId])
 
   // ── If counselor, also eagerly load their OWN assessment ─────────────────
   useEffect(() => {
@@ -904,6 +926,42 @@ function SelfDiscoveryTab({
     return (
       <div className="flex items-center justify-center py-16">
         <div className="w-7 h-7 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (resultLoadError) {
+    return (
+      <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-6 text-center space-y-3">
+        <p className="text-sm text-slate-400">Couldn&apos;t load assessment data — please try again.</p>
+        <button
+          onClick={() => {
+            setResultLoadError(false)
+            setResultLoaded(false)
+            getToken().then(freshToken => {
+              if (!freshToken) { setResultLoaded(true); setResultLoadError(true); return }
+              const url = studentId
+                ? `${API}/writing/personality-assessment?student_id=${studentId}`
+                : `${API}/writing/personality-assessment`
+              fetch(url, { headers: { Authorization: `Bearer ${freshToken}` } })
+                .then(async r => {
+                  if (r.status === 404) { setResultLoaded(true); return }
+                  if (!r.ok) throw new Error(`${r.status}`)
+                  const data = await r.json()
+                  if (data?.result) {
+                    setExistingResult(data.result)
+                    if (data.interpretation) setInterpretation(data.interpretation)
+                    else fetchInterpretation(studentId)
+                  }
+                  setResultLoaded(true)
+                })
+                .catch(() => { setResultLoaded(true); setResultLoadError(true) })
+            })
+          }}
+          className="px-4 py-2 text-sm bg-violet-600 hover:bg-violet-500 text-white rounded-lg transition-all"
+        >
+          Retry
+        </button>
       </div>
     )
   }
