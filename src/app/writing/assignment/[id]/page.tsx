@@ -133,7 +133,7 @@ function AssignmentPageInner() {
     return text.trim() ? text.trim().split(/\s+/).length : 0
   }
 
-  // Mark a content/milestone exercise complete by posting a sentinel response
+  // Mark a content/milestone exercise complete by posting a sentinel response + patching status
   async function handleComplete(sentinel: string) {
     const freshToken = await getToken()
     if (!freshToken) return
@@ -146,6 +146,12 @@ function AssignmentPageInner() {
         body: JSON.stringify({ content: sentinel }),
       })
       if (!res.ok) throw new Error('Failed to save')
+      // Advance status to submitted so the list badge shows Done / Scheduled ✓
+      await fetch(`${API}/writing/assignments/${assignmentId}`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${freshToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'submitted' }),
+      })
       const sectionKey = assignment?.section_key ?? ''
       const backSection = SECTION_BACK[sectionKey] || ''
       const href = `/writing?section=${backSection}${forParam ? `&for=${forParam}` : ''}`
