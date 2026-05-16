@@ -74,6 +74,7 @@ function AssignmentPageInner() {
   const router = useRouter()
   const [token, setToken] = useState<string | null>(null)
   const [assignment, setAssignment] = useState<Assignment | null>(null)
+  const [schedulingLink, setSchedulingLink] = useState<string | null>(null)
   const [body, setBody] = useState('')
   // For structured exercises: per-field answers keyed by field id
   const [structuredBody, setStructuredBody] = useState<Record<string, string>>({})
@@ -91,30 +92,36 @@ function AssignmentPageInner() {
 
   useEffect(() => {
     if (!token || !assignmentId) return
-    fetch(`${API}/writing/assignments/${assignmentId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(r => r.json())
-      .then(data => {
-        const a: Assignment = data.assignment
-        setAssignment(a)
-        // Pre-populate write tab with most recent response
-        if (a.responses && a.responses.length > 0) {
-          const latest = a.responses[0]
-          if (a.exercise_type === 'structured' && latest.content) {
-            // Parse JSON → populate per-field state
-            try {
-              setStructuredBody(JSON.parse(latest.content) as Record<string, string>)
-            } catch {
-              setStructuredBody({})
-            }
-          } else {
-            setBody(latest.content || '')
+    // Fetch assignment + usage (for scheduling link on milestone exercises) in parallel
+    Promise.all([
+      fetch(`${API}/writing/assignments/${assignmentId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }).then(r => r.json()),
+      fetch(`${API}/my-usage`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }).then(r => r.json()).catch(() => ({})),
+    ]).then(([assignmentData, usageData]) => {
+      const a: Assignment = assignmentData.assignment
+      setAssignment(a)
+      // Scheduling link — only relevant for students (counselors/parents don't book meetings this way)
+      if (usageData.scheduling_link) {
+        setSchedulingLink(usageData.scheduling_link)
+      }
+      // Pre-populate write tab with most recent response
+      if (a.responses && a.responses.length > 0) {
+        const latest = a.responses[0]
+        if (a.exercise_type === 'structured' && latest.content) {
+          try {
+            setStructuredBody(JSON.parse(latest.content) as Record<string, string>)
+          } catch {
+            setStructuredBody({})
           }
+        } else {
+          setBody(latest.content || '')
         }
-        setLoading(false)
-      })
-      .catch(() => setLoading(false))
+      }
+      setLoading(false)
+    }).catch(() => setLoading(false))
   }, [token, assignmentId])
 
   function wordCount(text: string) {
@@ -370,22 +377,32 @@ function AssignmentPageInner() {
                 </div>
               ) : (
                 <p className="text-sm text-slate-300 text-center">
-                  Schedule a meeting with your coach to review your work before continuing.
+                  Meet with your coach to review your work before continuing.
                 </p>
+              )}
+              {schedulingLink && !isAlreadyDone && (
+                <a
+                  href={schedulingLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 w-full py-3 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded-xl font-medium transition-all"
+                >
+                  📅 Schedule a meeting →
+                </a>
               )}
             </div>
             {error && <p className="text-xs text-red-400 text-center">{error}</p>}
             {isAlreadyDone ? (
               <div className="py-3 px-4 bg-green-900/20 border border-green-700/30 rounded-xl text-center">
-                <span className="text-green-400 text-sm font-medium">✓ Meeting Scheduled</span>
+                <span className="text-green-400 text-sm font-medium">✓ Done</span>
               </div>
             ) : (
               <button
                 onClick={() => handleComplete('scheduled')}
                 disabled={saving}
-                className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded-xl font-medium transition-all disabled:opacity-50"
+                className="w-full py-3 bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm rounded-xl font-medium transition-all disabled:opacity-50"
               >
-                {saving ? 'Saving…' : '✓ Meeting Scheduled — Continue'}
+                {saving ? 'Saving…' : "I've had this meeting — Continue →"}
               </button>
             )}
           </div>
