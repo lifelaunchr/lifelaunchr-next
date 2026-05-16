@@ -1866,7 +1866,6 @@ function WritingPageInner() {
   const [loadingAssignments, setLoadingAssignments] = useState(true)
   const [assessmentDone, setAssessmentDone] = useState<boolean | null>(null)
   const [showAssessment, setShowAssessment] = useState(false)
-  const [showValues, setShowValues] = useState(false)
 
   // Load token + usage
   useEffect(() => {
@@ -1940,7 +1939,6 @@ function WritingPageInner() {
     if (isCoachView) {
       setAssessmentDone(null)
       setShowAssessment(false)
-      setShowValues(false)
       return
     }
     // Students: check if assessment is done to decide whether to expand
@@ -1951,13 +1949,11 @@ function WritingPageInner() {
         .then(r => {
           const done = r.status === 200
           setAssessmentDone(done)
-          setShowAssessment(!done)
-          setShowValues(true)
+          setShowAssessment(!done) // expand if not done (show CTA), collapse if done
         })
         .catch(() => {
           setAssessmentDone(false)
           setShowAssessment(true)
-          setShowValues(true)
         })
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2054,33 +2050,6 @@ function WritingPageInner() {
                 )}
               </div>
 
-              {/* Values Reflection collapsible card */}
-              <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 overflow-hidden">
-                <button
-                  onClick={() => setShowValues(x => !x)}
-                  className="w-full flex items-center justify-between px-4 py-3.5 text-left hover:bg-slate-800/70 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-base">💎</span>
-                    <div>
-                      <p className="text-sm font-medium text-white">Values Reflection</p>
-                      <p className="text-xs text-slate-500 mt-0.5">Core values exercise — the foundation of your essays</p>
-                    </div>
-                  </div>
-                  <span className="text-slate-500 text-xs">{showValues ? '▲' : '▼'}</span>
-                </button>
-                {showValues && (
-                  <div className="border-t border-slate-700/50 px-4 pb-4 pt-4">
-                    <ValuesReflectionSection
-                      token={token}
-                      studentId={forParam}
-                      studentName={studentDisplayName}
-                      isReadOnly={(isCounselor || isParent) && !!forParam}
-                      canRegenerate={!isParent}
-                    />
-                  </div>
-                )}
-              </div>
             </div>
           )}
 
