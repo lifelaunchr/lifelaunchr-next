@@ -51,6 +51,17 @@ interface Response {
   coach_reviewed_at: string | null
 }
 
+interface StructuredField {
+  id: string
+  label: string
+  type: 'textarea'
+}
+
+interface StructuredSchema {
+  type: 'structured'
+  fields: StructuredField[]
+}
+
 function AssignmentPageInner() {
   const { getToken, isLoaded } = useAuth()
   const params = useParams()
@@ -62,6 +73,8 @@ function AssignmentPageInner() {
   const [token, setToken] = useState<string | null>(null)
   const [assignment, setAssignment] = useState<Assignment | null>(null)
   const [body, setBody] = useState('')
+  // For structured exercises: per-field answers keyed by field id
+  const [structuredBody, setStructuredBody] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -84,7 +97,17 @@ function AssignmentPageInner() {
         setAssignment(a)
         // Pre-populate write tab with most recent response
         if (a.responses && a.responses.length > 0) {
-          setBody(a.responses[0].content || '')
+          const latest = a.responses[0]
+          if (a.exercise_type === 'structured' && latest.content) {
+            // Parse JSON → populate per-field state
+            try {
+              setStructuredBody(JSON.parse(latest.content) as Record<string, string>)
+            } catch {
+              setStructuredBody({})
+            }
+          } else {
+            setBody(latest.content || '')
+          }
         }
         setLoading(false)
       })
@@ -118,9 +141,14 @@ function AssignmentPageInner() {
   }
 
   async function handleSave() {
-    if (!token || !body.trim()) return
+    const isStructured = assignment?.exercise_type === 'structured'
+    const hasContent = isStructured
+      ? Object.values(structuredBody).some(v => v.trim())
+      : body.trim()
+    if (!token || !hasContent) return
     setSaving(true)
     setError(null)
+    const content = isStructured ? JSON.stringify(structuredBody) : body
     try {
       const res = await fetch(`${API}/writing/assignments/${assignmentId}/responses`, {
         method: 'POST',
@@ -128,7 +156,7 @@ function AssignmentPageInner() {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ content: body }),
+        body: JSON.stringify({ content }),
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
@@ -138,7 +166,7 @@ function AssignmentPageInner() {
       // Add new response to top of list
       const newResponse: Response = {
         id: data.response.id,
-        content: body,
+        content,
         structured_data: null,
         word_count: wordCount(body),
         revision_number: data.response.revision_number,
@@ -173,11 +201,19 @@ function AssignmentPageInner() {
   }
 
   const responses = assignment.responses || []
-  const wc = wordCount(body)
-  const withinLimit = !assignment.word_limit || wc <= assignment.word_limit
-  const isAlreadyDone = responses.length > 0
   const isContent = assignment.exercise_type === 'content'
   const isMilestone = assignment.exercise_type === 'milestone'
+  const isStructured = assignment.exercise_type === 'structured'
+  // Word count: sum all structured fields, or count free-write body
+  const wc = isStructured
+    ? Object.values(structuredBody).reduce((sum, v) => sum + wordCount(v), 0)
+    : wordCount(body)
+  const withinLimit = !assignment.word_limit || wc <= assignment.word_limit
+  const isAlreadyDone = responses.length > 0
+  // Parse schema for structured exercises
+  const schema: StructuredSchema | null = isStructured && assignment.response_schema
+    ? (assignment.response_schema as StructuredSchema)
+    : null
   const isComplete = assignment.status === 'complete'
   const isReviewed = assignment.status === 'reviewed' || isComplete
   const hasCoachFeedback = !!(assignment.coach_feedback?.trim())
@@ -363,20 +399,42 @@ function AssignmentPageInner() {
 
             {/* Write */}
             {activeTab === 'write' && (
-              <div className="space-y-3">
-                {assignment.prompt_text && (
-                  <p className="text-sm text-slate-400 bg-slate-800/30 rounded-lg p-3 leading-relaxed">
-                    {assignment.prompt_text}
-                  </p>
+              <div className="space-y-4">
+                {/* Structured exercise — render each field as a labeled textarea */}
+                {isStructured && schema ? (
+                  <div className="space-y-6">
+                    {schema.fields.map(field => (
+                      <div key={field.id} className="space-y-2">
+                        <label className="block text-sm text-slate-200 leading-snug font-medium">
+                          {field.label}
+                        </label>
+                        <textarea
+                          value={structuredBody[field.id] || ''}
+                          onChange={e => setStructuredBody(prev => ({ ...prev, [field.id]: e.target.value }))}
+                          placeholder="Write whatever comes to mind…"
+                          rows={4}
+                          className="w-full bg-slate-800/50 border border-slate-700/50 rounded-xl px-4 py-3 text-sm text-white placeholder:text-slate-600 resize-y focus:outline-none focus:border-violet-500/50 leading-relaxed"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  /* Free-write exercise — single textarea */
+                  <>
+                    {assignment.prompt_text && (
+                      <p className="text-sm text-slate-400 bg-slate-800/30 rounded-lg p-3 leading-relaxed">
+                        {assignment.prompt_text}
+                      </p>
+                    )}
+                    <textarea
+                      value={body}
+                      onChange={e => setBody(e.target.value)}
+                      placeholder="Write whatever comes to mind…"
+                      rows={16}
+                      className="w-full bg-slate-800/50 border border-slate-700/50 rounded-xl px-4 py-3 text-sm text-white placeholder:text-slate-600 resize-y focus:outline-none focus:border-violet-500/50 leading-relaxed"
+                    />
+                  </>
                 )}
-
-                <textarea
-                  value={body}
-                  onChange={e => setBody(e.target.value)}
-                  placeholder="Write whatever comes to mind…"
-                  rows={16}
-                  className="w-full bg-slate-800/50 border border-slate-700/50 rounded-xl px-4 py-3 text-sm text-white placeholder:text-slate-600 resize-y focus:outline-none focus:border-violet-500/50 leading-relaxed"
-                />
 
                 <div className="flex items-center justify-between">
                   <span className={`text-xs tabular-nums ${
@@ -396,7 +454,9 @@ function AssignmentPageInner() {
                     {error && <span className="text-xs text-red-400">{error}</span>}
                     <button
                       onClick={handleSave}
-                      disabled={saving || !body.trim()}
+                      disabled={saving || !(isStructured
+                        ? Object.values(structuredBody).some(v => v.trim())
+                        : body.trim())}
                       className="px-4 py-1.5 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
                     >
                       {saving && (
@@ -428,10 +488,30 @@ function AssignmentPageInner() {
                         <p className="text-xs text-slate-300">{r.coach_notes}</p>
                       </div>
                     )}
-                    <p className="text-sm text-slate-300 line-clamp-3 whitespace-pre-wrap">{r.content}</p>
+                    {/* Structured: show each question+answer; free-write: plain text */}
+                    {isStructured && schema && r.content ? (() => {
+                      let parsed: Record<string, string> = {}
+                      try { parsed = JSON.parse(r.content) } catch { /* ignore */ }
+                      return (
+                        <div className="space-y-2 mt-1">
+                          {schema.fields.map(f => parsed[f.id] ? (
+                            <div key={f.id}>
+                              <p className="text-xs text-slate-500 mb-0.5 line-clamp-1">{f.label}</p>
+                              <p className="text-xs text-slate-300 line-clamp-2 whitespace-pre-wrap">{parsed[f.id]}</p>
+                            </div>
+                          ) : null)}
+                        </div>
+                      )
+                    })() : (
+                      <p className="text-sm text-slate-300 line-clamp-3 whitespace-pre-wrap">{r.content}</p>
+                    )}
                     <button
                       onClick={() => {
-                        setBody(r.content || '')
+                        if (isStructured && r.content) {
+                          try { setStructuredBody(JSON.parse(r.content)) } catch { /* ignore */ }
+                        } else {
+                          setBody(r.content || '')
+                        }
                         setActiveTab('write')
                       }}
                       className="mt-2 text-xs text-violet-400 hover:text-violet-300"
