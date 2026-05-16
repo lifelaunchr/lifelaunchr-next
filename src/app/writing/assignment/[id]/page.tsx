@@ -54,7 +54,9 @@ interface Response {
 interface StructuredField {
   id: string
   label: string
-  type: 'textarea'
+  prompt?: string
+  type: 'textarea' | 'text'
+  optional?: boolean
 }
 
 interface StructuredSchema {
@@ -402,12 +404,18 @@ function AssignmentPageInner() {
               <div className="space-y-4">
                 {/* Structured exercise — render each field as a labeled textarea */}
                 {isStructured && schema ? (
-                  <div className="space-y-6">
+                  <div className="space-y-8">
                     {schema.fields.map(field => (
                       <div key={field.id} className="space-y-2">
                         <label className="block text-sm text-slate-200 leading-snug font-medium">
                           {field.label}
+                          {field.optional && <span className="ml-1.5 text-xs text-slate-500 font-normal">(optional)</span>}
                         </label>
+                        {field.prompt && (
+                          <p className="text-xs text-slate-400 leading-relaxed italic border-l-2 border-slate-700 pl-3">
+                            {field.prompt}
+                          </p>
+                        )}
                         <textarea
                           value={structuredBody[field.id] || ''}
                           onChange={e => setStructuredBody(prev => ({ ...prev, [field.id]: e.target.value }))}
