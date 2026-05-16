@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -84,6 +84,11 @@ function AssignmentPageInner() {
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'guide' | 'write' | 'history'>('guide')
   const [loading, setLoading] = useState(true)
+  // Timed write state
+  const [timerStarted, setTimerStarted] = useState(false)
+  const [timerSeconds, setTimerSeconds] = useState(0)
+  const [timerDone, setTimerDone] = useState(false)
+  const [timerAutoSaved, setTimerAutoSaved] = useState(false)
 
   useEffect(() => {
     if (!isLoaded) return
@@ -235,6 +240,57 @@ function AssignmentPageInner() {
     }
   }
 
+  // ── Timed write helpers ──────────────────────────────────────────────────
+
+  // Auto-save when timer hits zero (stable ref so the interval closure sees it)
+  const autoSaveRef = useRef<() => Promise<void>>(async () => {})
+  autoSaveRef.current = async () => {
+    if (!body.trim()) return
+    const freshToken = await getToken()
+    if (!freshToken) return
+    try {
+      await fetch(`${API}/writing/assignments/${assignmentId}/responses`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${freshToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: body }),
+      })
+      setTimerAutoSaved(true)
+    } catch { /* silent — student still has text in the textarea */ }
+  }
+
+  const startTimer = useCallback(() => {
+    const minutes = assignment?.time_limit_minutes ?? 10
+    setTimerSeconds(minutes * 60)
+    setTimerStarted(true)
+    setTimerDone(false)
+    setTimerAutoSaved(false)
+  }, [assignment?.time_limit_minutes])
+
+  // Countdown interval
+  useEffect(() => {
+    if (!timerStarted || timerDone) return
+    const id = setInterval(() => {
+      setTimerSeconds(prev => {
+        if (prev <= 1) {
+          clearInterval(id)
+          setTimerDone(true)
+          autoSaveRef.current()
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+    return () => clearInterval(id)
+  }, [timerStarted, timerDone])
+
+  const formatTime = (secs: number) => {
+    const m = Math.floor(secs / 60).toString().padStart(2, '0')
+    const s = (secs % 60).toString().padStart(2, '0')
+    return `${m}:${s}`
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+
   if (!isLoaded || !token || loading) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
@@ -255,6 +311,7 @@ function AssignmentPageInner() {
   const isContent = assignment.exercise_type === 'content'
   const isMilestone = assignment.exercise_type === 'milestone'
   const isStructured = assignment.exercise_type === 'structured'
+  const isTimedWrite = assignment.exercise_type === 'timed_write'
   // Word count: sum all structured fields, or count free-write body
   const wc = isStructured
     ? Object.values(structuredBody).reduce((sum, v) => sum + wordCount(v), 0)
@@ -475,8 +532,81 @@ function AssignmentPageInner() {
                     <p className="text-xs text-slate-600">Check the Drafts tab to see your submission.</p>
                   </div>
                 )}
+                {/* ── Timed write ── */}
+                {!isSubmitted && isTimedWrite && (
+                  <>
+                    {/* Pre-start card — shown until timer begins (and no previous draft) */}
+                    {!timerStarted && !isAlreadyDone && (
+                      <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6 space-y-5 text-center">
+                        <div className="text-4xl">⏱</div>
+                        <div className="space-y-1">
+                          <p className="text-base font-semibold text-white">
+                            {assignment.time_limit_minutes ?? 10}-minute timed write
+                          </p>
+                          <p className="text-sm text-slate-400 leading-relaxed">
+                            Once you start, don&apos;t stop and don&apos;t edit — just write. The goal is flow, not polish.
+                          </p>
+                        </div>
+                        {assignment.prompt_text && (
+                          <div className="text-left bg-slate-900/50 rounded-lg px-4 py-3 border border-slate-700/40">
+                            <p className="text-xs text-slate-500 uppercase tracking-wide font-medium mb-1">Your prompt</p>
+                            <p className="text-sm text-slate-200 leading-relaxed">{assignment.prompt_text}</p>
+                          </div>
+                        )}
+                        <button
+                          onClick={() => { startTimer(); setActiveTab('write') }}
+                          className="w-full py-3 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-xl transition-all"
+                        >
+                          Start Timer →
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Active timer + textarea */}
+                    {timerStarted && !timerDone && (
+                      <div className="space-y-3">
+                        <div className={`flex items-center justify-center gap-2 py-2 rounded-xl font-mono text-2xl font-bold tracking-widest ${
+                          timerSeconds <= 30 ? 'text-red-400' : timerSeconds <= 120 ? 'text-amber-400' : 'text-violet-300'
+                        }`}>
+                          {formatTime(timerSeconds)}
+                        </div>
+                        <textarea
+                          value={body}
+                          onChange={e => setBody(e.target.value)}
+                          placeholder="Start writing — don't stop…"
+                          autoFocus
+                          rows={16}
+                          className="w-full bg-slate-800/50 border border-slate-700/50 rounded-xl px-4 py-3 text-sm text-white placeholder:text-slate-600 resize-y focus:outline-none focus:border-violet-500/50 leading-relaxed"
+                        />
+                      </div>
+                    )}
+
+                    {/* Time's up */}
+                    {(timerDone || isAlreadyDone) && (
+                      <div className="space-y-4">
+                        {timerDone && (
+                          <div className={`flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-medium ${
+                            timerAutoSaved
+                              ? 'bg-green-900/20 border border-green-700/30 text-green-400'
+                              : 'bg-slate-800/50 border border-slate-700/50 text-slate-400'
+                          }`}>
+                            {timerAutoSaved ? "⏱ Time's up — draft saved" : "⏱ Time's up"}
+                          </div>
+                        )}
+                        <textarea
+                          value={body}
+                          onChange={e => setBody(e.target.value)}
+                          placeholder="Write whatever comes to mind…"
+                          rows={16}
+                          className="w-full bg-slate-800/50 border border-slate-700/50 rounded-xl px-4 py-3 text-sm text-white placeholder:text-slate-600 resize-y focus:outline-none focus:border-violet-500/50 leading-relaxed"
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
+
                 {/* Structured exercise — render each field as a labeled textarea */}
-                {!isSubmitted && isStructured && schema ? (
+                {!isSubmitted && !isTimedWrite && isStructured && schema ? (
                   <div className="space-y-8">
                     {schema.fields.map(field => (
                       <div key={field.id} className="space-y-2">
@@ -499,8 +629,8 @@ function AssignmentPageInner() {
                       </div>
                     ))}
                   </div>
-                ) : !isSubmitted ? (
-                  /* Free-write exercise — single textarea */
+                ) : !isSubmitted && !isTimedWrite ? (
+                  /* Free-write / synthesis exercise — single textarea */
                   <>
                     {assignment.prompt_text && (
                       <p className="text-sm text-slate-400 bg-slate-800/30 rounded-lg p-3 leading-relaxed">
@@ -517,7 +647,8 @@ function AssignmentPageInner() {
                   </>
                 ) : null}
 
-                {!isSubmitted && (
+                {/* Action bar — hidden during active countdown, and when not yet started on timed writes */}
+                {!isSubmitted && !(isTimedWrite && !timerStarted && !isAlreadyDone) && !(isTimedWrite && timerStarted && !timerDone) && (
                   <div className="flex items-center justify-between">
                     <span className={`text-xs tabular-nums ${
                       !withinLimit ? 'text-red-400' : wc > 0 ? 'text-slate-400' : 'text-slate-600'
@@ -534,18 +665,21 @@ function AssignmentPageInner() {
                     <div className="flex items-center gap-3">
                       {saved && <span className="text-xs text-green-400">Draft saved ✓ — submit when ready</span>}
                       {error && <span className="text-xs text-red-400">{error}</span>}
-                      <button
-                        onClick={handleSave}
-                        disabled={saving || submitting || !(isStructured
-                          ? Object.values(structuredBody).some(v => v.trim())
-                          : body.trim())}
-                        className="px-4 py-1.5 rounded-lg text-sm bg-slate-700 text-slate-200 hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
-                      >
-                        {saving && (
-                          <div className="w-3.5 h-3.5 border-2 border-slate-300 border-t-transparent rounded-full animate-spin" />
-                        )}
-                        {saving ? 'Saving…' : 'Save Draft'}
-                      </button>
+                      {/* Save Draft hidden for timed writes — auto-saved at time's up */}
+                      {!isTimedWrite && (
+                        <button
+                          onClick={handleSave}
+                          disabled={saving || submitting || !(isStructured
+                            ? Object.values(structuredBody).some(v => v.trim())
+                            : body.trim())}
+                          className="px-4 py-1.5 rounded-lg text-sm bg-slate-700 text-slate-200 hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+                        >
+                          {saving && (
+                            <div className="w-3.5 h-3.5 border-2 border-slate-300 border-t-transparent rounded-full animate-spin" />
+                          )}
+                          {saving ? 'Saving…' : 'Save Draft'}
+                        </button>
+                      )}
                       <button
                         onClick={handleSubmitForReview}
                         disabled={saving || submitting || (
