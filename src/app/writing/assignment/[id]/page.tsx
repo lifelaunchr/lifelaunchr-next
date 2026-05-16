@@ -22,8 +22,9 @@ interface Assignment {
   id: number
   student_id: number
   exercise_id: number
-  status: string
+  status: 'assigned' | 'in_progress' | 'submitted' | 'reviewed' | 'complete'
   note_to_student: string | null
+  coach_feedback: string | null
   due_date: string | null
   exercise_title: string
   prompt_text: string | null
@@ -177,6 +178,9 @@ function AssignmentPageInner() {
   const isAlreadyDone = responses.length > 0
   const isContent = assignment.exercise_type === 'content'
   const isMilestone = assignment.exercise_type === 'milestone'
+  const isComplete = assignment.status === 'complete'
+  const isReviewed = assignment.status === 'reviewed' || isComplete
+  const hasCoachFeedback = !!(assignment.coach_feedback?.trim())
 
   // Section back-link
   const backSection = SECTION_BACK[assignment.section_key] || ''
@@ -197,11 +201,30 @@ function AssignmentPageInner() {
 
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
 
-        {/* Coach note */}
+        {/* Status badge */}
+        {(isReviewed || isComplete) && (
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium w-fit ${
+            isComplete
+              ? 'bg-slate-700/50 text-slate-400 border border-slate-700'
+              : 'bg-green-900/20 text-green-400 border border-green-700/30'
+          }`}>
+            {isComplete ? '✓ Complete' : '✓ Reviewed by coach'}
+          </div>
+        )}
+
+        {/* Coach note — shown before writing */}
         {assignment.note_to_student && (
           <div className="bg-violet-900/20 border border-violet-700/30 rounded-xl px-4 py-3">
             <p className="text-xs text-violet-300 font-medium mb-0.5">Note from your coach</p>
             <p className="text-sm text-slate-300 italic">{assignment.note_to_student}</p>
+          </div>
+        )}
+
+        {/* Coach feedback — shown after review */}
+        {hasCoachFeedback && (
+          <div className="bg-emerald-900/20 border border-emerald-700/30 rounded-xl px-4 py-4 space-y-1">
+            <p className="text-xs text-emerald-400 font-semibold uppercase tracking-wide">Coach feedback</p>
+            <p className="text-sm text-slate-200 leading-relaxed whitespace-pre-wrap">{assignment.coach_feedback}</p>
           </div>
         )}
 
@@ -292,7 +315,7 @@ function AssignmentPageInner() {
             <div className="flex gap-1 bg-slate-800/50 rounded-xl p-1">
               {[
                 { key: 'guide' as const, label: '📖 Context' },
-                { key: 'write' as const, label: '✍️ Write' },
+                ...(!isComplete ? [{ key: 'write' as const, label: '✍️ Write' }] : []),
                 ...(responses.length > 0 ? [{ key: 'history' as const, label: `🕐 Drafts (${responses.length})` }] : []),
               ].map(t => (
                 <button
