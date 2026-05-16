@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { useAuth } from '@clerk/nextjs'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -1855,10 +1855,8 @@ function EssaySectionTab({
 function WritingPageInner() {
   const { getToken, isLoaded } = useAuth()
   const searchParams = useSearchParams()
-  const router = useRouter()
 
   const forParam = searchParams.get('for')
-  const sectionParam = searchParams.get('section')
   const fromParam = searchParams.get('from')
 
   const [token, setToken] = useState<string | null>(null)
@@ -1866,8 +1864,9 @@ function WritingPageInner() {
   const [studentDisplayName, setStudentDisplayName] = useState<string | null>(null)
   const [assignments, setAssignments] = useState<WritingAssignment[]>([])
   const [loadingAssignments, setLoadingAssignments] = useState(true)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [assignPanel, setAssignPanel] = useState<{ sectionKey: string; sectionLabel: string } | null>(null)
+  const [assessmentDone, setAssessmentDone] = useState<boolean | null>(null)
+  const [showAssessment, setShowAssessment] = useState(false)
+  const [showValues, setShowValues] = useState(false)
 
   // Load token + usage
   useEffect(() => {
@@ -1933,16 +1932,36 @@ function WritingPageInner() {
   const showWhyEssays       = !!usageData?.why_essays_module
   const showEssayHub        = showEssayStatus || showCommonApp || showUCPIQs || showWhyEssays
 
-  const defaultSection = showSelfDiscovery ? 'sd-1' : showWritingPractice ? 'practice' : showCommonApp ? 'commonapp' : showUCPIQs ? 'uc_piqs' : 'essays'
-  const activeSection = sectionParam || defaultSection
-
-  function navigate(section: string) {
-    setSidebarOpen(false)
-    const params = new URLSearchParams()
-    params.set('section', section)
-    if (forParam) params.set('for', forParam)
-    router.replace(`/writing?${params.toString()}`)
-  }
+  // Check personality assessment completion to set initial expand state
+  useEffect(() => {
+    if (!token || !usageData) return
+    if (!showSelfDiscovery) return
+    const isCoachView = !!(isCounselor && forParam) || isParent
+    if (isCoachView) {
+      setAssessmentDone(null)
+      setShowAssessment(false)
+      setShowValues(false)
+      return
+    }
+    // Students: check if assessment is done to decide whether to expand
+    const url = `${API}/writing/personality-assessment`
+    getToken().then(freshToken => {
+      if (!freshToken) return
+      fetch(url, { headers: { Authorization: `Bearer ${freshToken}` } })
+        .then(r => {
+          const done = r.status === 200
+          setAssessmentDone(done)
+          setShowAssessment(!done)
+          setShowValues(true)
+        })
+        .catch(() => {
+          setAssessmentDone(false)
+          setShowAssessment(true)
+          setShowValues(true)
+        })
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, usageData])
 
   if (!isLoaded || !token || !usageData) {
     return (
@@ -1982,16 +2001,6 @@ function WritingPageInner() {
     <div className="h-screen bg-slate-900 text-white flex flex-col overflow-hidden">
       {/* Header */}
       <div className="border-b border-slate-800 px-4 py-3 flex items-center gap-3 flex-shrink-0">
-        {/* Hamburger — mobile only */}
-        <button
-          onClick={() => setSidebarOpen(o => !o)}
-          className="md:hidden p-1.5 -ml-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
-          aria-label="Toggle menu"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
         {fromParam === 'writing' ? (
           <Link href="/writing" className="text-slate-400 hover:text-white text-sm">← Writing</Link>
         ) : (
@@ -2006,150 +2015,34 @@ function WritingPageInner() {
         )}
       </div>
 
-      <div className="flex flex-1 overflow-hidden relative">
-        {/* Mobile backdrop */}
-        {sidebarOpen && (
-          <div
-            className="fixed inset-0 z-20 bg-black/60 md:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
+      {/* Main — no sidebar */}
+      <main className="flex-1 overflow-y-auto">
+        <div className="max-w-2xl mx-auto px-4 py-6 space-y-8">
 
-        {/* Sidebar */}
-        <aside className={`
-          absolute md:relative z-30 md:z-auto top-0 bottom-0 left-0
-          w-52 flex-shrink-0 bg-slate-900 border-r border-slate-800
-          overflow-y-auto transition-transform duration-200
-          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-        `}>
-          <nav className="p-3 pt-4 space-y-0.5">
-            {showSelfDiscovery && (
-              <>
-                <p className="text-[10px] uppercase tracking-widest text-slate-600 px-3 pb-1.5">
-                  Self-Discovery
-                </p>
-                {[
-                  { key: 'sd-1', label: 'Know Yourself' },
-                  { key: 'sd-values', label: 'Values Reflection' },
-                  { key: 'sd-2', label: 'Your Stories' },
-                  { key: 'sd-3', label: 'Your Voice' },
-                  { key: 'sd-4', label: 'Synthesis' },
-                ].map(item => (
-                  <button
-                    key={item.key}
-                    onClick={() => navigate(item.key)}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
-                      activeSection === item.key
-                        ? 'bg-violet-600/20 text-violet-300 font-medium'
-                        : 'text-slate-400 hover:text-white hover:bg-white/5'
-                    }`}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </>
-            )}
+          {/* Self-Discovery section */}
+          {showSelfDiscovery && token && (
+            <div className="space-y-3">
+              <h2 className="text-xs uppercase tracking-widest text-slate-500 font-medium">Self-Discovery</h2>
 
-            {showWritingPractice && (
-              <>
-                <p className="text-[10px] uppercase tracking-widest text-slate-600 px-3 pt-4 pb-1.5">
-                  Writing Practice
-                </p>
+              {/* Personality Assessment collapsible card */}
+              <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 overflow-hidden">
                 <button
-                  onClick={() => navigate('practice')}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
-                    activeSection === 'practice'
-                      ? 'bg-violet-600/20 text-violet-300 font-medium'
-                      : 'text-slate-400 hover:text-white hover:bg-white/5'
-                  }`}
+                  onClick={() => setShowAssessment(x => !x)}
+                  className="w-full flex items-center justify-between px-4 py-3.5 text-left hover:bg-slate-800/70 transition-colors"
                 >
-                  Exercises
+                  <div className="flex items-center gap-3">
+                    <span className="text-base">🧠</span>
+                    <div>
+                      <p className="text-sm font-medium text-white">Personality Assessment</p>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {assessmentDone === null ? 'Loading…' : assessmentDone ? '✓ Completed' : 'Not yet completed'}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-slate-500 text-xs">{showAssessment ? '▲' : '▼'}</span>
                 </button>
-              </>
-            )}
-
-            {showEssayHub && (
-              <>
-                <p className="text-[10px] uppercase tracking-widest text-slate-600 px-3 pt-4 pb-1.5">
-                  Essays
-                </p>
-                {showCommonApp && (
-                  <button
-                    onClick={() => navigate('commonapp')}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
-                      activeSection === 'commonapp'
-                        ? 'bg-violet-600/20 text-violet-300 font-medium'
-                        : 'text-slate-400 hover:text-white hover:bg-white/5'
-                    }`}
-                  >
-                    CommonApp Essay
-                  </button>
-                )}
-                {showUCPIQs && (
-                  <button
-                    onClick={() => navigate('uc_piqs')}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
-                      activeSection === 'uc_piqs'
-                        ? 'bg-violet-600/20 text-violet-300 font-medium'
-                        : 'text-slate-400 hover:text-white hover:bg-white/5'
-                    }`}
-                  >
-                    UC Personal Insight
-                  </button>
-                )}
-                {showWhyEssays && (
-                  <>
-                    <button
-                      onClick={() => navigate('why_major')}
-                      className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
-                        activeSection === 'why_major'
-                          ? 'bg-violet-600/20 text-violet-300 font-medium'
-                          : 'text-slate-400 hover:text-white hover:bg-white/5'
-                      }`}
-                    >
-                      Why Major
-                    </button>
-                    <button
-                      onClick={() => navigate('why_college')}
-                      className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
-                        activeSection === 'why_college'
-                          ? 'bg-violet-600/20 text-violet-300 font-medium'
-                          : 'text-slate-400 hover:text-white hover:bg-white/5'
-                      }`}
-                    >
-                      Why College
-                    </button>
-                  </>
-                )}
-                {showEssayStatus && (
-                  <button
-                    onClick={() => navigate('essays')}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
-                      activeSection === 'essays'
-                        ? 'bg-violet-600/20 text-violet-300 font-medium'
-                        : 'text-slate-400 hover:text-white hover:bg-white/5'
-                    }`}
-                  >
-                    Prompts &amp; Drafts
-                  </button>
-                )}
-              </>
-            )}
-          </nav>
-        </aside>
-
-        {/* Content */}
-        <main className="flex-1 overflow-y-auto">
-          <div className="max-w-2xl mx-auto px-4 py-6">
-            {loadingAssignments ? (
-              <div className="flex items-center justify-center py-16">
-                <div className="w-7 h-7 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
-              </div>
-            ) : (
-              <>
-                {/* Know Yourself — personality assessment + assigned exercises */}
-                {activeSection === 'sd-1' && showSelfDiscovery && token && (
-                  <>
+                {showAssessment && (
+                  <div className="border-t border-slate-700/50 px-4 pb-4 pt-4">
                     <SelfDiscoveryTab
                       token={token}
                       studentId={forParam}
@@ -2157,137 +2050,109 @@ function WritingPageInner() {
                       isReadOnly={(isCounselor || isParent) && !!forParam}
                       canRegenerate={!isParent}
                     />
-                    {/* Show assigned Know Yourself exercises below the assessment */}
-                    {assignments.some(a => a.section_key === 'self_discovery' && a.unit_title === 'Know Yourself') && (
-                      <UnitAssignmentList
-                        sectionKey="self_discovery" unitTitle="Know Yourself" label="Know Yourself Exercises"
-                        assignments={assignments} studentId={forParam} isCounselor={isCounselor}
-                      />
-                    )}
-                  </>
-                )}
-
-                {/* Values Reflection */}
-                {activeSection === 'sd-values' && showSelfDiscovery && token && (
-                  <ValuesReflectionSection
-                    token={token}
-                    studentId={forParam}
-                    studentName={studentDisplayName}
-                    isReadOnly={(isCounselor || isParent) && !!forParam}
-                    canRegenerate={!isParent}
-                  />
-                )}
-
-                {/* Your Stories */}
-                {activeSection === 'sd-2' && showSelfDiscovery && (
-                  <UnitAssignmentList
-                    sectionKey="self_discovery" unitTitle="Your Stories" label="Your Stories"
-                    assignments={assignments} studentId={forParam} isCounselor={isCounselor}
-                  />
-                )}
-
-                {/* Your Voice */}
-                {activeSection === 'sd-3' && showSelfDiscovery && (
-                  <UnitAssignmentList
-                    sectionKey="self_discovery" unitTitle="Your Voice" label="Your Voice"
-                    assignments={assignments} studentId={forParam} isCounselor={isCounselor}
-                  />
-                )}
-
-                {/* Synthesis */}
-                {activeSection === 'sd-4' && showSelfDiscovery && (
-                  <UnitAssignmentList
-                    sectionKey="self_discovery" unitTitle="Synthesis" label="Synthesis"
-                    assignments={assignments} studentId={forParam} isCounselor={isCounselor}
-                  />
-                )}
-
-                {/* Writing Practice */}
-                {activeSection === 'practice' && showWritingPractice && (
-                  <WritingPracticeTab
-                    assignments={assignments} studentId={forParam} isCounselor={isCounselor}
-                    onAssignRequest={isCounselor && forParam ? () => setAssignPanel({ sectionKey: 'writing_practice', sectionLabel: 'Writing Practice' }) : undefined}
-                  />
-                )}
-
-                {/* CommonApp Essay */}
-                {activeSection === 'commonapp' && showCommonApp && (
-                  <EssaySectionTab
-                    sectionKey="commonapp"
-                    label="CommonApp Personal Statement"
-                    description="Brainstorm ideas, find your angle, and develop your Common Application personal statement. Start with the brainstorm exercise, then move to drafting once you've found your story."
-                    assignments={assignments} studentId={forParam} isCounselor={isCounselor}
-                    onAssignRequest={isCounselor && forParam ? () => setAssignPanel({ sectionKey: 'commonapp', sectionLabel: 'CommonApp Personal Statement' }) : undefined}
-                  />
-                )}
-
-                {/* UC Personal Insight Questions */}
-                {activeSection === 'uc_piqs' && showUCPIQs && (
-                  <EssaySectionTab
-                    sectionKey="uc_piqs"
-                    label="UC Personal Insight Questions"
-                    description="Plan your four UC PIQ responses. Use the outline exercise to map a story to each prompt before you start writing."
-                    assignments={assignments} studentId={forParam} isCounselor={isCounselor}
-                    onAssignRequest={isCounselor && forParam ? () => setAssignPanel({ sectionKey: 'uc_piqs', sectionLabel: 'UC Personal Insight Questions' }) : undefined}
-                  />
-                )}
-
-                {/* Why Major */}
-                {activeSection === 'why_major' && showWhyEssays && (
-                  <EssaySectionTab
-                    sectionKey="why_major"
-                    label="Why Major"
-                    description="Articulate your academic interest, preparation, and goals for your intended major. This inventory feeds your Why Major essays across multiple schools."
-                    assignments={assignments} studentId={forParam} isCounselor={isCounselor}
-                    onAssignRequest={isCounselor && forParam ? () => setAssignPanel({ sectionKey: 'why_major', sectionLabel: 'Why Major' }) : undefined}
-                  />
-                )}
-
-                {/* Why College */}
-                {activeSection === 'why_college' && showWhyEssays && (
-                  <EssaySectionTab
-                    sectionKey="why_college"
-                    label="Why College"
-                    description="Write compelling Why College essays grounded in your actual research. Each exercise is tied to a specific school on your list."
-                    assignments={assignments} studentId={forParam} isCounselor={isCounselor}
-                    onAssignRequest={isCounselor && forParam ? () => setAssignPanel({ sectionKey: 'why_college', sectionLabel: 'Why College' }) : undefined}
-                  />
-                )}
-
-                {/* Prompts & Drafts — Editate integration */}
-                {activeSection === 'essays' && showEssayStatus && (
-                  <div className="space-y-4">
-                    <div>
-                      <h2 className="text-base font-semibold text-white mb-1">Essay Prompts &amp; Drafts</h2>
-                      <p className="text-sm text-slate-400">
-                        Browse all essay prompts for your college list and track your drafts in one place.
-                      </p>
-                    </div>
-                    <Link
-                      href={forParam ? `/essays?for=${forParam}` : '/essays'}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm rounded-lg transition-colors"
-                    >
-                      Open Essay Tracker →
-                    </Link>
                   </div>
                 )}
-              </>
+              </div>
+
+              {/* Values Reflection collapsible card */}
+              <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 overflow-hidden">
+                <button
+                  onClick={() => setShowValues(x => !x)}
+                  className="w-full flex items-center justify-between px-4 py-3.5 text-left hover:bg-slate-800/70 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-base">💎</span>
+                    <div>
+                      <p className="text-sm font-medium text-white">Values Reflection</p>
+                      <p className="text-xs text-slate-500 mt-0.5">Core values exercise — the foundation of your essays</p>
+                    </div>
+                  </div>
+                  <span className="text-slate-500 text-xs">{showValues ? '▲' : '▼'}</span>
+                </button>
+                {showValues && (
+                  <div className="border-t border-slate-700/50 px-4 pb-4 pt-4">
+                    <ValuesReflectionSection
+                      token={token}
+                      studentId={forParam}
+                      studentName={studentDisplayName}
+                      isReadOnly={(isCounselor || isParent) && !!forParam}
+                      canRegenerate={!isParent}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* My Assignments */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xs uppercase tracking-widest text-slate-500 font-medium">
+                {isCounselor && forParam
+                  ? `${studentDisplayName ? studentDisplayName.split(' ')[0] + "'s" : 'Student'} Assignments`
+                  : 'My Assignments'}
+              </h2>
+              {isCounselor && forParam && (
+                <Link
+                  href="/writing"
+                  className="text-xs text-violet-400 hover:text-violet-300 transition-colors"
+                >
+                  ← Assign exercises
+                </Link>
+              )}
+            </div>
+
+            {loadingAssignments ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="w-6 h-6 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : assignments.length === 0 ? (
+              <div className="py-12 text-center bg-slate-800/30 rounded-xl border border-slate-700/30">
+                {isCounselor && forParam ? (
+                  <div className="space-y-3">
+                    <p className="text-slate-500 text-sm">No exercises assigned yet.</p>
+                    <Link href="/writing" className="text-xs text-violet-400 hover:text-violet-300">
+                      ← Go to Assignments to assign exercises
+                    </Link>
+                  </div>
+                ) : (
+                  <p className="text-slate-500 text-sm">Your coach hasn&apos;t assigned any exercises yet.</p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {[...assignments]
+                  .sort((a, b) => {
+                    const order: Record<string, number> = { in_progress: 0, submitted: 1, assigned: 2, reviewed: 3, complete: 4 }
+                    return (order[a.status] ?? 99) - (order[b.status] ?? 99)
+                  })
+                  .map(a => <AssignmentCard key={a.id} a={a} studentId={forParam} />)
+                }
+              </div>
             )}
           </div>
-        </main>
-      </div>
 
-      {/* Assign Exercise Panel */}
-      {assignPanel && token && forParam && (
-        <AssignPanel
-          sectionKey={assignPanel.sectionKey}
-          sectionLabel={assignPanel.sectionLabel}
-          studentId={forParam}
-          token={token}
-          onAssigned={() => loadAssignments.current()}
-          onClose={() => setAssignPanel(null)}
-        />
-      )}
+          {/* Essay Prompts & Drafts */}
+          {showEssayStatus && (
+            <div className="space-y-3">
+              <h2 className="text-xs uppercase tracking-widest text-slate-500 font-medium">Essays</h2>
+              <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-4 flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-white">Essay Prompts &amp; Drafts</p>
+                  <p className="text-xs text-slate-400 mt-0.5">Browse all essay prompts and track your drafts</p>
+                </div>
+                <Link
+                  href={forParam ? `/essays?for=${forParam}` : '/essays'}
+                  className="shrink-0 px-3 py-1.5 text-xs bg-violet-600 hover:bg-violet-500 text-white rounded-lg transition-colors"
+                >
+                  Open →
+                </Link>
+              </div>
+            </div>
+          )}
+
+        </div>
+      </main>
     </div>
   )
 }
