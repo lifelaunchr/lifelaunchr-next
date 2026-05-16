@@ -2089,15 +2089,24 @@ function WritingPageInner() {
               </div>
             ) : (
               <>
-                {/* Know Yourself — personality assessment */}
+                {/* Know Yourself — personality assessment + assigned exercises */}
                 {activeSection === 'sd-1' && showSelfDiscovery && token && (
-                  <SelfDiscoveryTab
-                    token={token}
-                    studentId={forParam}
-                    studentName={studentDisplayName}
-                    isReadOnly={(isCounselor || isParent) && !!forParam}
-                    canRegenerate={!isParent}
-                  />
+                  <>
+                    <SelfDiscoveryTab
+                      token={token}
+                      studentId={forParam}
+                      studentName={studentDisplayName}
+                      isReadOnly={(isCounselor || isParent) && !!forParam}
+                      canRegenerate={!isParent}
+                    />
+                    {/* Show assigned Know Yourself exercises below the assessment */}
+                    {assignments.some(a => a.section_key === 'self_discovery' && a.unit_title === 'Know Yourself') && (
+                      <UnitAssignmentList
+                        sectionKey="self_discovery" unitTitle="Know Yourself" label="Know Yourself Exercises"
+                        assignments={assignments} studentId={forParam} isCounselor={isCounselor}
+                      />
+                    )}
+                  </>
                 )}
 
                 {/* Values Reflection */}
