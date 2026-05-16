@@ -79,6 +79,7 @@ function AssignmentPageInner() {
   const [structuredBody, setStructuredBody] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'guide' | 'write' | 'history'>('guide')
   const [loading, setLoading] = useState(true)
@@ -189,6 +190,44 @@ function AssignmentPageInner() {
     }
   }
 
+  async function handleSubmitForReview() {
+    const isStructured = assignment?.exercise_type === 'structured'
+    const hasContent = isStructured
+      ? Object.values(structuredBody).some(v => v.trim())
+      : body.trim()
+    const freshToken = await getToken()
+    if (!freshToken) return
+    setSubmitting(true)
+    setError(null)
+    try {
+      // Save current content first (if any typed)
+      if (hasContent && assignment) {
+        const content = isStructured ? JSON.stringify(structuredBody) : body
+        const saveRes = await fetch(`${API}/writing/assignments/${assignmentId}/responses`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${freshToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content }),
+        })
+        if (!saveRes.ok) {
+          const err = await saveRes.json().catch(() => ({}))
+          throw new Error((err as { detail?: string }).detail || 'Save failed')
+        }
+      }
+      // Mark as submitted
+      const patchRes = await fetch(`${API}/writing/assignments/${assignmentId}`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${freshToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'submitted' }),
+      })
+      if (!patchRes.ok) throw new Error('Submit failed')
+      setAssignment(prev => prev ? { ...prev, status: 'submitted' } : prev)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Submit failed')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   if (!isLoaded || !token || loading) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
@@ -221,6 +260,7 @@ function AssignmentPageInner() {
     : null
   const isComplete = assignment.status === 'complete'
   const isReviewed = assignment.status === 'reviewed' || isComplete
+  const isSubmitted = assignment.status === 'submitted'
   const hasCoachFeedback = !!(assignment.coach_feedback?.trim())
 
   // Section back-link
@@ -243,13 +283,15 @@ function AssignmentPageInner() {
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
 
         {/* Status badge */}
-        {(isReviewed || isComplete) && (
+        {(isSubmitted || isReviewed || isComplete) && (
           <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium w-fit ${
             isComplete
               ? 'bg-slate-700/50 text-slate-400 border border-slate-700'
-              : 'bg-green-900/20 text-green-400 border border-green-700/30'
+              : isReviewed
+              ? 'bg-green-900/20 text-green-400 border border-green-700/30'
+              : 'bg-violet-900/20 text-violet-300 border border-violet-700/30'
           }`}>
-            {isComplete ? '✓ Complete' : '✓ Reviewed by coach'}
+            {isComplete ? '✓ Complete' : isReviewed ? '✓ Reviewed by coach' : '⏳ Submitted — awaiting coach review'}
           </div>
         )}
 
@@ -405,8 +447,19 @@ function AssignmentPageInner() {
             {/* Write */}
             {activeTab === 'write' && (
               <div className="space-y-4">
+                {/* Submitted state — show confirmation instead of editor */}
+                {isSubmitted && (
+                  <div className="bg-slate-800/40 border border-slate-700/40 rounded-xl px-5 py-10 text-center space-y-3">
+                    <div className="text-3xl">📬</div>
+                    <p className="text-sm font-semibold text-slate-200">Submitted for coach review</p>
+                    <p className="text-sm text-slate-400 leading-relaxed max-w-xs mx-auto">
+                      Your coach will review your work and send feedback. You&apos;ll see their notes here when ready.
+                    </p>
+                    <p className="text-xs text-slate-600">Check the History tab to see your submission.</p>
+                  </div>
+                )}
                 {/* Structured exercise — render each field as a labeled textarea */}
-                {isStructured && schema ? (
+                {!isSubmitted && isStructured && schema ? (
                   <div className="space-y-8">
                     {schema.fields.map(field => (
                       <div key={field.id} className="space-y-2">
@@ -429,7 +482,7 @@ function AssignmentPageInner() {
                       </div>
                     ))}
                   </div>
-                ) : (
+                ) : !isSubmitted ? (
                   /* Free-write exercise — single textarea */
                   <>
                     {assignment.prompt_text && (
@@ -445,38 +498,54 @@ function AssignmentPageInner() {
                       className="w-full bg-slate-800/50 border border-slate-700/50 rounded-xl px-4 py-3 text-sm text-white placeholder:text-slate-600 resize-y focus:outline-none focus:border-violet-500/50 leading-relaxed"
                     />
                   </>
-                )}
+                ) : null}
 
-                <div className="flex items-center justify-between">
-                  <span className={`text-xs tabular-nums ${
-                    !withinLimit ? 'text-red-400' : wc > 0 ? 'text-slate-400' : 'text-slate-600'
-                  }`}>
-                    {wc} {wc === 1 ? 'word' : 'words'}
-                    {assignment.word_limit && (
-                      <span className="text-slate-600"> / {assignment.word_limit} max</span>
-                    )}
-                    {assignment.word_limit && !withinLimit && (
-                      <span className="text-red-400"> — over by {wc - assignment.word_limit}</span>
-                    )}
-                  </span>
-
-                  <div className="flex items-center gap-3">
-                    {saved && <span className="text-xs text-green-400">Saved ✓</span>}
-                    {error && <span className="text-xs text-red-400">{error}</span>}
-                    <button
-                      onClick={handleSave}
-                      disabled={saving || !(isStructured
-                        ? Object.values(structuredBody).some(v => v.trim())
-                        : body.trim())}
-                      className="px-4 py-1.5 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
-                    >
-                      {saving && (
-                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                {!isSubmitted && (
+                  <div className="flex items-center justify-between">
+                    <span className={`text-xs tabular-nums ${
+                      !withinLimit ? 'text-red-400' : wc > 0 ? 'text-slate-400' : 'text-slate-600'
+                    }`}>
+                      {wc} {wc === 1 ? 'word' : 'words'}
+                      {assignment.word_limit && (
+                        <span className="text-slate-600"> / {assignment.word_limit} max</span>
                       )}
-                      {saving ? 'Saving…' : 'Save Draft'}
-                    </button>
+                      {assignment.word_limit && !withinLimit && (
+                        <span className="text-red-400"> — over by {wc - assignment.word_limit}</span>
+                      )}
+                    </span>
+
+                    <div className="flex items-center gap-3">
+                      {saved && <span className="text-xs text-green-400">Draft saved ✓ — submit when ready</span>}
+                      {error && <span className="text-xs text-red-400">{error}</span>}
+                      <button
+                        onClick={handleSave}
+                        disabled={saving || submitting || !(isStructured
+                          ? Object.values(structuredBody).some(v => v.trim())
+                          : body.trim())}
+                        className="px-4 py-1.5 rounded-lg text-sm bg-slate-700 text-slate-200 hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+                      >
+                        {saving && (
+                          <div className="w-3.5 h-3.5 border-2 border-slate-300 border-t-transparent rounded-full animate-spin" />
+                        )}
+                        {saving ? 'Saving…' : 'Save Draft'}
+                      </button>
+                      <button
+                        onClick={handleSubmitForReview}
+                        disabled={saving || submitting || (
+                          !(isStructured
+                            ? Object.values(structuredBody).some(v => v.trim())
+                            : body.trim()) && responses.length === 0
+                        )}
+                        className="px-4 py-1.5 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+                      >
+                        {submitting && (
+                          <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        )}
+                        {submitting ? 'Submitting…' : 'Submit for Review'}
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
 
