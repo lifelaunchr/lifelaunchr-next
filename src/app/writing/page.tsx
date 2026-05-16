@@ -1651,6 +1651,49 @@ function WritingPageInner() {
       <main className="flex-1 overflow-y-auto">
         <div className="max-w-2xl mx-auto px-4 py-6 space-y-8">
 
+          {/* Student intro — always visible for students, hidden for coaches/parents */}
+          {!isCounselor && !isParent && (
+            <div className="bg-slate-800/40 border border-slate-700/40 rounded-xl px-5 py-4 space-y-3">
+              <p className="text-sm text-slate-200 leading-relaxed">
+                <span className="font-semibold text-white">Welcome to your writing hub.</span>{' '}
+                Whether you&rsquo;re a freshman just starting to think about college or a senior deep in applications,
+                these exercises will help you write standout essays — by helping you know yourself first.
+              </p>
+              <div className="flex flex-col gap-2 text-sm text-slate-300 leading-relaxed">
+                <div className="flex gap-2.5">
+                  <span className="text-violet-400 font-bold shrink-0">1.</span>
+                  <span>
+                    <span className="text-white font-medium">Start with the Personality Assessment.</span>{' '}
+                    It&rsquo;s a scientifically validated assessment that helps you understand yourself — and connects
+                    your strengths and values to real essay material.
+                  </span>
+                </div>
+                <div className="flex gap-2.5">
+                  <span className="text-violet-400 font-bold shrink-0">2.</span>
+                  <span>
+                    <span className="text-white font-medium">Work through your assigned exercises.</span>{' '}
+                    Read each prompt, write your response, and save a draft. Your coach assigns exercises
+                    when the time is right for you — in order, so each one builds on the last.
+                  </span>
+                </div>
+                <div className="flex gap-2.5">
+                  <span className="text-violet-400 font-bold shrink-0">3.</span>
+                  <span>
+                    <span className="text-white font-medium">Get feedback from your coach.</span>{' '}
+                    After you submit, your coach will review your work and leave written feedback directly
+                    on the assignment. Check back after your next session.
+                  </span>
+                </div>
+              </div>
+              {assignments.length === 0 && (
+                <p className="text-xs text-slate-500 border-t border-slate-700/50 pt-3 leading-relaxed">
+                  Don&rsquo;t see any assignments yet? That&rsquo;s normal — your coach will assign exercises
+                  when the time is right. If you have questions, reach out to them directly.
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Self-Discovery section */}
           {showSelfDiscovery && token && (
             <div className="space-y-3">
