@@ -1224,10 +1224,10 @@ export default function AdminPage() {
                     type="password"
                     value={tenantEditateToken}
                     onChange={e => setTenantEditateToken(e.target.value)}
-                    placeholder="Leave blank to keep existing token"
+                    placeholder="Enter new token to update, or leave blank to keep current"
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
                   />
-                  <p className="text-xs text-gray-400 mt-1">Required to generate Editate access links for students.</p>
+                  <p className="text-xs text-gray-400 mt-1">Your token is stored securely and not displayed. Enter a new value only if you need to update it.</p>
                 </div>
                 {/* Editate Org ID */}
                 <div>
