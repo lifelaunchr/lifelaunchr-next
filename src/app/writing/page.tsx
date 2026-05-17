@@ -1543,10 +1543,13 @@ function WritingPageInner() {
   useEffect(() => {
     if (!token) return
     const sid = forParam || undefined
+    // Coaches must have a student selected — without student_id the backend 400s
+    const isCoach = usageData && usageData.account_type !== 'student' && usageData.account_type !== 'parent'
+    if (isCoach && !sid) { setLoadingAssignments(false); return }
     const url = `${API}/writing/assignments${sid ? `?student_id=${sid}` : ''}`
     const doFetch = () => {
       fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-        .then(r => r.json())
+        .then(r => r.ok ? r.json() : { assignments: [] })
         .then(data => {
           setAssignments(data.assignments || [])
           setLoadingAssignments(false)
@@ -1555,7 +1558,7 @@ function WritingPageInner() {
     }
     loadAssignments.current = doFetch
     doFetch()
-  }, [token, forParam])
+  }, [token, forParam, usageData])
 
   const isCounselor = usageData?.account_type === 'counselor'
   const isParent = usageData?.account_type === 'parent'

@@ -391,7 +391,7 @@ function ReviewPanel({
       const tok = await getToken()
       if (!tok) return
       const url = `${API}/writing/assignments/${assignment.id}/generate-observations?response_id=${latestId}`
-      const res = await fetch(url, { headers: { Authorization: `Bearer ${tok}` } })
+      const res = await fetch(url, { method: 'POST', headers: { Authorization: `Bearer ${tok}` } })
       if (!res.ok || !res.body) { setGeneratingObs(false); return }
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
