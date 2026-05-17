@@ -41,13 +41,19 @@ interface WritingAssignment {
   section_title: string
   latest_revision: number | null
   last_submitted_at: string | null
+  response_schema: { type: string; fields: Array<{ id: string; label: string; prompt: string; type: string }> } | null
 }
 
 interface AssignmentResponse {
   id: number
-  body: string
+  content: string | null
+  structured_data: Record<string, string> | null
+  word_count: number | null
   revision_number: number
-  created_at: string
+  submitted_at: string
+  coach_notes: string | null
+  coach_reviewed_at: string | null
+  soar_observations: string | null
 }
 
 interface LibraryExercise {
@@ -316,6 +322,8 @@ function ReviewPanel({
   const [saving, setSaving] = useState(false)
   const [marking, setMarking] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [observations, setObservations] = useState<string>('')
+  const [generatingObs, setGeneratingObs] = useState(false)
 
   useEffect(() => {
     getToken().then(tok => {
@@ -324,7 +332,15 @@ function ReviewPanel({
         headers: { Authorization: `Bearer ${tok}` },
       })
         .then(r => r.json())
-        .then(data => { setResponses(data.responses || []); setLoadingResponses(false) })
+        .then(data => {
+          const rows: AssignmentResponse[] = data.responses || []
+          setResponses(rows)
+          // Pre-populate observations from the latest response if already generated
+          if (rows.length > 0 && rows[0].soar_observations) {
+            setObservations(rows[0].soar_observations)
+          }
+          setLoadingResponses(false)
+        })
         .catch(() => setLoadingResponses(false))
     })
   }, [assignment.id, getToken])
@@ -366,7 +382,58 @@ function ReviewPanel({
     }
   }
 
-  const latestResponse = responses[responses.length - 1]
+  const generateObservations = useCallback(async () => {
+    const latestId = responses[0]?.id
+    if (!latestId) return
+    setGeneratingObs(true)
+    setObservations('')
+    try {
+      const tok = await getToken()
+      if (!tok) return
+      const url = `${API}/writing/assignments/${assignment.id}/generate-observations?response_id=${latestId}`
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${tok}` } })
+      if (!res.ok || !res.body) { setGeneratingObs(false); return }
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() ?? ''
+        for (const line of lines) {
+          if (!line.startsWith('data:')) continue
+          try {
+            const evt = JSON.parse(line.slice(5).trim())
+            if (evt.type === 'text') setObservations(prev => prev + evt.text)
+          } catch { /* ignore parse errors */ }
+        }
+      }
+    } finally {
+      setGeneratingObs(false)
+    }
+  }, [responses, assignment.id, getToken])
+
+  // The latest response is first (ORDER BY revision_number DESC)
+  const latestResponse = responses[0]
+
+  // Parse structured fields from schema + response data
+  const schemaFields = assignment.response_schema?.fields ?? []
+  const structuredAnswers: Record<string, string> = (() => {
+    if (!latestResponse?.structured_data) return {}
+    if (typeof latestResponse.structured_data === 'string') {
+      try { return JSON.parse(latestResponse.structured_data) } catch { return {} }
+    }
+    return latestResponse.structured_data as Record<string, string>
+  })()
+
+  const isStructured = assignment.exercise_type === 'structured' && schemaFields.length > 0
+  const hasResponse = latestResponse && (
+    isStructured
+      ? Object.values(structuredAnswers).some(v => v?.trim())
+      : latestResponse.content?.trim()
+  )
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
@@ -383,29 +450,51 @@ function ReviewPanel({
           <button onClick={onClose} className="text-slate-400 hover:text-white text-xl leading-none">×</button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5 space-y-5">
-          {/* Student response */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-6">
+
+          {/* ── Student Response ── */}
           <div>
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">
-              Student Response
-            </p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Student Response</p>
+              {latestResponse && (
+                <p className="text-xs text-slate-500">
+                  Revision {latestResponse.revision_number}
+                  {' · '}
+                  {latestResponse.submitted_at
+                    ? new Date(latestResponse.submitted_at).toLocaleDateString()
+                    : '—'}
+                  {responses.length > 1 && (
+                    <span className="ml-2 text-slate-600">({responses.length} revisions)</span>
+                  )}
+                  {latestResponse.word_count != null && (
+                    <span className="ml-2 text-slate-600">{latestResponse.word_count} words</span>
+                  )}
+                </p>
+              )}
+            </div>
+
             {loadingResponses ? (
               <div className="flex items-center justify-center py-8">
                 <div className="w-5 h-5 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
               </div>
-            ) : latestResponse ? (
-              <div className="bg-slate-700/30 rounded-xl border border-slate-600/40 p-4">
-                <p className="text-xs text-slate-500 mb-2">
-                  Revision {latestResponse.revision_number}
-                  {' · '}
-                  {new Date(latestResponse.created_at).toLocaleDateString()}
-                  {responses.length > 1 && (
-                    <span className="ml-2 text-slate-600">({responses.length} total revisions)</span>
-                  )}
-                </p>
-                <p className="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">
-                  {latestResponse.body}
-                </p>
+            ) : hasResponse ? (
+              <div className="bg-slate-700/30 rounded-xl border border-slate-600/40 p-4 space-y-4">
+                {isStructured ? (
+                  schemaFields.map(field => {
+                    const answer = structuredAnswers[field.id]
+                    if (!answer?.trim()) return null
+                    return (
+                      <div key={field.id}>
+                        <p className="text-xs font-semibold text-violet-400 mb-1">{field.label}</p>
+                        <p className="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">{answer}</p>
+                      </div>
+                    )
+                  })
+                ) : (
+                  <p className="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">
+                    {latestResponse!.content}
+                  </p>
+                )}
               </div>
             ) : (
               <div className="bg-slate-700/20 rounded-xl border border-slate-700/30 p-6 text-center">
@@ -414,11 +503,43 @@ function ReviewPanel({
             )}
           </div>
 
-          {/* Coach notes */}
+          {/* ── Soar Observations ── */}
+          {hasResponse && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Soar Observations</p>
+                <button
+                  onClick={generateObservations}
+                  disabled={generatingObs}
+                  className="text-xs px-3 py-1 bg-violet-600/20 hover:bg-violet-600/30 text-violet-400 rounded-full border border-violet-600/30 transition-all disabled:opacity-50"
+                >
+                  {generatingObs ? 'Generating…' : observations ? '↺ Regenerate' : '✦ Generate'}
+                </button>
+              </div>
+              {observations ? (
+                <div className="bg-violet-500/5 border border-violet-500/20 rounded-xl p-4">
+                  <p className="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">{observations}</p>
+                </div>
+              ) : generatingObs ? (
+                <div className="bg-violet-500/5 border border-violet-500/20 rounded-xl p-4 min-h-[60px] flex items-center">
+                  <div className="w-4 h-4 border-2 border-violet-500 border-t-transparent rounded-full animate-spin mr-2" />
+                  <p className="text-sm text-slate-400">Analysing response…</p>
+                </div>
+              ) : (
+                <div className="bg-slate-700/20 rounded-xl border border-slate-700/30 p-4 text-center">
+                  <p className="text-xs text-slate-500">
+                    Click Generate to have Soar analyse this response and surface coaching insights.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Coach Notes ── */}
           <div>
             <label className="text-xs font-medium text-slate-400 uppercase tracking-wider block mb-2">
-              Coach Notes{' '}
-              <span className="text-slate-600 normal-case">(visible to student, not to parents)</span>
+              Coach Note to Student{' '}
+              <span className="text-slate-600 normal-case">(visible to student)</span>
             </label>
             <textarea
               value={note}
