@@ -1538,14 +1538,14 @@ function WritingPageInner() {
       .catch(() => {})
   }, [isLoaded, getToken, forParam])
 
-  // Load assignments
+  // Load assignments — wait for usageData so we know the account type before fetching
   const loadAssignments = useRef<() => void>(() => {})
   useEffect(() => {
-    if (!token) return
+    if (!token || !usageData) return
     const sid = forParam || undefined
-    // Coaches must have a student selected — without student_id the backend 400s
-    const isCoach = usageData && usageData.account_type !== 'student' && usageData.account_type !== 'parent'
-    if (isCoach && !sid) { setLoadingAssignments(false); return }
+    // Non-students must supply student_id — backend 400s without it
+    const isNonStudent = usageData.account_type !== 'student' && usageData.account_type !== 'parent'
+    if (isNonStudent && !sid) { setLoadingAssignments(false); return }
     const url = `${API}/writing/assignments${sid ? `?student_id=${sid}` : ''}`
     const doFetch = () => {
       fetch(url, { headers: { Authorization: `Bearer ${token}` } })
