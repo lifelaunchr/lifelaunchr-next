@@ -406,7 +406,7 @@ function ReviewPanel({
           if (!line.startsWith('data:')) continue
           try {
             const evt = JSON.parse(line.slice(5).trim())
-            if (evt.type === 'text') setObservations(prev => prev + evt.text)
+            if (evt.type === 'text' || evt.type === 'chunk') setObservations(prev => prev + evt.text)
           } catch { /* ignore parse errors */ }
         }
       }
@@ -537,7 +537,7 @@ function ReviewPanel({
               ) : generatingObs ? (
                 <div className="bg-violet-500/5 border border-violet-500/20 rounded-xl p-4 min-h-[60px] flex items-center">
                   <div className="w-4 h-4 border-2 border-violet-500 border-t-transparent rounded-full animate-spin mr-2" />
-                  <p className="text-sm text-slate-400">Analysing response…</p>
+                  <p className="text-sm text-slate-400">Analyzing response…</p>
                 </div>
               ) : (
                 <div className="bg-slate-700/20 rounded-xl border border-slate-700/30 p-4 text-center">
