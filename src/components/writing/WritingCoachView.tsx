@@ -421,18 +421,32 @@ function ReviewPanel({
   // Parse structured fields from schema + response data
   const schemaFields = assignment.response_schema?.fields ?? []
   const structuredAnswers: Record<string, string> = (() => {
-    if (!latestResponse?.structured_data) return {}
-    if (typeof latestResponse.structured_data === 'string') {
-      try { return JSON.parse(latestResponse.structured_data) } catch { return {} }
+    if (!latestResponse) return {}
+    // Try structured_data first (JSONB col, returned as object by API)
+    if (latestResponse.structured_data) {
+      if (typeof latestResponse.structured_data === 'string') {
+        try { return JSON.parse(latestResponse.structured_data) } catch { /* fall through */ }
+      } else {
+        return latestResponse.structured_data as Record<string, string>
+      }
     }
-    return latestResponse.structured_data as Record<string, string>
+    // Fallback: student stores JSON.stringify(structuredBody) into content column
+    if (latestResponse.content) {
+      try {
+        const parsed = JSON.parse(latestResponse.content)
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          return parsed as Record<string, string>
+        }
+      } catch { /* plain-text content, not JSON */ }
+    }
+    return {}
   })()
 
   const isStructured = assignment.exercise_type === 'structured' && schemaFields.length > 0
-  const hasResponse = latestResponse && (
+  const hasResponse = !!latestResponse && (
     isStructured
       ? Object.values(structuredAnswers).some(v => v?.trim())
-      : latestResponse.content?.trim()
+      : !!(latestResponse.content?.trim())
   )
 
   return (
