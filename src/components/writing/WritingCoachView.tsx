@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import Link from 'next/link'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'https://lifelaunchr.onrender.com'
 
@@ -531,8 +533,12 @@ function ReviewPanel({
                 </button>
               </div>
               {observations ? (
-                <div className="bg-violet-500/5 border border-violet-500/20 rounded-xl p-4">
-                  <p className="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">{observations}</p>
+                <div className="bg-violet-500/5 border border-violet-500/20 rounded-xl p-4 prose prose-invert prose-sm max-w-none
+                  prose-headings:text-violet-300 prose-headings:font-semibold prose-headings:mt-4 prose-headings:mb-1
+                  prose-p:text-slate-200 prose-p:leading-relaxed prose-p:my-1
+                  prose-li:text-slate-200 prose-ul:my-1 prose-ol:my-1
+                  prose-strong:text-slate-100">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{observations}</ReactMarkdown>
                 </div>
               ) : generatingObs ? (
                 <div className="bg-violet-500/5 border border-violet-500/20 rounded-xl p-4 min-h-[60px] flex items-center">
