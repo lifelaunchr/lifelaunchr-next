@@ -533,12 +533,32 @@ function ReviewPanel({
                 </button>
               </div>
               {observations ? (
-                <div className="bg-violet-500/5 border border-violet-500/20 rounded-xl p-4 prose prose-invert prose-sm max-w-none
-                  prose-headings:text-violet-300 prose-headings:font-semibold prose-headings:mt-4 prose-headings:mb-1
-                  prose-p:text-slate-200 prose-p:leading-relaxed prose-p:my-1
-                  prose-li:text-slate-200 prose-ul:my-1 prose-ol:my-1
-                  prose-strong:text-slate-100">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{observations}</ReactMarkdown>
+                <div className="bg-violet-500/5 border border-violet-500/20 rounded-xl p-4 text-sm space-y-1">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      h2: ({ children }) => (
+                        <h2 className="text-xs font-semibold text-violet-300 uppercase tracking-wider mt-4 mb-1 first:mt-0">{children}</h2>
+                      ),
+                      p: ({ children }) => (
+                        <p className="text-slate-200 leading-relaxed">{children}</p>
+                      ),
+                      ul: ({ children }) => (
+                        <ul className="list-disc pl-5 space-y-1">{children}</ul>
+                      ),
+                      ol: ({ children }) => (
+                        <ol className="list-decimal pl-5 space-y-1">{children}</ol>
+                      ),
+                      li: ({ children }) => (
+                        <li className="text-slate-200 leading-relaxed">{children}</li>
+                      ),
+                      strong: ({ children }) => (
+                        <strong className="text-slate-100 font-semibold">{children}</strong>
+                      ),
+                    }}
+                  >
+                    {observations}
+                  </ReactMarkdown>
                 </div>
               ) : generatingObs ? (
                 <div className="bg-violet-500/5 border border-violet-500/20 rounded-xl p-4 min-h-[60px] flex items-center">
