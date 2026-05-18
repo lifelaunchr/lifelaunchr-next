@@ -372,7 +372,7 @@ function AssignmentPageInner() {
               <p className="text-xs text-emerald-400 font-semibold uppercase tracking-wide">Feedback from your coach</p>
               <p className="text-sm text-slate-200 leading-relaxed whitespace-pre-wrap">{assignment.note_to_student}</p>
               {!isComplete && (
-                <p className="text-xs text-slate-500 pt-1">You can revise and resubmit using the Write tab above.</p>
+                <p className="text-xs text-slate-500 pt-1">You can revise and resubmit using the Write tab below.</p>
               )}
             </div>
           ) : (
