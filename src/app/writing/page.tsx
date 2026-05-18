@@ -1562,10 +1562,9 @@ function WritingParentSummary({
       {/* Privacy notice */}
       <div className="bg-slate-800/40 border border-slate-700/40 rounded-xl px-5 py-4">
         <p className="text-sm text-slate-300 leading-relaxed">
-          {firstName}&apos;s writing assignments are private between them and their coach — honest writing
-          requires a safe space free from outside readers. If {firstName} would like to share their
-          work with you, that&apos;s a conversation between the two of you. You can see their
-          personality profile and overall progress below.
+          {firstName}&apos;s writing assignments are private between them and their coach — honest writing requires a safe space free from outside readers.
+          {' '}If {firstName} would like to share their work with you, that&apos;s a conversation between the two of you.
+          {' '}You can see their personality profile and overall progress below.
         </p>
       </div>
 
@@ -1587,7 +1586,7 @@ function WritingParentSummary({
         ) : (
           <div className="bg-slate-800/40 border border-slate-700/40 rounded-xl px-5 py-4">
             <p className="text-sm text-slate-400">
-              {firstName} hasn&apos;t taken the personality assessment yet.
+              {firstName}{' '}hasn&apos;t taken the personality assessment yet.
             </p>
           </div>
         )}
@@ -1599,7 +1598,7 @@ function WritingParentSummary({
         {enrolledSections.length === 0 ? (
           <div className="bg-slate-800/40 border border-slate-700/40 rounded-xl px-5 py-4">
             <p className="text-sm text-slate-400">
-              {firstName} hasn&apos;t been enrolled in any writing sections yet.
+              {firstName}{' '}hasn&apos;t been enrolled in any writing sections yet.
             </p>
           </div>
         ) : (
