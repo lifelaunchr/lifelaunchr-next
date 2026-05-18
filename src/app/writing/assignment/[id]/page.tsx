@@ -9,6 +9,32 @@ import remarkGfm from 'remark-gfm'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'https://lifelaunchr.onrender.com'
 
+// Shared markdown component styles for framing_content blocks
+const framingComponents = {
+  h2: ({ children }: { children?: React.ReactNode }) => (
+    <h2 className="text-violet-300 text-[11px] font-semibold uppercase tracking-widest mt-6 mb-2 first:mt-0">{children}</h2>
+  ),
+  h3: ({ children }: { children?: React.ReactNode }) => (
+    <h3 className="text-slate-200 text-sm font-semibold mt-5 mb-1.5 first:mt-0">{children}</h3>
+  ),
+  p: ({ children }: { children?: React.ReactNode }) => (
+    <p className="text-sm text-slate-300 leading-relaxed mb-3 last:mb-0">{children}</p>
+  ),
+  ul: ({ children }: { children?: React.ReactNode }) => (
+    <ul className="mb-3 pl-5 list-disc list-outside space-y-1.5 last:mb-0">{children}</ul>
+  ),
+  ol: ({ children }: { children?: React.ReactNode }) => (
+    <ol className="mb-3 pl-5 list-decimal list-outside space-y-1.5 last:mb-0">{children}</ol>
+  ),
+  li: ({ children }: { children?: React.ReactNode }) => (
+    <li className="text-sm text-slate-300 leading-relaxed marker:text-violet-400">{children}</li>
+  ),
+  strong: ({ children }: { children?: React.ReactNode }) => (
+    <strong className="text-white font-semibold">{children}</strong>
+  ),
+  hr: () => <hr className="border-slate-700 my-4" />,
+}
+
 const SECTION_BACK: Record<string, string> = {
   self_discovery: 'sd-2',
   writing_practice: 'practice',
@@ -400,8 +426,8 @@ function AssignmentPageInner() {
           <div className="space-y-4">
             <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-5 space-y-4">
               {assignment.framing_content ? (
-                <div className="prose prose-invert prose-sm max-w-none">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{assignment.framing_content}</ReactMarkdown>
+                <div className="space-y-0">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={framingComponents}>{assignment.framing_content}</ReactMarkdown>
                 </div>
               ) : (
                 <p className="text-slate-400 text-sm">No content available.</p>
@@ -438,8 +464,8 @@ function AssignmentPageInner() {
                 <h2 className="text-base font-semibold text-white">{assignment.exercise_title}</h2>
               </div>
               {assignment.framing_content ? (
-                <div className="prose prose-invert prose-sm max-w-none">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{assignment.framing_content}</ReactMarkdown>
+                <div className="space-y-0">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={framingComponents}>{assignment.framing_content}</ReactMarkdown>
                 </div>
               ) : (
                 <p className="text-sm text-slate-300 text-center">
@@ -502,8 +528,8 @@ function AssignmentPageInner() {
             {activeTab === 'guide' && (
               <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-5 space-y-4">
                 {assignment.framing_content ? (
-                  <div className="prose prose-invert prose-sm max-w-none">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  <div className="space-y-0">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={framingComponents}>
                       {assignment.framing_content}
                     </ReactMarkdown>
                   </div>
