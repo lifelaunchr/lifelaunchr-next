@@ -517,15 +517,28 @@ function AssignmentPageInner() {
                   </div>
                 )}
                 <div className="pt-2">
-                  <button
-                    onClick={() => {
-                      if (isTimedWrite && !isAlreadyDone) startTimer()
-                      setActiveTab('write')
-                    }}
-                    className="w-full py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm rounded-lg transition-all"
-                  >
-                    {isTimedWrite && !isAlreadyDone ? 'Start Writing — Timer Begins →' : 'Start Writing →'}
-                  </button>
+                  {isReviewed ? (
+                    <button
+                      onClick={() => setActiveTab('history')}
+                      className="w-full py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm rounded-lg transition-all"
+                    >
+                      View your drafts →
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        if (isTimedWrite && !isAlreadyDone) startTimer()
+                        setActiveTab('write')
+                      }}
+                      className="w-full py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm rounded-lg transition-all"
+                    >
+                      {isTimedWrite && !isAlreadyDone
+                        ? 'Start Writing — Timer Begins →'
+                        : isAlreadyDone
+                        ? 'Continue writing →'
+                        : 'Start Writing →'}
+                    </button>
+                  )}
                 </div>
               </div>
             )}
