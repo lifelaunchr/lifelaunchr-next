@@ -607,36 +607,41 @@ function PersonalityAssessmentForm({
           <h3 className="text-sm font-semibold text-white mb-4">
             {studentName ? `About ${studentName.split(' ')[0]}` : studentId ? 'About the Student' : 'About You'}
           </h3>
-          <div className="flex flex-wrap gap-6">
-            <div>
-              <label className="block text-xs text-slate-400 mb-1.5">Sex (for norms)</label>
-              <div className="flex gap-2">
-                {[{ value: 'M', label: 'Male' }, { value: 'F', label: 'Female' }].map(opt => (
-                  <button
-                    key={opt.value}
-                    onClick={() => setSex(opt.value as 'M' | 'F')}
-                    className={`px-4 py-1.5 rounded-lg text-sm border transition-all ${
-                      sex === opt.value
-                        ? 'bg-violet-600 border-violet-500 text-white'
-                        : 'border-slate-600 text-slate-400 hover:border-slate-500'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-6">
+              <div>
+                <label className="block text-xs text-slate-400 mb-1.5">Biological Sex</label>
+                <div className="flex gap-2">
+                  {[{ value: 'M', label: 'Male' }, { value: 'F', label: 'Female' }].map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setSex(opt.value as 'M' | 'F')}
+                      className={`px-4 py-1.5 rounded-lg text-sm border transition-all ${
+                        sex === opt.value
+                          ? 'bg-violet-600 border-violet-500 text-white'
+                          : 'border-slate-600 text-slate-400 hover:border-slate-500'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1.5">Age</label>
+                <input
+                  type="number"
+                  min={13}
+                  max={99}
+                  value={age}
+                  onChange={e => setAge(e.target.value)}
+                  className="w-20 bg-slate-700 border border-slate-600 rounded-lg px-3 py-1.5 text-sm text-white text-center"
+                />
               </div>
             </div>
-            <div>
-              <label className="block text-xs text-slate-400 mb-1.5">Age</label>
-              <input
-                type="number"
-                min={13}
-                max={99}
-                value={age}
-                onChange={e => setAge(e.target.value)}
-                className="w-20 bg-slate-700 border border-slate-600 rounded-lg px-3 py-1.5 text-sm text-white text-center"
-              />
-            </div>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              The IPIP-NEO assessment was developed and normed by Prof. John Johnson (Penn State DuBois) using biological sex rather than gender identity — which is why we ask for this here. Your selection affects only which norm group your scores are compared against; it has no bearing on your results or essay profile.
+            </p>
           </div>
         </div>
       )}
