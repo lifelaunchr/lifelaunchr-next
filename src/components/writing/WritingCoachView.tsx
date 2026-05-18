@@ -830,7 +830,7 @@ function StudentAssignmentPanel({
                         <div className="flex-1 min-w-0">
                           <p className="text-sm text-white leading-tight">{a.exercise_title}</p>
                           <p className="text-xs text-slate-500 mt-0.5">{a.unit_title}</p>
-                          {a.note_to_student && (
+                          {!readOnly && a.note_to_student && (
                             <p className="text-xs text-violet-400/70 mt-1 line-clamp-1 italic">
                               {a.note_to_student}
                             </p>

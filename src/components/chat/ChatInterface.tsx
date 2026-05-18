@@ -1361,7 +1361,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                 usageData?.commonapp_module || usageData?.uc_piqs_module || usageData?.why_essays_module
               ) && (
                 <Link
-                  href="/writing"
+                  href={isParent && forStudentId ? `/writing?for=${forStudentId}` : '/writing'}
                   className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
                 >
                   <span className="text-base leading-none">📝</span>
