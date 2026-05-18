@@ -1524,6 +1524,7 @@ function WritingParentSummary({
   const { getToken } = useAuth()
   const [data, setData] = useState<ParentSummaryData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [assessmentExpanded, setAssessmentExpanded] = useState(false)
 
   useEffect(() => {
     getToken().then(freshToken => {
@@ -1568,27 +1569,35 @@ function WritingParentSummary({
         </p>
       </div>
 
-      {/* Personality profile */}
-      <section className="space-y-4">
-        <h2 className="text-sm font-semibold text-white">Personality Profile</h2>
-        {data.personality.result ? (
-          <>
-            <AssessmentResults result={data.personality.result} />
-            {data.personality.interpretation && (
-              <InterpretationCard
-                text={data.personality.interpretation}
-                loading={false}
-                error={null}
-                title={`✨ ${firstName}'s Essay Profile`}
-              />
-            )}
-          </>
-        ) : (
-          <div className="bg-slate-800/40 border border-slate-700/40 rounded-xl px-5 py-4">
-            <p className="text-sm text-slate-400">
-              {firstName}{' '}hasn&apos;t taken the personality assessment yet.
-            </p>
-          </div>
+      {/* Personality profile — collapsible */}
+      <section className="space-y-3">
+        <button
+          onClick={() => setAssessmentExpanded(e => !e)}
+          className="w-full flex items-center justify-between text-left"
+        >
+          <h2 className="text-sm font-semibold text-white">Personality Profile</h2>
+          <span className="text-xs text-slate-500">{assessmentExpanded ? '▲ hide' : '▼ show'}</span>
+        </button>
+        {assessmentExpanded && (
+          data.personality.result ? (
+            <div className="space-y-4">
+              <AssessmentResults result={data.personality.result} />
+              {data.personality.interpretation && (
+                <InterpretationCard
+                  text={data.personality.interpretation}
+                  loading={false}
+                  error={null}
+                  title={`✨ ${firstName}'s Essay Profile`}
+                />
+              )}
+            </div>
+          ) : (
+            <div className="bg-slate-800/40 border border-slate-700/40 rounded-xl px-5 py-4">
+              <p className="text-sm text-slate-400">
+                {firstName}{' '}hasn&apos;t taken the personality assessment yet.
+              </p>
+            </div>
+          )
         )}
       </section>
 
