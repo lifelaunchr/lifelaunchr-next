@@ -72,6 +72,32 @@ interface FacetResult {
   percentile: number
 }
 
+interface ParentUnit {
+  id: number
+  title: string
+  display_order: number
+  total: number
+  submitted: number
+  complete: number
+}
+
+interface ParentSection {
+  id: number
+  key: string
+  title: string
+  enrolled: boolean
+  units: ParentUnit[]
+}
+
+interface ParentSummaryData {
+  student_name: string
+  personality: {
+    result: AssessmentResult | null
+    interpretation: string | null
+  }
+  sections: ParentSection[]
+}
+
 // ── API base ──────────────────────────────────────────────────────────────────
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'https://lifelaunchr.onrender.com'
@@ -1486,6 +1512,138 @@ function EssaySectionTab({
   )
 }
 
+// ── Parent writing summary ─────────────────────────────────────────────────────
+
+function WritingParentSummary({
+  studentId,
+  studentDisplayName,
+}: {
+  studentId: string
+  studentDisplayName: string | null
+}) {
+  const { getToken } = useAuth()
+  const [data, setData] = useState<ParentSummaryData | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    getToken().then(freshToken => {
+      if (!freshToken) return
+      fetch(`${API}/writing/parent-summary?student_id=${studentId}`, {
+        headers: { Authorization: `Bearer ${freshToken}` },
+      })
+        .then(r => r.ok ? r.json() : null)
+        .then(d => { setData(d); setLoading(false) })
+        .catch(() => setLoading(false))
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [studentId])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (!data) {
+    return (
+      <div className="py-16 text-center text-slate-400 text-sm">Could not load writing summary.</div>
+    )
+  }
+
+  const name = data.student_name || studentDisplayName || 'Your student'
+  const firstName = name.split(' ')[0]
+  const enrolledSections = data.sections.filter(s => s.enrolled)
+
+  return (
+    <div className="max-w-2xl mx-auto px-4 py-6 space-y-8">
+
+      {/* Privacy notice */}
+      <div className="bg-slate-800/40 border border-slate-700/40 rounded-xl px-5 py-4">
+        <p className="text-sm text-slate-300 leading-relaxed">
+          {firstName}&apos;s writing assignments are private between them and their coach — honest writing
+          requires a safe space free from outside readers. If {firstName} would like to share their
+          work with you, that&apos;s a conversation between the two of you. You can see their
+          personality profile and overall progress below.
+        </p>
+      </div>
+
+      {/* Personality profile */}
+      <section className="space-y-4">
+        <h2 className="text-sm font-semibold text-white">Personality Profile</h2>
+        {data.personality.result ? (
+          <>
+            <AssessmentResults result={data.personality.result} />
+            {data.personality.interpretation && (
+              <InterpretationCard
+                text={data.personality.interpretation}
+                loading={false}
+                error={null}
+                title={`✨ ${firstName}'s Essay Profile`}
+              />
+            )}
+          </>
+        ) : (
+          <div className="bg-slate-800/40 border border-slate-700/40 rounded-xl px-5 py-4">
+            <p className="text-sm text-slate-400">
+              {firstName} hasn&apos;t taken the personality assessment yet.
+            </p>
+          </div>
+        )}
+      </section>
+
+      {/* Writing progress */}
+      <section className="space-y-4">
+        <h2 className="text-sm font-semibold text-white">Writing Progress</h2>
+        {enrolledSections.length === 0 ? (
+          <div className="bg-slate-800/40 border border-slate-700/40 rounded-xl px-5 py-4">
+            <p className="text-sm text-slate-400">
+              {firstName} hasn&apos;t been enrolled in any writing sections yet.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {enrolledSections.map(section => {
+              const totalAssignments = section.units.reduce((s, u) => s + u.total, 0)
+              const totalSubmitted   = section.units.reduce((s, u) => s + u.submitted, 0)
+              return (
+                <div key={section.id} className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-white">{section.title}</h3>
+                    <span className="text-xs text-slate-400">
+                      {totalSubmitted} of {totalAssignments} submitted
+                    </span>
+                  </div>
+                  <div className="space-y-2.5">
+                    {section.units.map(unit => (
+                      <div key={unit.id} className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-slate-400">{unit.title}</span>
+                          <span className="text-xs text-slate-500">{unit.submitted}/{unit.total}</span>
+                        </div>
+                        {unit.total > 0 && (
+                          <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-violet-500 rounded-full transition-all duration-500"
+                              style={{ width: `${Math.round((unit.submitted / unit.total) * 100)}%` }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </section>
+
+    </div>
+  )
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 function WritingPageInner() {
@@ -1602,6 +1760,30 @@ function WritingPageInner() {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  // Parents with a student selected → privacy-safe parent summary view
+  if (isParent && forParam) {
+    return (
+      <div className="h-screen bg-slate-900 text-white flex flex-col overflow-hidden">
+        <div className="border-b border-slate-800 px-4 py-3 flex items-center gap-3 flex-shrink-0">
+          <Link href="/chat" className="text-slate-400 hover:text-white text-sm">← Chat</Link>
+          <span className="text-slate-700">|</span>
+          <h1 className="text-base font-semibold">Writing Progress</h1>
+          {studentDisplayName && (
+            <span className="text-xs bg-violet-900/40 text-violet-300 px-2 py-0.5 rounded-full border border-violet-700/50 ml-auto">
+              {studentDisplayName}
+            </span>
+          )}
+        </div>
+        <main className="flex-1 overflow-y-auto">
+          <WritingParentSummary
+            studentId={forParam}
+            studentDisplayName={studentDisplayName}
+          />
+        </main>
       </div>
     )
   }
