@@ -331,7 +331,6 @@ function AssignmentPageInner() {
   const isComplete = assignment.status === 'complete'
   const isReviewed = assignment.status === 'reviewed' || isComplete
   const isSubmitted = assignment.status === 'submitted'
-  const hasCoachFeedback = !!(assignment.coach_feedback?.trim())
 
   // Section back-link
   const backSection = SECTION_BACK[assignment.section_key] || ''
@@ -365,20 +364,24 @@ function AssignmentPageInner() {
           </div>
         )}
 
-        {/* Coach note — shown before writing */}
+        {/* Coach note / feedback — context-aware styling */}
         {assignment.note_to_student && (
-          <div className="bg-violet-900/20 border border-violet-700/30 rounded-xl px-4 py-3">
-            <p className="text-xs text-violet-300 font-medium mb-0.5">Note from your coach</p>
-            <p className="text-sm text-slate-300 italic">{assignment.note_to_student}</p>
-          </div>
-        )}
-
-        {/* Coach feedback — shown after review */}
-        {hasCoachFeedback && (
-          <div className="bg-emerald-900/20 border border-emerald-700/30 rounded-xl px-4 py-4 space-y-1">
-            <p className="text-xs text-emerald-400 font-semibold uppercase tracking-wide">Coach feedback</p>
-            <p className="text-sm text-slate-200 leading-relaxed whitespace-pre-wrap">{assignment.coach_feedback}</p>
-          </div>
+          isReviewed ? (
+            /* Post-review feedback — prominent green treatment */
+            <div className="bg-emerald-900/20 border border-emerald-700/30 rounded-xl px-4 py-4 space-y-2">
+              <p className="text-xs text-emerald-400 font-semibold uppercase tracking-wide">Feedback from your coach</p>
+              <p className="text-sm text-slate-200 leading-relaxed whitespace-pre-wrap">{assignment.note_to_student}</p>
+              {!isComplete && (
+                <p className="text-xs text-slate-500 pt-1">You can revise and resubmit using the Write tab above.</p>
+              )}
+            </div>
+          ) : (
+            /* Pre-assignment note */
+            <div className="bg-violet-900/20 border border-violet-700/30 rounded-xl px-4 py-3">
+              <p className="text-xs text-violet-300 font-medium mb-1">Note from your coach</p>
+              <p className="text-sm text-slate-300 italic">{assignment.note_to_student}</p>
+            </div>
+          )
         )}
 
         {/* Meta */}
