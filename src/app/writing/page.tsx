@@ -1748,7 +1748,7 @@ function WritingParentSummary({
 
       {/* Writing progress */}
       <section className="space-y-4">
-        <h2 className="text-sm font-semibold text-white">Writing Progress</h2>
+        <h2 className="text-sm font-semibold text-white">{firstName}&apos;s Writing Progress</h2>
         {enrolledSections.length === 0 ? (
           <div className="bg-slate-800/40 border border-slate-700/40 rounded-xl px-5 py-4">
             <p className="text-sm text-slate-400">
