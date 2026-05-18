@@ -1526,9 +1526,17 @@ function WritingParentSummary({
   const [loading, setLoading] = useState(true)
   const [assessmentExpanded, setAssessmentExpanded] = useState(false)
 
+  // "Take it yourself" state
+  const [parentTestMode, setParentTestMode] = useState(false)
+  const [parentOwnResult, setParentOwnResult] = useState<AssessmentResult | null>(null)
+  const [parentOwnInterpretation, setParentOwnInterpretation] = useState<string | null>(null)
+  const [parentOwnInterpretationLoading, setParentOwnInterpretationLoading] = useState(false)
+  const [parentToken, setParentToken] = useState<string | null>(null)
+
   useEffect(() => {
     getToken().then(freshToken => {
       if (!freshToken) return
+      setParentToken(freshToken)
       fetch(`${API}/writing/parent-summary?student_id=${studentId}`, {
         headers: { Authorization: `Bearer ${freshToken}` },
       })
@@ -1538,6 +1546,62 @@ function WritingParentSummary({
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [studentId])
+
+  // Eagerly load the parent's own assessment (if they've taken it before)
+  useEffect(() => {
+    getToken().then(freshToken => {
+      if (!freshToken) return
+      fetch(`${API}/writing/personality-assessment`, {
+        headers: { Authorization: `Bearer ${freshToken}` },
+      })
+        .then(r => r.ok ? r.json() : null)
+        .then(d => {
+          if (d?.result) {
+            setParentOwnResult(d.result)
+            if (d.interpretation) setParentOwnInterpretation(d.interpretation)
+            else fetchParentInterpretation()
+          }
+        })
+        .catch(() => {})
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  async function fetchParentInterpretation(forceRegenerate = false) {
+    setParentOwnInterpretationLoading(true)
+    if (forceRegenerate) setParentOwnInterpretation(null)
+    const freshToken = await getToken()
+    if (!freshToken) { setParentOwnInterpretationLoading(false); return }
+    try {
+      const res = await fetch(`${API}/writing/personality-assessment/interpret`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${freshToken}` },
+      })
+      if (!res.ok) { setParentOwnInterpretationLoading(false); return }
+      const reader = res.body?.getReader()
+      if (!reader) { setParentOwnInterpretationLoading(false); return }
+      const decoder = new TextDecoder()
+      let buf = ''
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buf += decoder.decode(value, { stream: true })
+        const lines = buf.split('\n')
+        buf = lines.pop() ?? ''
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          const raw = line.slice(6).trim()
+          if (!raw) continue
+          let ev: { type: string; text?: string }
+          try { ev = JSON.parse(raw) } catch { continue }
+          if (ev.type === 'chunk' && ev.text) setParentOwnInterpretation(prev => (prev ?? '') + ev.text)
+          else if (ev.type === 'text' && ev.text) setParentOwnInterpretation(ev.text)
+        }
+      }
+    } catch { /* silent */ } finally {
+      setParentOwnInterpretationLoading(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -1579,25 +1643,101 @@ function WritingParentSummary({
           <span className="text-xs text-slate-500">{assessmentExpanded ? '▲ hide' : '▼ show'}</span>
         </button>
         {assessmentExpanded && (
-          data.personality.result ? (
-            <div className="space-y-4">
-              <AssessmentResults result={data.personality.result} />
-              {data.personality.interpretation && (
-                <InterpretationCard
-                  text={data.personality.interpretation}
-                  loading={false}
-                  error={null}
-                  title={`✨ ${firstName}'s Essay Profile`}
-                />
-              )}
-            </div>
-          ) : (
-            <div className="bg-slate-800/40 border border-slate-700/40 rounded-xl px-5 py-4">
-              <p className="text-sm text-slate-400">
-                {firstName}{' '}hasn&apos;t taken the personality assessment yet.
-              </p>
-            </div>
-          )
+          <div className="space-y-5">
+            {/* Student results */}
+            {data.personality.result ? (
+              <div className="space-y-4">
+                <p className="text-xs text-slate-500">{firstName}&apos;s Big Five profile:</p>
+                <AssessmentResults result={data.personality.result} />
+                {data.personality.interpretation && (
+                  <InterpretationCard
+                    text={data.personality.interpretation}
+                    loading={false}
+                    error={null}
+                    title={`✨ ${firstName}'s Essay Profile`}
+                  />
+                )}
+              </div>
+            ) : (
+              <div className="bg-slate-800/40 border border-slate-700/40 rounded-xl px-5 py-4">
+                <p className="text-sm text-slate-400">
+                  {firstName}{' '}hasn&apos;t taken the personality assessment yet.
+                </p>
+              </div>
+            )}
+
+            {/* Take it yourself section */}
+            {!parentTestMode && (
+              <div className="border-t border-slate-700/50 pt-4 flex items-center justify-between">
+                <span className="text-xs text-slate-500">
+                  {parentOwnResult
+                    ? 'Your result:'
+                    : data.personality.result
+                      ? 'Want to compare with your own result?'
+                      : 'Curious what the assessment is like?'}
+                </span>
+                <button
+                  onClick={() => setParentTestMode(true)}
+                  className="text-xs px-3 py-1.5 rounded-lg border border-slate-600 text-slate-400 hover:border-violet-500/50 hover:text-violet-300 transition-all"
+                >
+                  {parentOwnResult ? '🧪 View your result' : '🧪 Take it yourself'}
+                </button>
+              </div>
+            )}
+
+            {/* Parent's own assessment */}
+            {parentTestMode && (
+              <div className="border-t border-slate-700/50 pt-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-violet-300 bg-violet-900/30 border border-violet-700/40 px-2 py-0.5 rounded-full">
+                    Your result — for comparison
+                  </span>
+                  <div className="flex items-center gap-3">
+                    {parentOwnResult && (
+                      <button
+                        onClick={() => { setParentOwnResult(null); setParentOwnInterpretation(null) }}
+                        className="text-xs text-violet-400 hover:text-violet-300"
+                      >
+                        Retake
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setParentTestMode(false)}
+                      className="text-xs text-slate-500 hover:text-slate-300"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+
+                {parentOwnResult ? (
+                  <div className="space-y-4">
+                    <AssessmentResults result={parentOwnResult} />
+                    <InterpretationCard
+                      text={parentOwnInterpretation ?? ''}
+                      loading={parentOwnInterpretationLoading}
+                      error={null}
+                      title="✨ Your Essay Profile"
+                      emptyLabel="Generate My Essay Profile →"
+                      emptyDescription="Get a personalized interpretation of your own results."
+                      generatingLabel="Analyzing your personality profile…"
+                      onRegenerate={() => fetchParentInterpretation(true)}
+                    />
+                  </div>
+                ) : (
+                  <PersonalityAssessmentForm
+                    token={parentToken ?? ''}
+                    studentId={null}
+                    onComplete={r => {
+                      setParentOwnResult(r)
+                      setParentOwnInterpretation(null)
+                      fetchParentInterpretation()
+                    }}
+                  />
+                )}
+              </div>
+            )}
+          </div>
         )}
       </section>
 
