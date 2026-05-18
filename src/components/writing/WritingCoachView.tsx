@@ -700,6 +700,10 @@ function StudentAssignmentPanel({
         .then(data => {
           const items: WritingAssignment[] = data.assignments || []
           setAssignments(items)
+          // Keep the open ReviewPanel in sync — reviewAssignment is a stale
+          // copy of the assignment object; replace it with the freshly fetched
+          // version so note_to_student and status are always current.
+          setReviewAssignment(prev => prev ? (items.find(a => a.id === prev.id) ?? prev) : null)
           setLoading(false)
           onCountChanged(
             student.id,
