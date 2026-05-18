@@ -358,6 +358,7 @@ function ReviewPanel({
         headers: { Authorization: `Bearer ${tok}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ note_to_student: note }),
       })
+      onReviewed() // refresh parent data so re-opening the panel shows the saved note
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     } finally {
