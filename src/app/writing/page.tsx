@@ -1794,6 +1794,22 @@ function WritingParentSummary({
         )}
       </section>
 
+      {/* Essay Prompts & Drafts */}
+      <section>
+        <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-white">Essay Prompts &amp; Drafts</p>
+            <p className="text-xs text-slate-400 mt-0.5">See {firstName}&apos;s essay requirements and track draft progress</p>
+          </div>
+          <a
+            href={`/essays?for=${studentId}`}
+            className="shrink-0 px-3 py-1.5 text-xs bg-violet-600 hover:bg-violet-500 text-white rounded-lg transition-colors"
+          >
+            Open →
+          </a>
+        </div>
+      </section>
+
     </div>
   )
 }
