@@ -669,8 +669,22 @@ function StudentAssignmentPanel({
   const [track, setTrack] = useState<'long_form' | 'sprint' | null>(student.writing_track)
   const [savingTrack, setSavingTrack] = useState(false)
   const [assessmentCompleted, setAssessmentCompleted] = useState<boolean | null>(null)
+  // Per-student allowed section keys — fetched from backend which applies per-student flags
+  const [allowedSectionKeys, setAllowedSectionKeys] = useState<Set<string> | null>(null)
 
-  const hasEssayModules = enabledModules.commonApp || enabledModules.ucPiqs || enabledModules.whyEssays
+  // Derive per-student enabledModules by intersecting counselor modules with student's allowed sections
+  const studentModules: EnabledModules = allowedSectionKeys === null ? enabledModules : {
+    selfDiscovery:   enabledModules.selfDiscovery   && allowedSectionKeys.has('self_discovery'),
+    writingPractice: enabledModules.writingPractice && allowedSectionKeys.has('writing_practice'),
+    commonApp:       enabledModules.commonApp       && allowedSectionKeys.has('commonapp'),
+    ucPiqs:          enabledModules.ucPiqs          && allowedSectionKeys.has('uc_piqs'),
+    whyEssays:       enabledModules.whyEssays       && (allowedSectionKeys.has('why_major') || allowedSectionKeys.has('why_college')),
+    essayHub:        enabledModules.essayHub,
+  }
+
+  const hasEssayModules = studentModules.commonApp || studentModules.ucPiqs || studentModules.whyEssays
+  // Essay Prep track button only shows if this student has essay modules
+  const studentHasEssayModules = hasEssayModules
 
   const saveTrack = async (newTrack: 'long_form' | 'sprint' | null) => {
     setSavingTrack(true)
@@ -689,22 +703,24 @@ function StudentAssignmentPanel({
     }
   }
 
-  const sectionOptions = getSectionOptions(track, enabledModules, hasEssayModules)
+  const sectionOptions = getSectionOptions(track, studentModules, hasEssayModules)
 
   const loadData = useCallback(() => {
     setLoading(true)
     getToken().then(tok => {
       if (!tok) { setLoading(false); return }
-      fetch(`${API}/writing/assignments?student_id=${student.id}`, {
-        headers: { Authorization: `Bearer ${tok}` },
-      })
-        .then(r => r.json())
-        .then(data => {
-          const items: WritingAssignment[] = data.assignments || []
+      // Fetch assignments and student's allowed sections in parallel
+      Promise.all([
+        fetch(`${API}/writing/assignments?student_id=${student.id}`, {
+          headers: { Authorization: `Bearer ${tok}` },
+        }).then(r => r.json()),
+        fetch(`${API}/writing/sections?student_id=${student.id}`, {
+          headers: { Authorization: `Bearer ${tok}` },
+        }).then(r => r.json()),
+      ])
+        .then(([assignData, sectionData]) => {
+          const items: WritingAssignment[] = assignData.assignments || []
           setAssignments(items)
-          // Keep the open ReviewPanel in sync — reviewAssignment is a stale
-          // copy of the assignment object; replace it with the freshly fetched
-          // version so note_to_student and status are always current.
           setReviewAssignment(prev => prev ? (items.find(a => a.id === prev.id) ?? prev) : null)
           setLoading(false)
           onCountChanged(
@@ -712,6 +728,11 @@ function StudentAssignmentPanel({
             items.length,
             items.filter(a => a.status === 'submitted').length,
           )
+          // Build set of section keys this student is allowed to access
+          const keys = new Set<string>(
+            (sectionData.sections || []).map((s: { key: string }) => s.key)
+          )
+          setAllowedSectionKeys(keys)
         })
         .catch(() => setLoading(false))
     })
@@ -773,8 +794,8 @@ function StudentAssignmentPanel({
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
-          {/* Track chooser — only for coaches when essay modules are enabled */}
-          {!readOnly && hasEssayModules && (
+          {/* Track chooser — only for coaches when this student has essay modules */}
+          {!readOnly && studentHasEssayModules && (
             <div className="flex items-center rounded-lg border border-slate-700 overflow-hidden text-[10px] font-medium">
               <button
                 onClick={() => saveTrack('long_form')}
