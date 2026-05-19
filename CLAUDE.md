@@ -1,31 +1,5 @@
 @AGENTS.md
 
-## 🚨 ACTIVE FEATURE IN PROGRESS — READ BEFORE ANY COMMIT
-
-**`main` is NOT stable. Do NOT push anything to `production`. Real users are on the system.**
-
-The Writing & Essays hub (app#119 / next#52 / next#53) is partially deployed to `main` and has not been fully tested. The backend CLAUDE.md deployment workflow already requires that **Claude must never run the production push command** — Claude writes out the command and stops; the user runs it manually. That rule applies here with extra force:
-
-Until the user explicitly says "looks good on staging" and approves a production push, all of the following are absolutely prohibited — no exceptions, no rationalizations:
-- Running `git push --force-with-lease origin main:production`
-- Any cherry-pick to `production`
-- Any tagging of a new version
-
-**What's in-flight on `main` (as of 2026-05-14):**
-- New writing hub sections: CommonApp Essay, UC PIQs, Why Major, Why College
-- Coach exercise assignment panel (`AssignPanel` component in `/writing`)
-- Student writing access checkboxes in the dashboard edit panel
-- New module keys (`essay_list`, `editate`, `commonapp_essays`, `uc_piqs`, `why_essays`) seeded on LifeLaunchr tenant
-- Meeting brief now includes writing/essay assignment status
-- `DELETE /writing/enroll` unenroll endpoint
-- app#123 fix: parent CC bug (`notify_parent_session_reports IS NULL`)
-
-**Lesson learned:** Update CLAUDE.md with an active-feature notice BEFORE starting any multi-session feature work. This prevents a future Claude session from treating `main` as stable and pushing to production.
-
-When this feature is tested and approved for production, remove this section and tag v1.0.38.
-
----
-
 ## ⚠️ CRITICAL — TWO REPO RULE (READ FIRST, EVERY SESSION)
 
 **This repo (`lifelaunchr-next`) is FRONTEND ONLY (Next.js → Vercel).**
@@ -40,12 +14,13 @@ When this feature is tested and approved for production, remove this section and
 
 # LifeLaunchr / Soar — Deployment Reference
 
-> Last updated: 2026-05-11 (v1.0.36).
+> Last updated: 2026-05-18 (v1.0.38).
 
 ## Version History
 
 | Version | Date | Notes |
 |---------|------|-------|
+| v1.0.38 | 2026-05-18 | Writing Hub complete (next#52, next#53). **New `/writing` page** (`src/app/writing/page.tsx`, 2180 lines): tabbed hub for self-discovery, writing practice, and essay sections. Sections visible depend on `enabled_modules`. **Student view:** shows assigned exercises in each section with status badges (`assigned`/`in_progress`/`submitted`/`reviewed`); clicking an assignment opens a full response editor with a word-count bar, revision history dropdown, and submit button. Personality assessment tab (Self-Discovery): 120-item IPIP-NEO questionnaire with per-domain result bars and facet breakdown. **Counselor view:** `WritingCoachView` component — student roster dropdown; for each student shows sections with enrollment toggles and an `AssignPanel` for assigning exercises; when a student has submitted a response the counselor sees the submitted text and an "Generate Observations" button that streams AI coaching notes. **Parent view:** read-only section list with progress counts. **`WritingWelcomeModal`** (`src/components/writing/WritingWelcomeModal.tsx`): role-specific welcome modal shown once per role per browser (`localStorage` keyed by role). Three roles have distinct copy: student (process ownership), counselor (workflow + pacing), parent (privacy + read access). **`AssignPanel`** (`src/components/writing/AssignPanel.tsx`): fetches exercises via `GET /writing/library?section_key=`, renders a list with exercise titles and prompts; "Assign" button POSTs to `POST /writing/assignments`; optional note and due date fields. **`WritingCoachView`** (`src/components/writing/WritingCoachView.tsx`): counselor-only full-page roster view rendered when no student is selected; lists all connected students with assigned/submitted counts; clicking a student switches to that student. **Chat sidebar** (`ChatInterface.tsx`): Writing Hub link (`/writing`) added to sidebar nav for all roles when any writing module is enabled; counselors see it in the student sub-nav. **Essays nav link** restored for counselors and parents: appears in the student sub-nav when `essay_list_module || essays_module` is true; was accidentally removed during Writing Hub work. **`/essays` page restyle** (`src/app/essays/page.tsx`): completely converted from all-inline-styles white theme (775 lines, `style={{...}}` throughout) to Tailwind dark navy matching the Writing Hub — `bg-slate-900`, `bg-slate-800/50`, `border-slate-700/50`, violet-600 buttons, slate text variants, violet/amber/green status badges. All logic preserved identically. Back link now points to `/writing` (or `/writing?for=studentId`). **Dashboard edit panel** (`dashboard/page.tsx`): added student writing access checkboxes — three booleans (`commonapp_essays_enabled`, `uc_piqs_enabled`, `why_essays_enabled`) that toggle which essay hub sections are visible for a student; stored in `users` table. Backend changes in backend CLAUDE.md v1.0.38. |
 | v1.0.36 | 2026-05-11 | Sortable college list — clickable spreadsheet headers + sort dropdown (next#51, frontend-only). **`src/app/lists/page.tsx`:** added `CollegeSortBy` type, `LIKELIHOOD_RANK` map, `STATUS_ORDER` array, and `sortCollegeEntries()` pure function (sorts by likelihood tier/name/deadline/status with asc/desc; deadline nulls always last; alpha tiebreak on ties). `SpreadsheetView` gains `sortBy`, `sortDir`, `onSort` props; College, Status, Likelihood, Deadline headers are clickable — active column highlights indigo with ▲/▼ arrow, inactive columns show ⇅. Sort dropdown added to toolbar (colleges tab only, left of view toggle) with 7 options: Likelihood best-fit/reach-first, Name A-Z/Z-A, Deadline soonest/latest, Status. Dropdown and column headers share the same state (`collegeSortBy`, `collegeSortDir`) in `ListsPage`. Default: likelihood asc. Preference persisted to `localStorage` (`ll_college_sort_by`, `ll_college_sort_dir`). Both `SpreadsheetView` and `CardView` receive pre-sorted entries; card view buckets remain grouped (researching/applying) but cards sort within each bucket. No backend changes. |
 | v1.0.35 | 2026-05-11 | Friendly error states for inaccessible or missing sessions (next#47, frontend-only). **`src/components/chat/ChatInterface.tsx`:** added `sessionAccessError` state typed as `'forbidden' \| 'not_found' \| null` (replaces previous boolean). `loadSession` now sets `sessionAccessError('forbidden')` on 403 and `'not_found'` on 404 before returning early (previously both were silently swallowed). `handleNewConversation` clears the error on new session. In the render tree, when `sessionAccessError` is non-null an error panel is shown instead of the WelcomeCard: 🔒 icon + "You don't have access to this session" / "This session belongs to a student you're not connected to." for 403; 🔍 icon + "Session not found" / "This link may be broken or the session may have been deleted." for 404. Both panels include a "Start a new session" button. No backend changes. |
 | v1.0.34 | 2026-05-11 | Backend-only: enrich Soar Summary with culture/community fit paragraph and deeper academic program analysis (app#117) — see backend CLAUDE.md v1.0.34. No frontend changes. |
@@ -271,6 +246,8 @@ Students are already using ChatGPT and Claude for college and career planning �
 | `/onboarding` | `app/onboarding/page.tsx` | 6-step post-signup onboarding: (1) role picker, (2) student profile, (3) college wishlist, (4) Make the Most of Soar intro cards, (5) counselor invite (counselors only), (6) question picker → auto-sends to /chat |
 | `/join` | `app/join/page.tsx` | Invite acceptance landing page |
 | `/accept-invite` | `app/accept-invite/page.tsx` | Post-Clerk-auth invite claim page |
+| `/writing` | `app/writing/page.tsx` | Writing Hub — tabbed hub for self-discovery, writing practice, and essay sections. Role-specific views: student (assignments + response editor + personality assessment), counselor (roster + assign panel + observation generator), parent (read-only progress). |
+| `/essays` | `app/essays/page.tsx` | Editate essay prompt browser and draft status tracker. Styled in dark Tailwind matching the Writing Hub (restyled v1.0.38). |
 | `/sign-in` | `app/sign-in/` | Clerk sign-in |
 | `/sign-up` | `app/sign-up/` | Clerk sign-up |
 
@@ -283,6 +260,9 @@ Students are already using ChatGPT and Claude for college and career planning �
 | `WelcomeCard` | `components/chat/WelcomeCard.tsx` | Welcome screen with starter chips; switches between normal and first-session modes (`isFirstSession` prop); role-specific starters via `FIRST_SESSION_STARTERS`; returning-user view shows 6 value prop cards (`VALUE_PROPS`) and 4 starter chips (`STARTERS`); tagline: "The college and career planning assistant that knows you, remembers everything, and gets smarter the more you use it." |
 | `AddFamilyModal` | `components/counselor/AddFamilyModal.tsx` | Modal for counselors to add student + parents as a family; validates emails, handles capacity errors, shows invite results |
 | `ModuleChips` | `components/chat/ModuleChips.tsx` | Topic pills below chat input ("Load extra guidance for: Athletics, Religious life, ..."); toggles active_topics sent to backend |
+| `WritingWelcomeModal` | `components/writing/WritingWelcomeModal.tsx` | Role-specific welcome modal shown once per role per browser (`localStorage` key per role). Three versions: student (process ownership, HECA framing), counselor (workflow + pacing), parent (privacy + read access). `useWritingWelcomeSeen(role)` hook for conditional rendering. |
+| `WritingCoachView` | `components/writing/WritingCoachView.tsx` | Full-page counselor roster view when no student is selected on `/writing`. Lists students with assigned/submitted counts; clicking switches to that student and shows the assign panel. |
+| `AssignPanel` | `components/writing/AssignPanel.tsx` | Counselor panel to assign exercises to a student. Fetches exercises via `GET /writing/library?section_key=`, renders exercise list; "Assign" button POSTs to `POST /writing/assignments` with optional note and due date. |
 
 ### Key Frontend Patterns
 
