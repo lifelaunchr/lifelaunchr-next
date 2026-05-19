@@ -240,7 +240,7 @@ const parentSteps: TourStepContent[] = [
   {
     target: '#tour-nav-writing',
     title: 'Writing Hub',
-    body: "Soar doesn't write essays or tell students what to write. The Writing Hub lets you see your student's essay progress as they work with their coach or mentor, all in one place.",
+    body: "Soar doesn't write essays or tell students what to write. The Writing Hub lets you see your teen's essay progress as they work with their coach or mentor, all in one place.",
     placement: 'right',
     requiresModule: 'writing',
   },
