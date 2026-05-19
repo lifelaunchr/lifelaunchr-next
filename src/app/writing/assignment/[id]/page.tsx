@@ -75,6 +75,7 @@ interface Response {
   submitted_at: string
   coach_notes: string | null
   coach_reviewed_at: string | null
+  soar_observations?: string | null
 }
 
 interface StructuredField {
@@ -99,6 +100,7 @@ function AssignmentPageInner() {
 
   const router = useRouter()
   const [token, setToken] = useState<string | null>(null)
+  const [accountType, setAccountType] = useState<string | null>(null)
   const [assignment, setAssignment] = useState<Assignment | null>(null)
   const [schedulingLink, setSchedulingLink] = useState<string | null>(null)
   const [body, setBody] = useState('')
@@ -115,6 +117,14 @@ function AssignmentPageInner() {
   const [timerSeconds, setTimerSeconds] = useState(0)
   const [timerDone, setTimerDone] = useState(false)
   const [timerAutoSaved, setTimerAutoSaved] = useState(false)
+  // Coach review state
+  const [coachResponses, setCoachResponses] = useState<Response[]>([])
+  const [coachNote, setCoachNote] = useState('')
+  const [coachSaving, setCoachSaving] = useState(false)
+  const [coachSaved, setCoachSaved] = useState(false)
+  const [coachMarking, setCoachMarking] = useState(false)
+  const [observations, setObservations] = useState('')
+  const [generatingObs, setGeneratingObs] = useState(false)
 
   useEffect(() => {
     if (!isLoaded) return
@@ -123,7 +133,7 @@ function AssignmentPageInner() {
 
   useEffect(() => {
     if (!token || !assignmentId) return
-    // Fetch assignment + usage (for scheduling link on milestone exercises) in parallel
+    // Fetch assignment + usage in parallel
     Promise.all([
       fetch(`${API}/writing/assignments/${assignmentId}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -134,11 +144,9 @@ function AssignmentPageInner() {
     ]).then(([assignmentData, usageData]) => {
       const a: Assignment = assignmentData.assignment
       setAssignment(a)
-      // Scheduling link — only relevant for students (counselors/parents don't book meetings this way)
-      if (usageData.scheduling_link) {
-        setSchedulingLink(usageData.scheduling_link)
-      }
-      // Pre-populate write tab with most recent response
+      setAccountType(usageData.account_type ?? null)
+      if (usageData.scheduling_link) setSchedulingLink(usageData.scheduling_link)
+      // Pre-populate write tab with most recent response (students only)
       if (a.responses && a.responses.length > 0) {
         const latest = a.responses[0]
         if (a.exercise_type === 'structured' && latest.content) {
@@ -154,6 +162,97 @@ function AssignmentPageInner() {
       setLoading(false)
     }).catch(() => setLoading(false))
   }, [token, assignmentId])
+
+  // Coach: fetch full responses list (includes soar_observations) + pre-fill note
+  useEffect(() => {
+    if (!token || !assignmentId || accountType !== 'counselor') return
+    fetch(`${API}/writing/assignments/${assignmentId}/responses`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.json())
+      .then(data => {
+        const rows: Response[] = data.responses || []
+        setCoachResponses(rows)
+        if (rows[0]?.soar_observations) setObservations(rows[0].soar_observations)
+      })
+      .catch(() => {})
+  }, [token, assignmentId, accountType])
+
+  // Pre-fill coach note from assignment once loaded
+  useEffect(() => {
+    if (assignment && accountType === 'counselor') {
+      setCoachNote(assignment.note_to_student || '')
+    }
+  }, [assignment, accountType])
+
+  const generateObservations = useCallback(async () => {
+    const latestId = coachResponses[0]?.id
+    if (!latestId) return
+    setGeneratingObs(true)
+    setObservations('')
+    try {
+      const tok = await getToken()
+      if (!tok) return
+      const url = `${API}/writing/assignments/${assignmentId}/generate-observations?response_id=${latestId}`
+      const res = await fetch(url, { method: 'POST', headers: { Authorization: `Bearer ${tok}` } })
+      if (!res.ok || !res.body) { setGeneratingObs(false); return }
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() ?? ''
+        for (const line of lines) {
+          if (!line.startsWith('data:')) continue
+          try {
+            const evt = JSON.parse(line.slice(5).trim())
+            if (evt.type === 'text' || evt.type === 'chunk') setObservations(prev => prev + evt.text)
+          } catch { /* ignore */ }
+        }
+      }
+    } finally {
+      setGeneratingObs(false)
+    }
+  }, [coachResponses, assignmentId, getToken])
+
+  const saveCoachNote = async () => {
+    setCoachSaving(true)
+    setCoachSaved(false)
+    try {
+      const tok = await getToken()
+      if (!tok) return
+      await fetch(`${API}/writing/assignments/${assignmentId}`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${tok}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note_to_student: coachNote }),
+      })
+      setCoachSaved(true)
+      setTimeout(() => setCoachSaved(false), 2000)
+    } finally {
+      setCoachSaving(false)
+    }
+  }
+
+  const markReviewed = async () => {
+    setCoachMarking(true)
+    try {
+      const tok = await getToken()
+      if (!tok) return
+      const res = await fetch(`${API}/writing/assignments/${assignmentId}`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${tok}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note_to_student: coachNote, status: 'reviewed' }),
+      })
+      if (res.ok) {
+        setAssignment(prev => prev ? { ...prev, status: 'reviewed', note_to_student: coachNote } : prev)
+      }
+    } finally {
+      setCoachMarking(false)
+    }
+  }
 
   function wordCount(text: string) {
     return text.trim() ? text.trim().split(/\s+/).length : 0
@@ -338,6 +437,189 @@ function AssignmentPageInner() {
       </div>
     )
   }
+
+  const isCounselor = accountType === 'counselor'
+
+  // ── Coach view ────────────────────────────────────────────────────────────
+  if (isCounselor && forParam) {
+    const latestResponse = coachResponses[0]
+    const schemaFields = (assignment.response_schema as { fields?: StructuredField[] })?.fields ?? []
+    const isStructuredEx = assignment.exercise_type === 'structured' && schemaFields.length > 0
+    const structuredAnswers: Record<string, string> = (() => {
+      if (!latestResponse?.content) return {}
+      try {
+        const parsed = JSON.parse(latestResponse.content)
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed as Record<string, string>
+      } catch { /* plain text */ }
+      return {}
+    })()
+    const hasResponse = !!latestResponse && (
+      isStructuredEx
+        ? Object.values(structuredAnswers).some(v => v?.trim())
+        : !!(latestResponse.content?.trim())
+    )
+    const backHref = `/writing?for=${forParam}&from=writing`
+
+    return (
+      <div className="min-h-screen bg-slate-900 text-white">
+        {/* Header */}
+        <div className="border-b border-slate-800 px-4 py-4">
+          <div className="max-w-2xl mx-auto flex items-center gap-3">
+            <button
+              onClick={() => { router.push(backHref); router.refresh() }}
+              className="text-slate-400 hover:text-white text-sm flex-shrink-0"
+            >
+              ← {assignment.unit_title}
+            </button>
+            <span className="text-slate-700">|</span>
+            <h1 className="text-base font-semibold truncate">{assignment.exercise_title}</h1>
+            <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-violet-900/30 text-violet-400 border border-violet-700/40 flex-shrink-0">
+              Coach view
+            </span>
+          </div>
+        </div>
+
+        <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+
+          {/* Status */}
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium w-fit ${
+            assignment.status === 'reviewed' || assignment.status === 'complete'
+              ? 'bg-green-900/20 text-green-400 border border-green-700/30'
+              : assignment.status === 'submitted'
+              ? 'bg-violet-900/20 text-violet-300 border border-violet-700/30'
+              : 'bg-slate-700/50 text-slate-400 border border-slate-700'
+          }`}>
+            {assignment.status === 'reviewed' || assignment.status === 'complete'
+              ? '✓ Reviewed'
+              : assignment.status === 'submitted'
+              ? '⏳ Submitted — awaiting review'
+              : assignment.status === 'in_progress'
+              ? '✍️ In progress'
+              : '📋 Assigned'}
+          </div>
+
+          {/* Student response */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Student Response</p>
+              {latestResponse && (
+                <p className="text-xs text-slate-500">
+                  Revision {latestResponse.revision_number}
+                  {' · '}
+                  {new Date(latestResponse.submitted_at).toLocaleDateString()}
+                  {coachResponses.length > 1 && <span className="ml-2 text-slate-600">({coachResponses.length} revisions)</span>}
+                  {latestResponse.word_count != null && <span className="ml-2 text-slate-600">{latestResponse.word_count} words</span>}
+                </p>
+              )}
+            </div>
+            {hasResponse ? (
+              <div className="bg-slate-700/30 rounded-xl border border-slate-600/40 p-4 space-y-4">
+                {isStructuredEx ? (
+                  schemaFields.map(field => {
+                    const answer = structuredAnswers[field.id]
+                    if (!answer?.trim()) return null
+                    return (
+                      <div key={field.id}>
+                        <p className="text-xs font-semibold text-violet-400 mb-1">{field.label}</p>
+                        <p className="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">{answer}</p>
+                      </div>
+                    )
+                  })
+                ) : (
+                  <p className="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">{latestResponse!.content}</p>
+                )}
+              </div>
+            ) : (
+              <div className="bg-slate-700/20 rounded-xl border border-slate-700/30 p-6 text-center">
+                <p className="text-slate-500 text-sm">No response submitted yet.</p>
+              </div>
+            )}
+          </div>
+
+          {/* Soar Observations */}
+          {hasResponse && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Soar Observations</p>
+                <button
+                  onClick={generateObservations}
+                  disabled={generatingObs}
+                  className="text-xs px-3 py-1 bg-violet-600/20 hover:bg-violet-600/30 text-violet-400 rounded-full border border-violet-600/30 transition-all disabled:opacity-50"
+                >
+                  {generatingObs ? 'Generating…' : observations ? '↺ Regenerate' : '✦ Generate'}
+                </button>
+              </div>
+              {observations ? (
+                <div className="bg-violet-500/5 border border-violet-500/20 rounded-xl p-4 text-sm space-y-1">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      h2: ({ children }) => <h2 className="text-xs font-semibold text-violet-300 uppercase tracking-wider mt-4 mb-1 first:mt-0">{children}</h2>,
+                      p: ({ children }) => <p className="text-slate-200 leading-relaxed">{children}</p>,
+                      ul: ({ children }) => <ul className="list-disc pl-5 space-y-1">{children}</ul>,
+                      ol: ({ children }) => <ol className="list-decimal pl-5 space-y-1">{children}</ol>,
+                      li: ({ children }) => <li className="text-slate-200 leading-relaxed">{children}</li>,
+                      strong: ({ children }) => <strong className="text-slate-100 font-semibold">{children}</strong>,
+                    }}
+                  >
+                    {observations}
+                  </ReactMarkdown>
+                </div>
+              ) : generatingObs ? (
+                <div className="bg-violet-500/5 border border-violet-500/20 rounded-xl p-4 min-h-[60px] flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+                  <p className="text-sm text-slate-400">Analysing response…</p>
+                </div>
+              ) : (
+                <div className="bg-slate-700/20 rounded-xl border border-slate-700/30 p-4 text-center">
+                  <p className="text-xs text-slate-500">Click Generate to have Soar analyse this response and surface coaching insights.</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Coach note */}
+          <div>
+            <label className="text-xs font-medium text-slate-400 uppercase tracking-wider block mb-2">
+              Coach Note to Student <span className="text-slate-600 normal-case">(visible to student)</span>
+            </label>
+            <textarea
+              value={coachNote}
+              onChange={e => setCoachNote(e.target.value)}
+              rows={4}
+              placeholder="Share feedback, encouragement, or guidance for this exercise…"
+              className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-violet-500/50 resize-none"
+            />
+          </div>
+
+          {/* Action row */}
+          <div className="flex items-center justify-between gap-3 pb-8">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={saveCoachNote}
+                disabled={coachSaving}
+                className="px-4 py-2 rounded-lg text-sm bg-slate-700 text-slate-200 hover:bg-slate-600 disabled:opacity-50 transition-all"
+              >
+                {coachSaving ? 'Saving…' : 'Save note'}
+              </button>
+              {coachSaved && <span className="text-xs text-green-400">Saved ✓</span>}
+            </div>
+            {(assignment.status === 'submitted' || assignment.status === 'in_progress') && (
+              <button
+                onClick={markReviewed}
+                disabled={coachMarking}
+                className="px-4 py-2 rounded-lg text-sm bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-50 transition-all flex items-center gap-2"
+              >
+                {coachMarking && <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                {coachMarking ? 'Marking…' : '✓ Mark as Reviewed'}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+  // ── End coach view ─────────────────────────────────────────────────────────
 
   const responses = assignment.responses || []
   const isContent = assignment.exercise_type === 'content'
