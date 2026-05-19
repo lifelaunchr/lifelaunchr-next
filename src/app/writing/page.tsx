@@ -1180,6 +1180,7 @@ function AssignmentCard({ a, studentId }: { a: WritingAssignment; studentId?: st
   const isMilestone = a.exercise_type === 'milestone'
   const badgeMap = isMilestone ? MILESTONE_STATUS : isContent ? CONTENT_STATUS : STATUS_BADGE
   const badge = badgeMap[a.status] || badgeMap.assigned
+  const isCoachMode = !!studentId
 
   return (
     <Link
@@ -1197,7 +1198,20 @@ function AssignmentCard({ a, studentId }: { a: WritingAssignment; studentId?: st
           {isContent && <span className="text-base leading-none flex-shrink-0">📖</span>}
           <span className="text-sm text-white">{a.exercise_title}</span>
         </div>
-        <span className={`text-xs flex-shrink-0 ${badge.className}`}>{badge.label}</span>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className={`text-xs ${badge.className}`}>{badge.label}</span>
+          {/* Coach review/view action — shown for all non-content, non-milestone exercises */}
+          {isCoachMode && !isContent && !isMilestone && (
+            <span className={[
+              'text-xs px-2 py-0.5 rounded-md border',
+              a.status === 'submitted'
+                ? 'text-violet-300 border-violet-600/50 bg-violet-900/30'
+                : 'text-slate-400 border-slate-600/50 bg-slate-800/50',
+            ].join(' ')}>
+              {a.status === 'submitted' ? 'Review →' : 'View →'}
+            </span>
+          )}
+        </div>
       </div>
       {a.note_to_student && (
         <p className="text-xs text-slate-400 mt-1 italic">"{a.note_to_student}"</p>
