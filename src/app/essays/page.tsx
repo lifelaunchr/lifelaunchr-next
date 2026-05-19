@@ -204,7 +204,13 @@ function EssaysPageInner() {
       try {
         const token = await getToken()
         if (!token) { setAccessDenied(true); setLoading(false); return }
-        const res = await fetch(`${apiUrl}/my-usage`, {
+        // Pass for_student_id so the backend resolves module flags from the
+        // student's tenant context, not the caller's (parents may have no
+        // tenant_id or a different one — the student's practice is what matters).
+        const usageUrl = forStudentId
+          ? `${apiUrl}/my-usage?for_student_id=${forStudentId}`
+          : `${apiUrl}/my-usage`
+        const res = await fetch(usageUrl, {
           headers: { Authorization: `Bearer ${token}` },
         })
         if (!res.ok) { setAccessDenied(true); setLoading(false); return }
