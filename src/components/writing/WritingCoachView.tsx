@@ -905,8 +905,8 @@ function StudentAssignmentPanel({
                         </div>
                         <div className="flex-shrink-0 flex items-center gap-2">
                           <StatusBadge status={a.status} />
-                          {/* Coach review/view button */}
-                          {!readOnly && (a.status === 'submitted' || a.status === 'in_progress' || a.status === 'reviewed') && (
+                          {/* Coach review/view button — always shown for all statuses */}
+                          {!readOnly && (
                             <button
                               onClick={() => setReviewAssignment(a)}
                               className="text-xs text-violet-400 hover:text-violet-300 transition-colors px-2 py-1 rounded-lg hover:bg-violet-500/10"
