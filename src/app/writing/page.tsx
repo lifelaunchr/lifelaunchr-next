@@ -1905,8 +1905,23 @@ function WritingPageInner() {
     if (!showSelfDiscovery) return
     const isCoachView = !!(isCounselor && forParam) || isParent
     if (isCoachView) {
-      setAssessmentDone(null)
-      setShowAssessment(false)
+      // Coaches: check if student has a result; auto-expand if they do
+      const url = forParam
+        ? `${API}/writing/personality-assessment?student_id=${forParam}`
+        : `${API}/writing/personality-assessment`
+      getToken().then(freshToken => {
+        if (!freshToken) return
+        fetch(url, { headers: { Authorization: `Bearer ${freshToken}` } })
+          .then(r => {
+            const done = r.status === 200
+            setAssessmentDone(done)
+            setShowAssessment(done) // expand automatically if student has results
+          })
+          .catch(() => {
+            setAssessmentDone(false)
+            setShowAssessment(false)
+          })
+      })
       return
     }
     // Students: check if assessment is done to decide whether to expand

@@ -668,6 +668,7 @@ function StudentAssignmentPanel({
   const [reviewAssignment, setReviewAssignment] = useState<WritingAssignment | null>(null)
   const [track, setTrack] = useState<'long_form' | 'sprint' | null>(student.writing_track)
   const [savingTrack, setSavingTrack] = useState(false)
+  const [assessmentCompleted, setAssessmentCompleted] = useState<boolean | null>(null)
 
   const hasEssayModules = enabledModules.commonApp || enabledModules.ucPiqs || enabledModules.whyEssays
 
@@ -717,6 +718,19 @@ function StudentAssignmentPanel({
   }, [student.id, getToken, onCountChanged])
 
   useEffect(() => { loadData() }, [loadData])
+
+  // Fetch personality assessment status for this student
+  useEffect(() => {
+    if (!enabledModules.selfDiscovery) return
+    getToken().then(tok => {
+      if (!tok) return
+      fetch(`${API}/writing/personality-assessment?student_id=${student.id}`, {
+        headers: { Authorization: `Bearer ${tok}` },
+      }).then(r => setAssessmentCompleted(r.status === 200))
+        .catch(() => setAssessmentCompleted(false))
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [student.id, enabledModules.selfDiscovery])
 
   const studentName = student.full_name || student.email || `Student ${student.id}`
   const submittedCount = assignments.filter(a => a.status === 'submitted').length
@@ -814,6 +828,37 @@ function StudentAssignmentPanel({
           </div>
         ) : (
           <div className="p-5 space-y-6">
+
+            {/* Personality Assessment status — shown when self-discovery is enabled */}
+            {enabledModules.selfDiscovery && (
+              <div>
+                <h3 className="text-xs font-medium uppercase tracking-wider text-slate-500 mb-2">
+                  Self-Discovery
+                </h3>
+                <a
+                  href={`/writing?for=${student.id}&from=writing#assessment`}
+                  className="flex items-center justify-between gap-3 bg-slate-800/50 border border-slate-700/40 rounded-xl px-4 py-3 hover:border-violet-500/40 hover:bg-violet-500/5 transition-all group"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="text-base shrink-0">🧠</span>
+                    <div className="min-w-0">
+                      <p className="text-sm text-white">Personality Assessment</p>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {assessmentCompleted === null
+                          ? 'Loading…'
+                          : assessmentCompleted
+                          ? '✓ Completed — click to view results'
+                          : 'Not yet completed'}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs text-violet-400 group-hover:text-violet-300 shrink-0">
+                    View →
+                  </span>
+                </a>
+              </div>
+            )}
+
             {/* Assigned sections */}
             {sectionOrder.map(sKey => {
               const sec = sectionMap[sKey]
