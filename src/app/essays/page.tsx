@@ -239,8 +239,14 @@ function EssaysPageInner() {
             setStudentEditateAvailable(Boolean(data.student_editate_available))
             setStudentReviewLimitForCounselor(data.student_review_limit ?? 0)
           }
+        } else {
+          // Non-ok response — render the empty state rather than a blank page
+          setPrompts({ platform_essays: [], schools: [] })
         }
-      } catch { /* ignore */ }
+      } catch {
+        // Network/parse error — same fallback
+        setPrompts({ platform_essays: [], schools: [] })
+      }
       finally { setPromptsLoading(false) }
     }
     loadPrompts()

@@ -1982,6 +1982,7 @@ function WritingPageInner() {
             commonApp:       showCommonApp,
             ucPiqs:          showUCPIQs,
             whyEssays:       showWhyEssays,
+            essayHub:        showEssayHub,
           }}
         />
       </div>

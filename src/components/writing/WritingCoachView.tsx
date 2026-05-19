@@ -23,6 +23,7 @@ interface EnabledModules {
   commonApp: boolean
   ucPiqs: boolean
   whyEssays: boolean
+  essayHub?: boolean
 }
 
 interface WritingAssignment {
@@ -897,6 +898,25 @@ function StudentAssignmentPanel({
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Essay Prompts & Drafts */}
+        {enabledModules.essayHub && (
+          <div className="mt-4 pt-4 border-t border-slate-700/50">
+            <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Essays</p>
+            <a
+              href={`/essays?for=${student.id}`}
+              className="flex items-center justify-between gap-4 bg-slate-800/50 rounded-xl border border-slate-700/50 p-4 hover:border-violet-500/40 hover:bg-violet-500/5 transition-all group"
+            >
+              <div>
+                <p className="text-sm font-medium text-white">Essay Prompts &amp; Drafts</p>
+                <p className="text-xs text-slate-400 mt-0.5">Browse prompts and track drafts for this student</p>
+              </div>
+              <span className="shrink-0 px-3 py-1.5 text-xs bg-violet-600 group-hover:bg-violet-500 text-white rounded-lg transition-colors">
+                Open →
+              </span>
+            </a>
           </div>
         )}
       </div>
