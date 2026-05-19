@@ -280,7 +280,7 @@ function AssignmentPageInner() {
       const sectionKey = assignment?.section_key ?? ''
       const backSection = SECTION_BACK[sectionKey] || ''
       const href = `/writing?section=${backSection}${forParam ? `&for=${forParam}` : ''}`
-      router.push(href)
+      window.location.href = href
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to save')
       setSaving(false)
@@ -466,7 +466,7 @@ function AssignmentPageInner() {
         <div className="border-b border-slate-800 px-4 py-4">
           <div className="max-w-2xl mx-auto flex items-center gap-3">
             <button
-              onClick={() => { router.push(backHref); router.refresh() }}
+              onClick={() => { window.location.href = backHref }}
               className="text-slate-400 hover:text-white text-sm flex-shrink-0"
             >
               ← {assignment.unit_title}
