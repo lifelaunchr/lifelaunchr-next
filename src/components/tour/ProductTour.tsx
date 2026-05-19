@@ -9,11 +9,15 @@ interface ProductTourProps {
   role: TourRole
   run: boolean
   onFinish: () => void
+  /** Module gates — steps/showcase items with requiresModule are filtered if the key is falsy */
+  enabledModules?: Record<string, boolean>
 }
 
-/** Convert our plain-data steps into react-joyride Step objects */
-function buildJoyrideSteps(role: TourRole): Step[] {
-  return tourSteps[role].map((s) => ({
+/** Convert our plain-data steps into react-joyride Step objects, filtering by enabled modules */
+function buildJoyrideSteps(role: TourRole, enabledModules?: Record<string, boolean>): Step[] {
+  return tourSteps[role]
+    .filter((s) => !s.requiresModule || enabledModules?.[s.requiresModule])
+    .map((s) => ({
     target: s.target,
     placement: s.placement ?? 'auto',
     skipBeacon: true,
@@ -36,9 +40,9 @@ function buildJoyrideSteps(role: TourRole): Step[] {
   }))
 }
 
-export default function ProductTour({ role, run, onFinish }: ProductTourProps) {
+export default function ProductTour({ role, run, onFinish, enabledModules }: ProductTourProps) {
   const [showShowcase, setShowShowcase] = useState(false)
-  const steps = buildJoyrideSteps(role)
+  const steps = buildJoyrideSteps(role, enabledModules)
 
   const handleEvent = useCallback((data: EventData) => {
     const { status, type } = data
@@ -137,6 +141,7 @@ export default function ProductTour({ role, run, onFinish }: ProductTourProps) {
         <TourShowcaseModal
           role={role}
           onClose={() => setShowShowcase(false)}
+          enabledModules={enabledModules}
         />
       )}
     </>

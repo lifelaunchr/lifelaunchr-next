@@ -1361,6 +1361,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                 usageData?.commonapp_module || usageData?.uc_piqs_module || usageData?.why_essays_module
               ) && (
                 <Link
+                  id="tour-nav-writing"
                   href={isParent && forStudentId ? `/writing?for=${forStudentId}` : '/writing'}
                   className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
                 >
@@ -1750,6 +1751,18 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
             setTourActive(false)
             const role: TourRole = isCounselor ? 'counselor' : isParent ? 'parent' : 'student'
             localStorage.setItem(tourMeta.localStorageKey(role), '1')
+          }}
+          enabledModules={{
+            writing: !!(
+              usageData?.writing_self_discovery_module ||
+              usageData?.writing_practice_module ||
+              usageData?.essays_module ||
+              usageData?.essay_list_module ||
+              usageData?.editate_module ||
+              usageData?.commonapp_module ||
+              usageData?.uc_piqs_module ||
+              usageData?.why_essays_module
+            ),
           }}
         />
       )}

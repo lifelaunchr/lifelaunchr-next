@@ -24,6 +24,8 @@ export interface TourStepContent {
   placement?: 'top' | 'bottom' | 'left' | 'right' | 'auto' | 'center'
   /** Scroll the page to the target before showing the step */
   scrollToStep?: boolean
+  /** If set, this step is filtered out unless enabledModules[requiresModule] is true */
+  requiresModule?: string
 }
 
 export interface ShowcaseItem {
@@ -31,6 +33,8 @@ export interface ShowcaseItem {
   title: string
   description: string
   href: string
+  /** If set, this item is filtered out unless enabledModules[requiresModule] is true */
+  requiresModule?: string
 }
 
 // ─── Button labels & misc strings ────────────────────────────────────────────
@@ -89,6 +93,13 @@ const studentSteps: TourStepContent[] = [
     title: 'Research Summaries & Notes',
     body: 'Every conversation gets summarized automatically so you can pick up where you left off — even weeks later. When you meet with your counselor, your meeting notes are shared here too.',
     placement: 'right',
+  },
+  {
+    target: '#tour-nav-writing',
+    title: 'Your Writing Hub',
+    body: 'Structured guidance for every essay you\'ll write — self-discovery, voice development, CommonApp, UC PIQs, Why Major, and Why College. Start with Self-Discovery before you start drafting anything.',
+    placement: 'right',
+    requiresModule: 'writing',
   },
   {
     target: '#tour-chat-input',
@@ -162,6 +173,13 @@ const counselorSteps: TourStepContent[] = [
     placement: 'right',
   },
   {
+    target: '#tour-nav-writing',
+    title: 'Writing Hub',
+    body: "Your student's essay workspace. Track their progress through self-discovery and drafts, read their free-writes, and add coaching observations at every step.",
+    placement: 'right',
+    requiresModule: 'writing',
+  },
+  {
     target: '#tour-chat-input',
     title: 'Things you might not think to ask',
     body: 'Soar can handle more than college research. Try:',
@@ -220,6 +238,13 @@ const parentSteps: TourStepContent[] = [
     placement: 'right',
   },
   {
+    target: '#tour-nav-writing',
+    title: 'Writing Hub',
+    body: "See your student's essay progress — their personality profile, self-discovery exercises, and drafts — all in one place. You can also take the personality assessment yourself and compare results.",
+    placement: 'right',
+    requiresModule: 'writing',
+  },
+  {
     target: '#tour-chat-input',
     title: 'Things you might not think to ask',
     body: 'Soar can help with more than college lists. Try:',
@@ -241,6 +266,13 @@ const studentShowcase: ShowcaseItem[] = [
     title: 'Your Profile',
     description: 'The more Soar knows about you, the better the advice. Keep your GPA, test scores, and interests up to date.',
     href: '/profile',
+  },
+  {
+    icon: '✍️',
+    title: 'Writing Hub',
+    description: 'Structured guidance for every essay — from self-discovery and voice development through CommonApp, UC PIQs, Why Major, and Why College drafts.',
+    href: '/writing',
+    requiresModule: 'writing',
   },
   {
     icon: '✨',
@@ -269,6 +301,13 @@ const studentShowcase: ShowcaseItem[] = [
 ]
 
 const counselorShowcase: ShowcaseItem[] = [
+  {
+    icon: '✍️',
+    title: 'Writing Hub',
+    description: "Track each student's essay progress, read their free-writes, and add coaching observations — from self-discovery through final drafts.",
+    href: '/writing',
+    requiresModule: 'writing',
+  },
   {
     icon: '📋',
     title: 'Meeting Brief',

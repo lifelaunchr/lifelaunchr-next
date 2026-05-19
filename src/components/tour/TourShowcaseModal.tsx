@@ -6,10 +6,13 @@ import { showcaseItems, tourMeta, type TourRole } from '@/lib/tourContent'
 interface TourShowcaseModalProps {
   role: TourRole
   onClose: () => void
+  enabledModules?: Record<string, boolean>
 }
 
-export default function TourShowcaseModal({ role, onClose }: TourShowcaseModalProps) {
-  const items = showcaseItems[role]
+export default function TourShowcaseModal({ role, onClose, enabledModules }: TourShowcaseModalProps) {
+  const items = showcaseItems[role].filter(
+    (item) => !item.requiresModule || enabledModules?.[item.requiresModule]
+  )
   const overlayRef = useRef<HTMLDivElement>(null)
 
   // Close on Escape
