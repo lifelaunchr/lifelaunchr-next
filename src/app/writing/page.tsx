@@ -2029,7 +2029,7 @@ function WritingPageInner() {
       {/* Header */}
       <div className="border-b border-slate-800 px-4 py-3 flex items-center gap-3 flex-shrink-0">
         {fromParam === 'writing' ? (
-          <button onClick={() => router.push('/writing')} className="text-slate-400 hover:text-white text-sm">← Writing</button>
+          <button onClick={() => { router.push('/writing'); router.refresh() }} className="text-slate-400 hover:text-white text-sm">← Writing</button>
         ) : (
           <Link href="/chat" className="text-slate-400 hover:text-white text-sm">← Chat</Link>
         )}
@@ -2137,7 +2137,7 @@ function WritingPageInner() {
               </h2>
               {isCounselor && forParam && (
                 <button
-                  onClick={() => router.push('/writing')}
+                  onClick={() => { router.push('/writing'); router.refresh() }}
                   className="text-xs text-violet-400 hover:text-violet-300 transition-colors"
                 >
                   ← Assign exercises
@@ -2154,7 +2154,7 @@ function WritingPageInner() {
                 {isCounselor && forParam ? (
                   <div className="space-y-3">
                     <p className="text-slate-500 text-sm">No exercises assigned yet.</p>
-                    <button onClick={() => router.push('/writing')} className="text-xs text-violet-400 hover:text-violet-300">
+                    <button onClick={() => { router.push('/writing'); router.refresh() }} className="text-xs text-violet-400 hover:text-violet-300">
                       ← Go to Assignments to assign exercises
                     </button>
                   </div>
