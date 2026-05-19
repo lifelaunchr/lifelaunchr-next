@@ -175,7 +175,7 @@ const counselorSteps: TourStepContent[] = [
   {
     target: '#tour-nav-writing',
     title: 'Writing Hub',
-    body: "Your student's essay workspace. Track their progress through self-discovery and drafts, read their free-writes, and add coaching observations at every step.",
+    body: "Soar doesn't write essays or tell students what to write. The Writing Hub structures the process from self-discovery through final drafts, so you can guide your students at every stage.",
     placement: 'right',
     requiresModule: 'writing',
   },
