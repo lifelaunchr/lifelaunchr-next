@@ -899,8 +899,10 @@ function StudentAssignmentPanel({
               </div>
             )}
 
-            {/* Essay Prompts & Drafts — all roles */}
-            {enabledModules.essayHub && (
+            {/* Essay Prompts & Drafts — all roles.
+                Always show for readOnly (parents) since they have no other path to essay status.
+                For counselors/others, gate on essayHub module flag. */}
+            {(readOnly || enabledModules.essayHub) && (
               <div className="pt-2 border-t border-slate-700/50">
                 <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Essays</p>
                 <a
