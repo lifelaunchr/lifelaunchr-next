@@ -97,7 +97,7 @@ const studentSteps: TourStepContent[] = [
   {
     target: '#tour-nav-writing',
     title: 'Your Writing Hub',
-    body: 'Structured guidance for every essay you\'ll write — self-discovery, voice development, CommonApp, UC PIQs, Why Major, and Why College. Start with Self-Discovery before you start drafting anything.',
+    body: "Soar doesn't write essays or tell you what to write. The Writing Hub structures the process from self-discovery through final drafts — so you and your coach or mentor can work through it together at every stage.",
     placement: 'right',
     requiresModule: 'writing',
   },
