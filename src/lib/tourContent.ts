@@ -240,7 +240,7 @@ const parentSteps: TourStepContent[] = [
   {
     target: '#tour-nav-writing',
     title: 'Writing Hub',
-    body: "See your student's essay progress — their personality profile, self-discovery exercises, and drafts — all in one place. You can also take the personality assessment yourself and compare results.",
+    body: "Soar doesn't write essays or tell students what to write. The Writing Hub lets you see your student's essay progress as they work with their coach or mentor, all in one place.",
     placement: 'right',
     requiresModule: 'writing',
   },
