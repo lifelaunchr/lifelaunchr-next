@@ -1408,16 +1408,8 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                     <span className="text-base leading-none">🏆</span>
                     <span>Activities</span>
                   </Link>
-                  {/* Essay prompts + Editate drafts — only when essay module enabled */}
-                  {(usageData?.essays_module || usageData?.essay_list_module) && (
-                    <Link
-                      href={`/essays?for=${forStudentId}`}
-                      className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
-                    >
-                      <span className="text-base leading-none">✏️</span>
-                      <span>Essays</span>
-                    </Link>
-                  )}
+                  {/* Essays link removed — essay prompts & Editate drafts are accessible
+                      through the Writing Hub (WritingCoachView has the Essay Prompts & Drafts card) */}
                 </>
               )}
 
