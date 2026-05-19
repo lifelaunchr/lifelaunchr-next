@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { useAuth } from '@clerk/nextjs'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -1818,6 +1818,7 @@ function WritingParentSummary({
 
 function WritingPageInner() {
   const { getToken, isLoaded } = useAuth()
+  const router = useRouter()
   const searchParams = useSearchParams()
 
   const forParam = searchParams.get('for')
@@ -2028,7 +2029,7 @@ function WritingPageInner() {
       {/* Header */}
       <div className="border-b border-slate-800 px-4 py-3 flex items-center gap-3 flex-shrink-0">
         {fromParam === 'writing' ? (
-          <Link href="/writing" className="text-slate-400 hover:text-white text-sm">← Writing</Link>
+          <button onClick={() => router.push('/writing')} className="text-slate-400 hover:text-white text-sm">← Writing</button>
         ) : (
           <Link href="/chat" className="text-slate-400 hover:text-white text-sm">← Chat</Link>
         )}
@@ -2135,12 +2136,12 @@ function WritingPageInner() {
                   : 'My Assignments'}
               </h2>
               {isCounselor && forParam && (
-                <Link
-                  href="/writing"
+                <button
+                  onClick={() => router.push('/writing')}
                   className="text-xs text-violet-400 hover:text-violet-300 transition-colors"
                 >
                   ← Assign exercises
-                </Link>
+                </button>
               )}
             </div>
 
@@ -2153,9 +2154,9 @@ function WritingPageInner() {
                 {isCounselor && forParam ? (
                   <div className="space-y-3">
                     <p className="text-slate-500 text-sm">No exercises assigned yet.</p>
-                    <Link href="/writing" className="text-xs text-violet-400 hover:text-violet-300">
+                    <button onClick={() => router.push('/writing')} className="text-xs text-violet-400 hover:text-violet-300">
                       ← Go to Assignments to assign exercises
-                    </Link>
+                    </button>
                   </div>
                 ) : (
                   <p className="text-slate-500 text-sm">Your coach hasn&apos;t assigned any exercises yet.</p>
