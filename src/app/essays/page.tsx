@@ -235,17 +235,28 @@ function EssaysPageInner() {
         if (res.ok) {
           const data = await res.json()
           setPrompts(data)
-          if (forStudentId && data.student_editate_available != null) {
-            setStudentEditateAvailable(Boolean(data.student_editate_available))
+          if (forStudentId) {
+            // Only show "not authorized" if the backend explicitly returns false.
+            // If the field is absent/null we default to true so the empty-state
+            // shows "no applying colleges" instead of the misleading auth warning.
+            setStudentEditateAvailable(
+              data.student_editate_available != null
+                ? Boolean(data.student_editate_available)
+                : true
+            )
             setStudentReviewLimitForCounselor(data.student_review_limit ?? 0)
           }
         } else {
-          // Non-ok response — render the empty state rather than a blank page
+          // Non-ok response — render the empty state rather than a blank page.
+          // Default studentEditateAvailable to true so we don't show "not authorized"
+          // just because the API errored.
           setPrompts({ platform_essays: [], schools: [] })
+          if (forStudentId) setStudentEditateAvailable(true)
         }
       } catch {
-        // Network/parse error — same fallback
+        // Network/parse error — same fallbacks
         setPrompts({ platform_essays: [], schools: [] })
+        if (forStudentId) setStudentEditateAvailable(true)
       }
       finally { setPromptsLoading(false) }
     }
