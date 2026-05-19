@@ -1355,9 +1355,8 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                 </Link>
               )}
 
-              {/* Writing link — any writing or essay module enabled */}
+              {/* Writing link — Writing Hub modules only (not Editate/Essays) */}
               {(usageData?.writing_self_discovery_module || usageData?.writing_practice_module ||
-                usageData?.essays_module || usageData?.essay_list_module || usageData?.editate_module ||
                 usageData?.commonapp_module || usageData?.uc_piqs_module || usageData?.why_essays_module
               ) && (
                 <Link
