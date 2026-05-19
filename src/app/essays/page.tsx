@@ -96,66 +96,49 @@ function EssayGroupCard({ group }: { group: EssayGroup }) {
   const multiplePrompts = group.prompts.length > 1
 
   return (
-    <div style={{
-      border: '1px solid #e2e8f0', borderRadius: 10, marginBottom: 10,
-      background: '#fff', overflow: 'hidden',
-    }}>
+    <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl mb-2 overflow-hidden">
       {/* Header — always clickable */}
       <div
         onClick={() => setOpen(o => !o)}
-        style={{
-          padding: '12px 16px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          cursor: 'pointer', gap: 12, userSelect: 'none',
-        }}
+        className="flex items-center justify-between gap-3 px-4 py-3 cursor-pointer select-none hover:bg-slate-700/30 transition-colors"
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
+        <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
           {group.name && (
-            <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#111827' }}>
-              {group.name}
-            </span>
+            <span className="text-sm font-semibold text-white">{group.name}</span>
           )}
           {group.optional && (
-            <span style={{
-              fontSize: '0.7rem', fontWeight: 600, color: '#6366f1',
-              background: '#eef2ff', borderRadius: 4, padding: '1px 6px',
-            }}>Optional</span>
+            <span className="text-[10px] font-semibold text-violet-400 bg-violet-900/30 border border-violet-700/40 rounded px-1.5 py-0.5">
+              Optional
+            </span>
           )}
           {lengthLabel(group) && (
-            <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{lengthLabel(group)}</span>
+            <span className="text-xs text-slate-500">{lengthLabel(group)}</span>
           )}
           {multiplePrompts && (
-            <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>· {chooseLabel}</span>
+            <span className="text-xs text-slate-500">· {chooseLabel}</span>
           )}
         </div>
-        <span style={{ color: '#9ca3af', fontSize: '0.8rem', flexShrink: 0 }}>
-          {open ? '▲' : '▼'}
-        </span>
+        <span className="text-slate-500 text-xs flex-shrink-0">{open ? '▲' : '▼'}</span>
       </div>
 
       {/* Expanded content */}
       {open && (
-        <div style={{ borderTop: '1px solid #f3f4f6' }}>
+        <div className="border-t border-slate-700/50">
           {multiplePrompts ? (
-            <div style={{ padding: '4px 0' }}>
+            <div>
               {group.prompts.map((p, i) => (
-                <div key={p.slug} style={{
-                  padding: '10px 16px',
-                  borderBottom: i < group.prompts.length - 1 ? '1px solid #f9fafb' : 'none',
-                }}>
-                  <div style={{ display: 'flex', gap: 10 }}>
-                    <span style={{
-                      fontSize: '0.75rem', fontWeight: 700, color: '#9ca3af',
-                      minWidth: 20, marginTop: 1, flexShrink: 0,
-                    }}>{i + 1}.</span>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: '0.82rem', color: '#374151', margin: 0, lineHeight: 1.5 }}>
-                        {cleanText(p.prompt)}
-                      </p>
+                <div
+                  key={p.slug}
+                  className={`px-4 py-3 ${i < group.prompts.length - 1 ? 'border-b border-slate-700/30' : ''}`}
+                >
+                  <div className="flex gap-3">
+                    <span className="text-xs font-bold text-slate-500 min-w-[20px] mt-0.5 flex-shrink-0">
+                      {i + 1}.
+                    </span>
+                    <div className="flex-1">
+                      <p className="text-sm text-slate-300 leading-relaxed">{cleanText(p.prompt)}</p>
                       {lengthLabel(p) && (
-                        <span style={{ fontSize: '0.72rem', color: '#9ca3af', marginTop: 4, display: 'block' }}>
-                          {lengthLabel(p)}
-                        </span>
+                        <span className="text-xs text-slate-500 mt-1 block">{lengthLabel(p)}</span>
                       )}
                     </div>
                   </div>
@@ -163,22 +146,16 @@ function EssayGroupCard({ group }: { group: EssayGroup }) {
               ))}
             </div>
           ) : group.prompts[0] ? (
-            <div style={{ padding: '12px 16px' }}>
-              <p style={{ fontSize: '0.82rem', color: '#374151', margin: 0, lineHeight: 1.6 }}>
-                {cleanText(group.prompts[0].prompt)}
-              </p>
+            <div className="px-4 py-3">
+              <p className="text-sm text-slate-300 leading-relaxed">{cleanText(group.prompts[0].prompt)}</p>
               {lengthLabel(group.prompts[0]) && lengthLabel(group.prompts[0]) !== lengthLabel(group) && (
-                <span style={{ fontSize: '0.72rem', color: '#9ca3af', marginTop: 4, display: 'block' }}>
-                  {lengthLabel(group.prompts[0])}
-                </span>
+                <span className="text-xs text-slate-500 mt-1 block">{lengthLabel(group.prompts[0])}</span>
               )}
             </div>
           ) : null}
           {group.instructions && (
-            <div style={{ padding: '8px 16px 12px', borderTop: group.prompts.length > 0 ? '1px solid #f9fafb' : 'none' }}>
-              <p style={{ fontSize: '0.75rem', color: '#9ca3af', margin: 0, lineHeight: 1.4, fontStyle: 'italic' }}>
-                {cleanText(group.instructions)}
-              </p>
+            <div className={`px-4 pb-3 ${group.prompts.length > 0 ? 'border-t border-slate-700/30 pt-2' : ''}`}>
+              <p className="text-xs text-slate-500 leading-relaxed italic">{cleanText(group.instructions)}</p>
             </div>
           )}
         </div>
@@ -201,8 +178,8 @@ function EssaysPageInner() {
   const [accessDenied, setAccessDenied] = useState(false)
   const [accountType, setAccountType] = useState<string>('')
   const [essaysModule, setEssaysModule] = useState(false)
-  const [editateAvailable, setEditateAvailable] = useState(false)       // student's own editate status (from /my-usage)
-  const [studentEditateAvailable, setStudentEditateAvailable] = useState(false) // counselor view: target student's status (from prompts)
+  const [editateAvailable, setEditateAvailable] = useState(false)
+  const [studentEditateAvailable, setStudentEditateAvailable] = useState(false)
   const [studentReviewLimitForCounselor, setStudentReviewLimitForCounselor] = useState(0)
 
   const [prompts, setPrompts] = useState<PromptsResponse | null>(null)
@@ -258,8 +235,6 @@ function EssaysPageInner() {
         if (res.ok) {
           const data = await res.json()
           setPrompts(data)
-          // For counselor view, store the student's Editate status in dedicated state
-          // (never use setEditateAvailable here — init effect overwrites it on re-render)
           if (forStudentId && data.student_editate_available != null) {
             setStudentEditateAvailable(Boolean(data.student_editate_available))
             setStudentReviewLimitForCounselor(data.student_review_limit ?? 0)
@@ -284,9 +259,7 @@ function EssaysPageInner() {
         const draftsUrl = isViewingStudentAs
           ? `${apiUrl}/essays/drafts?student_id=${forStudentId}`
           : `${apiUrl}/essays/drafts`
-        const res = await fetch(draftsUrl, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
+        const res = await fetch(draftsUrl, { headers: { Authorization: `Bearer ${token}` } })
         if (res.ok) {
           const data = await res.json()
           setDrafts(data.assignments || [])
@@ -299,6 +272,8 @@ function EssaysPageInner() {
     loadDrafts()
   }, [editateAvailable, studentEditateAvailable, accountType, forStudentId, getToken, apiUrl])
 
+  const isCounselor = accountType === 'counselor'
+
   const fetchEditateLink = useCallback(async () => {
     setEditateLinkLoading(true)
     setEditateLinkError(null)
@@ -308,9 +283,7 @@ function EssaysPageInner() {
       const url = (isCounselor && forStudentId)
         ? `${apiUrl}/essays/link?student_id=${forStudentId}`
         : `${apiUrl}/essays/link`
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
         setEditateLinkError(err.detail || 'Could not generate link. Please try again.')
@@ -323,49 +296,33 @@ function EssaysPageInner() {
     } finally {
       setEditateLinkLoading(false)
     }
-  }, [getToken, apiUrl, accountType, forStudentId])
+  }, [getToken, apiUrl, accountType, forStudentId, isCounselor])
 
-  // ── Styles ────────────────────────────────────────────────────────────────
-
-  const headerSt: React.CSSProperties = {
-    background: '#0c1b33', color: '#fff', display: 'flex',
-    alignItems: 'center', justifyContent: 'space-between',
-    padding: '0 20px', height: 49, flexShrink: 0,
-  }
-
-  const sectionHeaderSt: React.CSSProperties = {
-    fontSize: '0.78rem', fontWeight: 700, color: '#6b7280',
-    textTransform: 'uppercase', letterSpacing: '0.05em',
-    margin: '24px 0 10px',
-  }
-
-  // ── Render guards ─────────────────────────────────────────────────────────
+  // ── Render guards ──────────────────────────────────────────────────────────
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: '#9ca3af', fontSize: '0.875rem' }}>Loading…</div>
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
 
   if (accessDenied) {
     return (
-      <div style={{ minHeight: '100vh', background: '#f9fafb', display: 'flex', flexDirection: 'column' }}>
-        <header style={headerSt}>
-          <Link href="/" style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>
-            <span style={{ color: '#7dd3fc' }}>Soar</span> by LifeLaunchr
-          </Link>
-          <Link href="/chat" style={{ fontSize: '0.82rem', color: '#8888aa', textDecoration: 'none', border: '1px solid #444466', padding: '4px 12px', borderRadius: 6 }}>
+      <div className="min-h-screen bg-slate-900 flex flex-col">
+        <header className="bg-slate-900 border-b border-slate-800 px-4 h-12 flex items-center justify-between flex-shrink-0">
+          <span className="text-sm font-semibold text-white">✍️ Essays</span>
+          <Link href="/chat" className="text-xs text-slate-400 hover:text-white border border-slate-700 px-3 py-1.5 rounded-lg transition-colors">
             ← Back to Soar
           </Link>
         </header>
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ textAlign: 'center', maxWidth: 380 }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>🔒</div>
-            <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827', marginBottom: 8 }}>Essays Not Available</h1>
-            <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>The essays module is not enabled for your account.</p>
-            <Link href="/chat" style={{ display: 'inline-block', marginTop: 20, background: '#4f46e5', color: '#fff', padding: '8px 20px', borderRadius: 8, textDecoration: 'none', fontSize: '0.875rem', fontWeight: 600 }}>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center max-w-sm px-4">
+            <div className="text-4xl mb-3">🔒</div>
+            <h1 className="text-lg font-bold text-white mb-2">Essays Not Available</h1>
+            <p className="text-sm text-slate-400">The essays module is not enabled for your account.</p>
+            <Link href="/chat" className="inline-block mt-5 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors">
               Back to Soar
             </Link>
           </div>
@@ -377,21 +334,19 @@ function EssaysPageInner() {
   // Counselor landed here without a student selected (e.g. direct URL)
   if (accountType === 'counselor' && !forStudentId) {
     return (
-      <div style={{ minHeight: '100vh', background: '#f9fafb', display: 'flex', flexDirection: 'column' }}>
-        <header style={headerSt}>
-          <Link href="/" style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>
-            <span style={{ color: '#7dd3fc' }}>Soar</span> by LifeLaunchr
-          </Link>
-          <Link href="/chat" style={{ fontSize: '0.82rem', color: '#8888aa', textDecoration: 'none', border: '1px solid #444466', padding: '4px 12px', borderRadius: 6 }}>
+      <div className="min-h-screen bg-slate-900 flex flex-col">
+        <header className="bg-slate-900 border-b border-slate-800 px-4 h-12 flex items-center justify-between flex-shrink-0">
+          <span className="text-sm font-semibold text-white">✍️ Essays</span>
+          <Link href="/chat" className="text-xs text-slate-400 hover:text-white border border-slate-700 px-3 py-1.5 rounded-lg transition-colors">
             ← Back to Soar
           </Link>
         </header>
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ textAlign: 'center', maxWidth: 380 }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>✏️</div>
-            <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827', marginBottom: 8 }}>Select a Student</h1>
-            <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>Choose a student from the sidebar to view their essay requirements.</p>
-            <Link href="/chat" style={{ display: 'inline-block', marginTop: 20, background: '#4f46e5', color: '#fff', padding: '8px 20px', borderRadius: 8, textDecoration: 'none', fontSize: '0.875rem', fontWeight: 600 }}>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center max-w-sm px-4">
+            <div className="text-4xl mb-3">✏️</div>
+            <h1 className="text-lg font-bold text-white mb-2">Select a Student</h1>
+            <p className="text-sm text-slate-400">Choose a student from the sidebar to view their essay requirements.</p>
+            <Link href="/chat" className="inline-block mt-5 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors">
               Back to Soar
             </Link>
           </div>
@@ -402,10 +357,7 @@ function EssaysPageInner() {
 
   const isStudent = accountType === 'student'
   const isParent = accountType === 'parent'
-  const isCounselor = accountType === 'counselor'
 
-  // For counselor/parent-viewing-student, use the dedicated student state (immune to init re-runs).
-  // For students, use their own editate status from /my-usage.
   const viewingStudentAs = (isCounselor || isParent) && forStudentId
   const effectiveEditateAvailable = viewingStudentAs ? studentEditateAvailable : editateAvailable
   const effectiveReviewLimit = viewingStudentAs ? studentReviewLimitForCounselor : reviewLimit
@@ -416,351 +368,305 @@ function EssaysPageInner() {
     prompts.platform_essays.length === 0 &&
     prompts.schools.length === 0
 
+  const backHref = forStudentId ? `/writing?for=${forStudentId}` : '/writing'
+
   return (
-    <div style={{ minHeight: '100vh', background: '#f9fafb', display: 'flex', flexDirection: 'column' }}>
+    <div className="h-screen bg-slate-900 text-white flex flex-col overflow-hidden">
+
       {/* Header */}
-      <header style={headerSt}>
-        <Link href="/" style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>
-          <span style={{ color: '#7dd3fc' }}>Soar</span> by LifeLaunchr
+      <header className="bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center gap-3 flex-shrink-0">
+        <Link href={backHref} className="text-slate-400 hover:text-white text-sm transition-colors">
+          ← Writing
         </Link>
-        <Link href="/chat" style={{ fontSize: '0.82rem', color: '#8888aa', textDecoration: 'none', border: '1px solid #444466', padding: '4px 12px', borderRadius: 6 }}>
-          ← Back to Soar
-        </Link>
+        <span className="text-slate-700">|</span>
+        <h1 className="text-base font-semibold">Essay Prompts &amp; Drafts</h1>
       </header>
 
       {/* Content */}
-      <main style={{ flex: 1, maxWidth: 800, width: '100%', margin: '0 auto', padding: '24px 20px' }}>
-        <h1 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#0c1b33', marginBottom: 4 }}>Essays</h1>
-        <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: 24 }}>
-          Essay prompts for your college list.
-          {isCounselor && !forStudentId && ' Select a student from the sidebar to view their essay requirements.'}
-        </p>
+      <main className="flex-1 overflow-y-auto">
+        <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
 
-        {/* ── Editate access panel (students + counselors viewing a student with editate; not parents) ── */}
-        {effectiveEditateAvailable && (isStudent || (isCounselor && forStudentId)) && (
-          <div style={{
-            background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12,
-            padding: '20px 24px', marginBottom: 24,
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            flexWrap: 'wrap', gap: 12,
-          }}>
-            <div>
-              <div style={{ fontWeight: 600, fontSize: '0.95rem', color: '#111827', marginBottom: 4 }}>
-                {isCounselor ? "Student's Editate Access" : 'Submit & Review Essays with Editate'}
+          {/* ── Editate access panel ── */}
+          {effectiveEditateAvailable && (isStudent || (isCounselor && forStudentId)) && (
+            <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5 flex items-start justify-between gap-4 flex-wrap">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-white mb-1">
+                  {isCounselor ? "Student's Editate Access" : 'Submit & Review Essays with Editate'}
+                </p>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  {isCounselor
+                    ? 'Generate a login link for this student to access Editate.'
+                    : 'Upload your drafts, get feedback from your coach, and track revisions — all in one place.'}
+                </p>
               </div>
-              <div style={{ fontSize: '0.82rem', color: '#6b7280' }}>
-                {isCounselor
-                  ? 'Generate a login link for this student to access Editate.'
-                  : 'Upload your drafts, get feedback from your coach, and track revisions — all in one place.'}
-              </div>
-            </div>
-            <div>
-              {editateUrl ? (
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                  {!isCounselor && (
-                    <a
-                      href={editateUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        background: '#4f46e5', color: '#fff', borderRadius: 8,
-                        padding: '8px 18px', fontWeight: 600, fontSize: '0.875rem',
-                        textDecoration: 'none', display: 'inline-block',
-                      }}
-                    >
-                      Open Editate →
-                    </a>
-                  )}
-                  {isCounselor && (
+              <div className="flex-shrink-0">
+                {editateUrl ? (
+                  <div className="flex gap-2 flex-wrap items-center">
+                    {!isCounselor && (
+                      <a
+                        href={editateUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+                      >
+                        Open Editate →
+                      </a>
+                    )}
+                    {isCounselor && (
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(editateUrl)
+                          setLinkCopied(true)
+                          setTimeout(() => setLinkCopied(false), 2000)
+                        }}
+                        className={`text-sm font-semibold px-4 py-2 rounded-lg transition-colors ${
+                          linkCopied
+                            ? 'bg-green-900/30 text-green-400 border border-green-700/40'
+                            : 'bg-slate-700 hover:bg-slate-600 text-white'
+                        }`}
+                      >
+                        {linkCopied ? 'Copied! ✓' : 'Copy link'}
+                      </button>
+                    )}
                     <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(editateUrl)
-                        setLinkCopied(true)
-                        setTimeout(() => setLinkCopied(false), 2000)
-                      }}
-                      style={{
-                        background: linkCopied ? '#d1fae5' : '#f3f4f6',
-                        color: linkCopied ? '#065f46' : '#374151',
-                        border: 'none', borderRadius: 8,
-                        padding: '8px 18px', fontWeight: 600, fontSize: '0.875rem',
-                        cursor: 'pointer',
-                      }}
+                      onClick={fetchEditateLink}
+                      className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
                     >
-                      {linkCopied ? 'Copied!' : 'Copy link'}
+                      Refresh
                     </button>
-                  )}
-                </div>
-              ) : (
-                <button
-                  onClick={fetchEditateLink}
-                  disabled={editateLinkLoading}
-                  style={{
-                    background: editateLinkLoading ? '#c7d2fe' : '#4f46e5',
-                    color: '#fff', border: 'none', borderRadius: 8,
-                    padding: '8px 18px', fontWeight: 600, fontSize: '0.875rem',
-                    cursor: editateLinkLoading ? 'default' : 'pointer',
-                  }}
-                >
-                  {editateLinkLoading ? 'Generating link…' : isCounselor ? 'Generate Student Link' : 'Access Editate'}
-                </button>
-              )}
-              {editateLinkError && (
-                <p style={{ fontSize: '0.78rem', color: '#dc2626', marginTop: 6 }}>{editateLinkError}</p>
-              )}
-              {editateUrl && (
-                <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: 4 }}>
-                  Link expires in ~48 hours.{' '}
+                  </div>
+                ) : (
                   <button
                     onClick={fetchEditateLink}
-                    style={{ background: 'none', border: 'none', color: '#6366f1', cursor: 'pointer', padding: 0, fontSize: '0.75rem', textDecoration: 'underline' }}
+                    disabled={editateLinkLoading}
+                    className="bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
                   >
-                    Refresh
+                    {editateLinkLoading ? 'Generating…' : isCounselor ? 'Generate Student Link' : 'Access Editate'}
                   </button>
+                )}
+                {editateLinkError && (
+                  <p className="text-xs text-red-400 mt-1.5">{editateLinkError}</p>
+                )}
+                {editateUrl && (
+                  <p className="text-xs text-slate-600 mt-1.5">Link expires in ~48 hours.</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── Feedback rounds bar ── */}
+          {effectiveEditateAvailable && effectiveReviewLimit > 0 && (isStudent || viewingStudentAs) && (
+            <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-slate-200">
+                  Detailed Feedback Rounds: {roundsUsed} used of {effectiveReviewLimit}
+                </span>
+                {(isStudent || isParent) && (
+                  <button
+                    onClick={() => setReviewModalOpen(true)}
+                    className="text-xs text-violet-400 hover:text-violet-300 transition-colors"
+                  >
+                    What is this?
+                  </button>
+                )}
+              </div>
+              {/* Progress bar */}
+              <div className="h-1.5 rounded-full bg-slate-700 overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{
+                    width: `${Math.min(100, effectiveReviewLimit > 0 ? (roundsUsed / effectiveReviewLimit) * 100 : 0)}%`,
+                    background: roundsUsed >= effectiveReviewLimit ? '#f87171' : roundsUsed / effectiveReviewLimit >= 0.75 ? '#fbbf24' : '#7c3aed',
+                  }}
+                />
+              </div>
+              {roundsUsed >= effectiveReviewLimit && (
+                <p className="text-xs text-red-400">
+                  You&apos;ve used all your included feedback rounds. Additional reviews are available — contact your coach.
                 </p>
               )}
             </div>
-          </div>
-        )}
+          )}
 
-        {/* ── Feedback rounds bar (students, counselors, or parents viewing a student with editate) ── */}
-        {effectiveEditateAvailable && effectiveReviewLimit > 0 && (isStudent || viewingStudentAs) && (
-          <div style={{
-            background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12,
-            padding: '16px 20px', marginBottom: 20,
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#374151' }}>
-                Detailed Feedback Rounds: {roundsUsed} used of {effectiveReviewLimit}
-              </span>
-              {(isStudent || isParent) && (
-                <button
-                  onClick={() => setReviewModalOpen(true)}
-                  style={{
-                    background: 'none', border: 'none', color: '#6366f1',
-                    fontSize: '0.75rem', cursor: 'pointer', padding: 0,
-                    textDecoration: 'underline',
-                  }}
-                >
-                  What does this mean?
-                </button>
-              )}
-            </div>
-            {/* Progress bar */}
-            <div style={{ height: 6, borderRadius: 9999, background: '#f3f4f6', overflow: 'hidden' }}>
-              <div style={{
-                height: '100%',
-                width: `${Math.min(100, effectiveReviewLimit > 0 ? (roundsUsed / effectiveReviewLimit) * 100 : 0)}%`,
-                background: roundsUsed >= effectiveReviewLimit ? '#ef4444' : roundsUsed / effectiveReviewLimit >= 0.75 ? '#f59e0b' : '#4f46e5',
-                borderRadius: 9999,
-                transition: 'width 0.3s ease',
-              }} />
-            </div>
-            {/* Warning */}
-            {roundsUsed >= effectiveReviewLimit && (
-              <p style={{
-                fontSize: '0.78rem', marginTop: 8,
-                color: '#dc2626',
-              }}>
-                You&apos;ve used all your included feedback rounds. Additional reviews are available — contact your coach.
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* ── "What does this mean?" modal ── */}
-        {reviewModalOpen && (
-          <div
-            onClick={() => setReviewModalOpen(false)}
-            style={{
-              position: 'fixed', inset: 0, zIndex: 50,
-              background: 'rgba(0,0,0,0.45)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: 20,
-            }}
-          >
+          {/* ── "What does this mean?" modal ── */}
+          {reviewModalOpen && (
             <div
-              onClick={e => e.stopPropagation()}
-              style={{
-                background: '#fff', borderRadius: 14, maxWidth: 500, width: '100%',
-                padding: '28px 28px 24px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
-              }}
+              onClick={() => setReviewModalOpen(false)}
+              className="fixed inset-0 z-50 flex items-center justify-center p-5"
+              style={{ background: 'rgba(4,8,20,0.78)', backdropFilter: 'blur(4px)' }}
             >
-              <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#111827', marginBottom: 16, marginTop: 0 }}>
-                About Essay Feedback Rounds
-              </h2>
-              <div style={{ fontSize: '0.85rem', color: '#374151', lineHeight: 1.65, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <p style={{ margin: 0 }}>
-                  <strong>When do reviews happen?</strong> Feedback rounds typically take place after your brainstorming and initial drafting sessions with your coach — once you have a working draft ready for in-depth critique.
-                </p>
-                <p style={{ margin: 0 }}>
-                  <strong>What&apos;s included?</strong> Each round of feedback includes written comments on what&apos;s working well, specific suggestions for improvement, goals for your next draft, and in-line markup directly on your essay.
-                </p>
-                <p style={{ margin: 0 }}>
-                  <strong>How long does it take?</strong> You&apos;ll typically receive feedback within 48–72 hours of submission. Plan ahead — aim to submit at least 2 weeks before any application deadline.
-                </p>
-                <p style={{ margin: 0 }}>
-                  <strong>Need more rounds?</strong> Additional feedback rounds are available at $55 each, or you can purchase a bundle of 12 for $600. Reach out to your coach to add more.
-                </p>
-              </div>
-              <div style={{ marginTop: 20, textAlign: 'right' }}>
-                <button
-                  onClick={() => setReviewModalOpen(false)}
-                  style={{
-                    background: '#4f46e5', color: '#fff', border: 'none',
-                    borderRadius: 8, padding: '8px 20px', fontWeight: 600,
-                    fontSize: '0.875rem', cursor: 'pointer',
-                  }}
-                >
-                  Got it
-                </button>
+              <div
+                onClick={e => e.stopPropagation()}
+                className="bg-[#0c1b33] border border-slate-700/60 rounded-2xl max-w-lg w-full p-7 shadow-2xl"
+              >
+                <h2 className="text-base font-bold text-white mb-4">About Essay Feedback Rounds</h2>
+                <div className="space-y-3 text-sm text-slate-300 leading-relaxed">
+                  <p>
+                    <span className="font-semibold text-white">When do reviews happen?</span>{' '}
+                    Feedback rounds typically take place after your brainstorming and initial drafting sessions with your coach — once you have a working draft ready for in-depth critique.
+                  </p>
+                  <p>
+                    <span className="font-semibold text-white">What&apos;s included?</span>{' '}
+                    Each round of feedback includes written comments on what&apos;s working well, specific suggestions for improvement, goals for your next draft, and in-line markup directly on your essay.
+                  </p>
+                  <p>
+                    <span className="font-semibold text-white">How long does it take?</span>{' '}
+                    You&apos;ll typically receive feedback within 48–72 hours of submission. Plan ahead — aim to submit at least 2 weeks before any application deadline.
+                  </p>
+                  <p>
+                    <span className="font-semibold text-white">Need more rounds?</span>{' '}
+                    Additional feedback rounds are available at $55 each, or you can purchase a bundle of 12 for $600. Reach out to your coach to add more.
+                  </p>
+                </div>
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={() => setReviewModalOpen(false)}
+                    className="bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors"
+                  >
+                    Got it
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* ── Drafts (students with editate access, or counselors/parents viewing a student) ── */}
-        {effectiveEditateAvailable && (isStudent || viewingStudentAs) && (
-          <div style={{ marginBottom: 28 }}>
-            <div style={sectionHeaderSt}>{isCounselor || isParent ? "Student's submitted drafts" : "Your submitted drafts"}</div>
-            {draftsLoading ? (
-              <p style={{ fontSize: '0.82rem', color: '#9ca3af' }}>Loading drafts…</p>
-            ) : (() => {
-              const activeDrafts = drafts.filter(a =>
-                (a.total_assignment_submissions ?? 0) > 0 || a.marked_complete
-              )
-              return activeDrafts.length === 0 ? (
-                <p style={{ fontSize: '0.82rem', color: '#9ca3af' }}>No drafts submitted yet.</p>
-              ) : (
-                <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden' }}>
-                  {/* Table header */}
-                  <div style={{
-                    display: 'grid', gridTemplateColumns: '1fr 100px 120px',
-                    padding: '8px 16px', background: '#f9fafb',
-                    borderBottom: '1px solid #e2e8f0',
-                  }}>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Essay</span>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>Submissions</span>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>Status</span>
-                  </div>
-                  {activeDrafts.map((a, i) => {
-                    const displayName = a.source_assignment_name || a.name || `Draft ${i + 1}`
-                    const subs = a.total_assignment_submissions ?? 0
-                    const complete = a.marked_complete
-                    return (
-                      <div key={String(a.id ?? i)} style={{
-                        display: 'grid', gridTemplateColumns: '1fr 100px 120px',
-                        padding: '10px 16px', alignItems: 'center',
-                        borderBottom: i < activeDrafts.length - 1 ? '1px solid #f3f4f6' : 'none',
-                      }}>
-                        <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#111827' }}>
-                          {String(displayName)}
-                        </span>
-                        <span style={{ fontSize: '0.82rem', color: '#6b7280', textAlign: 'center' }}>
-                          {subs}
-                        </span>
-                        <div style={{ textAlign: 'center' }}>
-                          {complete ? (
-                            <span style={{
-                              fontSize: '0.72rem', fontWeight: 600, color: '#065f46',
-                              background: '#d1fae5', borderRadius: 4, padding: '2px 8px',
-                            }}>Complete</span>
-                          ) : (
-                            <span style={{
-                              fontSize: '0.72rem', fontWeight: 600, color: '#92400e',
-                              background: '#fef3c7', borderRadius: 4, padding: '2px 8px',
-                            }}>In Progress</span>
-                          )}
+          {/* ── Drafts ── */}
+          {effectiveEditateAvailable && (isStudent || viewingStudentAs) && (
+            <div>
+              <p className="text-xs uppercase tracking-widest text-slate-500 font-medium mb-3">
+                {isCounselor || isParent ? "Student's submitted drafts" : 'Your submitted drafts'}
+              </p>
+              {draftsLoading ? (
+                <p className="text-sm text-slate-500">Loading drafts…</p>
+              ) : (() => {
+                const activeDrafts = drafts.filter(a =>
+                  (a.total_assignment_submissions ?? 0) > 0 || a.marked_complete
+                )
+                return activeDrafts.length === 0 ? (
+                  <p className="text-sm text-slate-500">No drafts submitted yet.</p>
+                ) : (
+                  <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden">
+                    {/* Table header */}
+                    <div className="grid grid-cols-[1fr_100px_120px] px-4 py-2.5 bg-slate-700/30 border-b border-slate-700/50">
+                      <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Essay</span>
+                      <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest text-center">Submissions</span>
+                      <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest text-center">Status</span>
+                    </div>
+                    {activeDrafts.map((a, i) => {
+                      const displayName = a.source_assignment_name || a.name || `Draft ${i + 1}`
+                      const subs = a.total_assignment_submissions ?? 0
+                      const complete = a.marked_complete
+                      return (
+                        <div
+                          key={String(a.id ?? i)}
+                          className={`grid grid-cols-[1fr_100px_120px] px-4 py-3 items-center ${
+                            i < activeDrafts.length - 1 ? 'border-b border-slate-700/30' : ''
+                          }`}
+                        >
+                          <span className="text-sm font-medium text-white">{String(displayName)}</span>
+                          <span className="text-sm text-slate-400 text-center">{subs}</span>
+                          <div className="text-center">
+                            {complete ? (
+                              <span className="text-[10px] font-semibold text-green-400 bg-green-900/20 border border-green-700/30 rounded px-2 py-0.5">
+                                Complete
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-semibold text-amber-400 bg-amber-900/20 border border-amber-700/30 rounded px-2 py-0.5">
+                                In Progress
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )
-            })()}
-          </div>
-        )}
+                      )
+                    })}
+                  </div>
+                )
+              })()}
+            </div>
+          )}
 
-        {/* ── Essay prompts ── */}
-        {promptsLoading && (
-          <p style={{ fontSize: '0.82rem', color: '#9ca3af', textAlign: 'center', padding: '40px 0' }}>
-            Loading essay prompts…
-          </p>
-        )}
+          {/* ── Essay prompts ── */}
+          {promptsLoading && (
+            <div className="flex items-center justify-center py-12">
+              <div className="w-6 h-6 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
 
-        {noPrompts && (
-          <div style={{
-            textAlign: 'center', color: '#9ca3af', padding: '48px 0',
-            background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0',
-          }}>
-            <div style={{ fontSize: '2rem', marginBottom: 12 }}>✏️</div>
-            {!effectiveEditateAvailable ? (
-              <p style={{ fontSize: '0.875rem' }}>
-                {viewingStudentAs
-                  ? 'This student is not yet authorized to use Editate. Enable it in the admin panel under their user settings.'
-                  : 'Essay review is not enabled for your account. Contact your counselor to get access.'}
-              </p>
-            ) : (
-              <p style={{ fontSize: '0.875rem' }}>
-                No essay prompts yet.{' '}
-                {viewingStudentAs ? 'The student has' : 'You have'} no colleges in Applying or later status.
-                {' '}Move colleges from Researching to Applying on the{' '}
-                <a href="/lists" style={{ color: '#0c1b33', textDecoration: 'underline' }}>Lists page</a>
-                {' '}to see prompts here.
-              </p>
-            )}
-          </div>
-        )}
+          {noPrompts && (
+            <div className="text-center py-12 bg-slate-800/30 rounded-xl border border-slate-700/30">
+              <div className="text-3xl mb-3">✏️</div>
+              {!effectiveEditateAvailable ? (
+                <p className="text-sm text-slate-400">
+                  {viewingStudentAs
+                    ? 'This student is not yet authorized to use Editate. Enable it in the admin panel under their user settings.'
+                    : 'Essay review is not enabled for your account. Contact your counselor to get access.'}
+                </p>
+              ) : (
+                <p className="text-sm text-slate-400">
+                  No essay prompts yet.{' '}
+                  {viewingStudentAs ? 'The student has' : 'You have'} no colleges in Applying or later status.{' '}
+                  Move colleges from Researching to Applying on the{' '}
+                  <Link href="/lists" className="text-violet-400 hover:text-violet-300 underline transition-colors">
+                    Lists page
+                  </Link>
+                  {' '}to see prompts here.
+                </p>
+              )}
+            </div>
+          )}
 
-        {prompts && !promptsLoading && (
-          <>
-            {/* Platform essays (Common App, Coalition, etc.) */}
-            {prompts.platform_essays.length > 0 && (
-              <div style={{ marginBottom: 32 }}>
-                <div style={sectionHeaderSt}>Application platform essays</div>
-                {prompts.platform_essays.map(g => (
-                  <EssayGroupCard key={g.slug} group={g} />
-                ))}
-              </div>
-            )}
-
-            {/* Per-school supplements */}
-            {prompts.schools.map(school => (
-              (school.supplements.length > 0 || school.program_supplements.length > 0) && (
-                <div key={school.iped} style={{ marginBottom: 32 }}>
-                  <div style={sectionHeaderSt}>{school.name}</div>
-
-                  {school.supplements.map(g => (
+          {prompts && !promptsLoading && (
+            <div className="space-y-8">
+              {/* Platform essays (Common App, Coalition, etc.) */}
+              {prompts.platform_essays.length > 0 && (
+                <div>
+                  <p className="text-xs uppercase tracking-widest text-slate-500 font-medium mb-3">
+                    Application platform essays
+                  </p>
+                  {prompts.platform_essays.map(g => (
                     <EssayGroupCard key={g.slug} group={g} />
                   ))}
-
-                  {school.program_supplements.length > 0 && (
-                    <>
-                      <div style={{
-                        fontSize: '0.75rem', fontWeight: 600, color: '#9ca3af',
-                        textTransform: 'uppercase', letterSpacing: '0.04em',
-                        margin: '14px 0 8px',
-                      }}>
-                        Program-specific
-                      </div>
-                      {school.program_supplements.map(g => (
-                        <div key={g.slug}>
-                          {g.program_name && (
-                            <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#6366f1', marginBottom: 4 }}>
-                              {g.program_url
-                                ? <a href={g.program_url} target="_blank" rel="noopener noreferrer" style={{ color: '#6366f1', textDecoration: 'none' }}>{g.program_name} ↗</a>
-                                : g.program_name}
-                            </div>
-                          )}
-                          <EssayGroupCard group={g} />
-                        </div>
-                      ))}
-                    </>
-                  )}
                 </div>
-              )
-            ))}
-          </>
-        )}
+              )}
+
+              {/* Per-school supplements */}
+              {prompts.schools.map(school => (
+                (school.supplements.length > 0 || school.program_supplements.length > 0) && (
+                  <div key={school.iped}>
+                    <p className="text-xs uppercase tracking-widest text-slate-500 font-medium mb-3">
+                      {school.name}
+                    </p>
+
+                    {school.supplements.map(g => (
+                      <EssayGroupCard key={g.slug} group={g} />
+                    ))}
+
+                    {school.program_supplements.length > 0 && (
+                      <div className="mt-4">
+                        <p className="text-[10px] uppercase tracking-widest text-slate-600 font-semibold mb-2">
+                          Program-specific
+                        </p>
+                        {school.program_supplements.map(g => (
+                          <div key={g.slug}>
+                            {g.program_name && (
+                              <div className="text-xs font-semibold text-violet-400 mb-1">
+                                {g.program_url
+                                  ? <a href={g.program_url} target="_blank" rel="noopener noreferrer" className="hover:text-violet-300 transition-colors">{g.program_name} ↗</a>
+                                  : g.program_name}
+                              </div>
+                            )}
+                            <EssayGroupCard group={g} />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              ))}
+            </div>
+          )}
+
+        </div>
       </main>
     </div>
   )
@@ -768,7 +674,11 @@ function EssaysPageInner() {
 
 export default function EssaysPage() {
   return (
-    <Suspense>
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
       <EssaysPageInner />
     </Suspense>
   )
