@@ -7,6 +7,7 @@ import Link from 'next/link'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { WritingCoachView } from '@/components/writing/WritingCoachView'
+import WritingWelcomeModal from '@/components/writing/WritingWelcomeModal'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -1813,6 +1814,7 @@ function WritingPageInner() {
   const [loadingAssignments, setLoadingAssignments] = useState(true)
   const [assessmentDone, setAssessmentDone] = useState<boolean | null>(null)
   const [showAssessment, setShowAssessment] = useState(false)
+  const [showWelcome, setShowWelcome] = useState(false)
 
   // Load token + usage
   useEffect(() => {
@@ -1909,6 +1911,16 @@ function WritingPageInner() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, usageData])
 
+  // Show welcome modal once per role (checked after usageData loads so we know the role)
+  useEffect(() => {
+    if (!usageData?.account_type) return
+    const role = usageData.account_type === 'counselor' ? 'counselor'
+               : usageData.account_type === 'parent'    ? 'parent'
+               : 'student'
+    const key = `soar_writing_welcome_seen_${role}`
+    if (!localStorage.getItem(key)) setShowWelcome(true)
+  }, [usageData?.account_type])
+
   if (!isLoaded || !token || !usageData) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
@@ -1921,6 +1933,9 @@ function WritingPageInner() {
   if (isParent && forParam) {
     return (
       <div className="h-screen bg-slate-900 text-white flex flex-col overflow-hidden">
+        {showWelcome && (
+          <WritingWelcomeModal role="parent" onClose={() => setShowWelcome(false)} />
+        )}
         <div className="border-b border-slate-800 px-4 py-3 flex items-center gap-3 flex-shrink-0">
           <Link href="/chat" className="text-slate-400 hover:text-white text-sm">← Chat</Link>
           <span className="text-slate-700">|</span>
@@ -1945,6 +1960,12 @@ function WritingPageInner() {
   if (!forParam && (isCounselor || isParent)) {
     return (
       <div className="h-screen bg-slate-900 text-white flex flex-col overflow-hidden">
+        {showWelcome && (
+          <WritingWelcomeModal
+            role={isCounselor ? 'counselor' : 'parent'}
+            onClose={() => setShowWelcome(false)}
+          />
+        )}
         <div className="border-b border-slate-800 px-4 py-3 flex items-center gap-3 flex-shrink-0">
           <Link href="/chat" className="text-slate-400 hover:text-white text-sm">← Chat</Link>
           <span className="text-slate-700">|</span>
@@ -1969,6 +1990,9 @@ function WritingPageInner() {
 
   return (
     <div className="h-screen bg-slate-900 text-white flex flex-col overflow-hidden">
+      {showWelcome && (
+        <WritingWelcomeModal role="student" onClose={() => setShowWelcome(false)} />
+      )}
       {/* Header */}
       <div className="border-b border-slate-800 px-4 py-3 flex items-center gap-3 flex-shrink-0">
         {fromParam === 'writing' ? (
