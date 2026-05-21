@@ -136,6 +136,7 @@ const LIKELIHOOD_LABELS: Record<string, string> = {
 
 const STATUS_COLORS: Record<string, string> = {
   researching: '#7c3aed',
+  considering: '#7c3aed',  // legacy alias for 'researching'
   applying:    '#2563eb',
   applied:     '#0891b2',
   accepted:    '#16a34a',
@@ -147,6 +148,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 const STATUS_LABELS: Record<string, string> = {
   researching: 'Researching',
+  considering: 'Researching',  // legacy alias
   applying:    'Applying',
   applied:     'Applied',
   accepted:    'Accepted',
