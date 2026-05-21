@@ -1288,7 +1288,8 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                           headers: { Authorization: `Bearer ${token}` },
                         })
                         if (res.ok) {
-                          const list = await res.json()
+                          const data = await res.json()
+                          const list: Array<{ id: number; full_name: string }> = data.counselors || []
                           setCounselorOptions(list.length > 0 ? list : null)
                         } else {
                           setCounselorOptions(null)
