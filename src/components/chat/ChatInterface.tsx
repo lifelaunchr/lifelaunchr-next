@@ -1275,6 +1275,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
               {/* Add Family — counselors only */}
               {isCounselor && (
                 <button
+                  id="tour-add-family"
                   onClick={async () => {
                     if (usageData?.is_tenant_admin && counselorOptions === undefined) {
                       // Lazy-fetch counselor list for tenant admin modal dropdown

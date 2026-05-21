@@ -132,6 +132,12 @@ const counselorSteps: TourStepContent[] = [
     placement: 'right',
   },
   {
+    target: '#tour-add-family',
+    title: 'Invite your families',
+    body: "Soar delivers the most value when the whole team is in — student, parents, and you. Use Add Family to onboard a student and their parents in one step. Each person gets their own login and can research independently. Sessions pool together, parents stay in the loop automatically, and every conversation feeds back into your work with the student.",
+    placement: 'right',
+  },
+  {
     target: '#tour-chat-input',
     title: 'Research as a conversation',
     body: "Soar works best as a thinking partner. Start broad, then drill down — Soar remembers the whole thread. Try:",
