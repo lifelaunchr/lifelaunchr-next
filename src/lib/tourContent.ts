@@ -335,7 +335,7 @@ const counselorShowcase: ShowcaseItem[] = [
   {
     icon: '📊',
     title: 'Dashboard',
-    description: 'Manage all your students, track application status, copy invite links, and keep counseling notes — all in one place.',
+    description: 'Manage all your students, track application status, add new families, and keep counseling notes — all in one place.',
     href: '/dashboard',
   },
 ]
