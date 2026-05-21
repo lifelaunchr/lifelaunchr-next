@@ -1770,26 +1770,28 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
         />
       )}
 
-      {/* Add Family modal — counselors */}
-      <AddFamilyModal
-        open={showAddFamily}
-        onClose={() => setShowAddFamily(false)}
-        onSuccess={async () => {
-          setShowAddFamily(false)
-          // Refresh sidebar student list
-          try {
-            const token = await getToken()
-            const res = await fetch(`${apiUrl}/my-students`, { headers: { Authorization: `Bearer ${token}` } })
-            if (res.ok) {
-              const students = await res.json()
-              setMyStudents(students.map((s: { id: number; full_name: string; email: string; has_safety_flag?: boolean }) => ({
-                id: s.id, full_name: s.full_name, email: s.email, has_safety_flag: s.has_safety_flag,
-              })))
-            }
-          } catch { /* non-fatal */ }
-        }}
-        counselors={counselorOptions ?? undefined}
-      />
+      {/* Add Family modal — counselors; conditionally mounted so useState initializers run with correct props */}
+      {showAddFamily && (
+        <AddFamilyModal
+          open={true}
+          onClose={() => setShowAddFamily(false)}
+          onSuccess={async () => {
+            setShowAddFamily(false)
+            // Refresh sidebar student list
+            try {
+              const token = await getToken()
+              const res = await fetch(`${apiUrl}/my-students`, { headers: { Authorization: `Bearer ${token}` } })
+              if (res.ok) {
+                const students = await res.json()
+                setMyStudents(students.map((s: { id: number; full_name: string; email: string; has_safety_flag?: boolean }) => ({
+                  id: s.id, full_name: s.full_name, email: s.email, has_safety_flag: s.has_safety_flag,
+                })))
+              }
+            } catch { /* non-fatal */ }
+          }}
+          counselors={counselorOptions ?? undefined}
+        />
+      )}
 
       {/* Product tour — always mounted when signed in so joyride is ready before run flips */}
       {userId && (
