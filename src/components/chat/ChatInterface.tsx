@@ -11,6 +11,7 @@ import { WelcomeCard } from './WelcomeCard'
 import { LimitModal } from './LimitModal'
 import SessionsHelpModal from './SessionsHelpModal'
 import SafetyEventModal, { SafetyStudent } from '@/components/safety/SafetyEventModal'
+import AddFamilyModal from '@/components/counselor/AddFamilyModal'
 import dynamic from 'next/dynamic'
 import { tourMeta, type TourRole } from '@/lib/tourContent'
 
@@ -158,6 +159,8 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
   })
   const [inviteUrl, setInviteUrl] = useState<string | null>(null)
   const [inviteCopied, setInviteCopied] = useState(false)
+  const [showAddFamily, setShowAddFamily] = useState(false)
+  const [counselorOptions, setCounselorOptions] = useState<Array<{ id: number; full_name: string }> | undefined>(undefined)
   const [schedulingLink, setSchedulingLink] = useState<string | null>(null)
   const [forStudentId, setForStudentId] = useState<number | null>(() => {
     if (typeof window === 'undefined') return null
@@ -1269,8 +1272,32 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                 </div>
               )}
 
-              {/* Invite link — all signed-in users */}
-              {inviteUrl && (
+              {/* Add Family — counselors only */}
+              {isCounselor && (
+                <button
+                  onClick={async () => {
+                    if (usageData?.is_tenant_admin && counselorOptions === undefined) {
+                      // Lazy-fetch counselor list for tenant admin modal dropdown
+                      try {
+                        const token = await getToken()
+                        const res = await fetch(`${apiUrl}/tenant-admin/counselors`, {
+                          headers: { Authorization: `Bearer ${token}` },
+                        })
+                        if (res.ok) setCounselorOptions(await res.json())
+                        else setCounselorOptions([])
+                      } catch { setCounselorOptions([]) }
+                    }
+                    setShowAddFamily(true)
+                  }}
+                  className="flex items-center gap-3 px-3 py-2 text-xs text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all w-full text-left"
+                >
+                  <span className="text-base leading-none">➕</span>
+                  <span>Add Family</span>
+                </button>
+              )}
+
+              {/* Invite link — parents and non-counselors */}
+              {!isCounselor && inviteUrl && (
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(inviteUrl)
@@ -1280,15 +1307,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                   className="flex items-center gap-3 px-3 py-2 text-xs text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all w-full text-left"
                 >
                   <span className="text-base leading-none">{inviteCopied ? '✅' : '🔗'}</span>
-                  <span>
-                    {inviteCopied
-                      ? 'Copied!'
-                      : isCounselor
-                      ? 'Copy student invite link'
-                      : isParent
-                      ? 'Copy student invite link'
-                      : 'Copy invite link'}
-                  </span>
+                  <span>{inviteCopied ? 'Copied!' : 'Copy invite link'}</span>
                 </button>
               )}
 
@@ -1742,6 +1761,27 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
           getToken={async () => await getToken()}
         />
       )}
+
+      {/* Add Family modal — counselors */}
+      <AddFamilyModal
+        open={showAddFamily}
+        onClose={() => setShowAddFamily(false)}
+        onSuccess={async () => {
+          setShowAddFamily(false)
+          // Refresh sidebar student list
+          try {
+            const token = await getToken()
+            const res = await fetch(`${apiUrl}/my-students`, { headers: { Authorization: `Bearer ${token}` } })
+            if (res.ok) {
+              const students = await res.json()
+              setMyStudents(students.map((s: { id: number; full_name: string; email: string; has_safety_flag?: boolean }) => ({
+                id: s.id, full_name: s.full_name, email: s.email, has_safety_flag: s.has_safety_flag,
+              })))
+            }
+          } catch { /* non-fatal */ }
+        }}
+        counselors={usageData?.is_tenant_admin ? (counselorOptions ?? []) : undefined}
+      />
 
       {/* Product tour — always mounted when signed in so joyride is ready before run flips */}
       {userId && (
