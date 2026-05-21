@@ -160,7 +160,8 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
   const [inviteUrl, setInviteUrl] = useState<string | null>(null)
   const [inviteCopied, setInviteCopied] = useState(false)
   const [showAddFamily, setShowAddFamily] = useState(false)
-  const [counselorOptions, setCounselorOptions] = useState<Array<{ id: number; full_name: string }> | undefined>(undefined)
+  // undefined = not yet fetched; null = fetched, not a tenant admin; array = fetched, tenant admin
+  const [counselorOptions, setCounselorOptions] = useState<Array<{ id: number; full_name: string }> | null | undefined>(undefined)
   const [schedulingLink, setSchedulingLink] = useState<string | null>(null)
   const [forStudentId, setForStudentId] = useState<number | null>(() => {
     if (typeof window === 'undefined') return null
@@ -1277,16 +1278,22 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                 <button
                   id="tour-add-family"
                   onClick={async () => {
-                    if (usageData?.is_tenant_admin && counselorOptions === undefined) {
-                      // Lazy-fetch counselor list for tenant admin modal dropdown
+                    // Always try fetching counselors on first click — if the endpoint
+                    // returns a list the user is a tenant admin and gets the dropdown;
+                    // if it 403s or returns empty we fall back to the regular modal.
+                    if (counselorOptions === undefined) {
                       try {
                         const token = await getToken()
                         const res = await fetch(`${apiUrl}/tenant-admin/counselors`, {
                           headers: { Authorization: `Bearer ${token}` },
                         })
-                        if (res.ok) setCounselorOptions(await res.json())
-                        else setCounselorOptions([])
-                      } catch { setCounselorOptions([]) }
+                        if (res.ok) {
+                          const list = await res.json()
+                          setCounselorOptions(list.length > 0 ? list : null)
+                        } else {
+                          setCounselorOptions(null)
+                        }
+                      } catch { setCounselorOptions(null) }
                     }
                     setShowAddFamily(true)
                   }}
@@ -1781,7 +1788,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
             }
           } catch { /* non-fatal */ }
         }}
-        counselors={usageData?.is_tenant_admin ? (counselorOptions ?? []) : undefined}
+        counselors={counselorOptions ?? undefined}
       />
 
       {/* Product tour — always mounted when signed in so joyride is ready before run flips */}
