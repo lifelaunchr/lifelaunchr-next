@@ -14,12 +14,14 @@
 
 # LifeLaunchr / Soar — Deployment Reference
 
-> Last updated: 2026-05-21 (v1.1.4).
+> Last updated: 2026-05-23 (v1.1.6).
 
 ## Version History
 
 | Version | Date | Notes |
 |---------|------|-------|
+| v1.1.6 | 2026-05-23 | Backend-only: "In summary," closing rule for substantive responses (app#121/122) — see backend CLAUDE.md v1.1.6. No frontend changes. |
+| v1.1.5 | 2026-05-23 | Backend-only: in-chat admissions likelihood tool (app#128) — see backend CLAUDE.md v1.1.5. No frontend changes. |
 | v1.1.4 | 2026-05-21 | Add Family button in chat sidebar + counselor tour step (next#58, frontend-only). **`ChatInterface.tsx`:** replaced "Copy student invite link" button for counselors with an **Add Family** button (`id="tour-add-family"`). On first click, fetches `/tenant-admin/counselors` (response shape: `{ counselors: [...] }`) and stores result in `counselorOptions` state (`undefined` = not yet fetched; `null` = fetched, regular counselor; array = fetched, tenant admin with counselors list). `setShowAddFamily(true)` is called after the fetch in the same async handler so React 18 batches both state updates into one render. `AddFamilyModal` is now **conditionally rendered** (`{showAddFamily && <AddFamilyModal open={true} .../>}`) so its `useState` initializers run at mount time when `counselorOptions` is already set — previously the modal was always in the DOM and `isTenantAdmin` was permanently `false` because `useState` runs once at mount (before any fetch). `onSuccess` refreshes the sidebar student list via `/my-students`. Invite link button now gated to `!isCounselor` (parents/students only). **`tourContent.ts`:** added "Invite your families" step (target `#tour-add-family`) to counselor tour immediately after the student selector step; updated counselor showcase Dashboard card description. **Two-bug fix note:** (1) conditional render fix ensures modal state initializes correctly; (2) the counselor dropdown was also missing because the fetch handler read `list.length` on the raw response object `{ counselors: [...] }` instead of `data.counselors` — so `counselorOptions` was always set to `null` and `isTenantAdmin` never became true. Fixed by `const list = data.counselors \|\| []`. |
 | v1.1.3 | 2026-05-21 | Fix college list status and likelihood bugs (app#126, frontend portion). **`lists/page.tsx`:** added `considering: '#7c3aed'` to `STATUS_COLORS` and `considering: 'Researching'` to `STATUS_LABELS` as legacy aliases — legacy production rows with `status='considering'` now display correctly instead of showing a grey border and raw "considering" label. Backend changes (run_migrations fixes + add endpoint name lookup + compare_schemas.py script) in backend CLAUDE.md v1.1.3. |
 | v1.1.2 | 2026-05-21 | Backend-only: fix Writing Hub redirect rules blocking activities lists and résumés (app#127) — see backend CLAUDE.md v1.1.2. No frontend changes. |
