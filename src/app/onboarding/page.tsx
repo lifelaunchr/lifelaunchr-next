@@ -534,17 +534,14 @@ export default function OnboardingPage() {
       const hasMajor = intendedMajors.trim() && !intendedMajors.toLowerCase().includes('help me figure')
 
       if (hasColleges) {
-        // If counselor already set up a list, lead with "walk me through my list"
+        // If counselor already set up a list, keep all chips list-focused —
+        // even if the student added a college in Step 3, the whole list matters
         if (hasCounselorList) {
-          const qs: string[] = ['Walk me through my college list and help me figure out where to start']
-          if (hasNewColleges) {
-            const college = selectedColleges[0].name
-            qs.push(`How competitive am I at ${college}?`)
-            qs.push(`Find me 5 more schools similar to ${college}`)
-          } else {
-            qs.push('Which schools on my list are the best fit for me?')
-            qs.push('Help me understand what makes a college a good match')
-          }
+          const qs: string[] = [
+            'Walk me through my college list and help me figure out where to start',
+            'Which schools on my list are the best fit for me?',
+            'How do I know if a school is a good match for me?',
+          ]
           if (hasMajor) qs.push(`What kind of careers can a degree in ${intendedMajors} lead to?`)
           else qs.push('Help me figure out what I want to study')
           return qs
