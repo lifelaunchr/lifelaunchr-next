@@ -193,19 +193,22 @@ export default function OnboardingPage() {
           body: JSON.stringify({ token, clerk_user_id: clerkUser.id, email }),
         })
 
+        // Parse both responses upfront — each body stream can only be consumed once.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let syncData: any = {}
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let acceptData: any = {}
+        if (syncRes.ok) syncData = await syncRes.json().catch(() => ({}))
+        if (acceptRes.ok) acceptData = await acceptRes.json().catch(() => ({}))
+
         // Prefer account_type from accept-invite (reads directly from pre-created user row).
         // Fall back to auth/sync result if accept-invite fails (e.g. token already used).
-        let resolvedType: string | null = null
-        let acceptedUserId: number | null = null
-        if (acceptRes.ok) {
-          const acceptData = await acceptRes.json()
-          resolvedType = acceptData.user?.account_type || null
-          acceptedUserId = acceptData.user?.id || null
-        }
-        if (!resolvedType && syncRes.ok) {
-          const syncData = await syncRes.json()
-          resolvedType = syncData.account_type || null
-        }
+        const resolvedType: string | null =
+          acceptData.user?.account_type || syncData.account_type || null
+        // userId from accept-invite if the endpoint returns it, otherwise from auth/sync
+        // (auth/sync always returns user_id for claimed users)
+        const acceptedUserId: number | null =
+          acceptData.user?.id || syncData.user_id || null
 
         if (resolvedType === 'student') {
           setAccountType('student')
