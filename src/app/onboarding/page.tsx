@@ -138,6 +138,10 @@ export default function OnboardingPage() {
   const [onboardingUserId, setOnboardingUserId] = useState<number | null>(null)
   const [existingCollegeCount, setExistingCollegeCount] = useState(0)
   const [navigating, setNavigating] = useState(false)  // brief lock during step 2→3 transition
+  // Ref holds raw profile data fetched during the migration effect; applied by a
+  // separate useEffect once step===2 is committed to avoid batching/ordering races.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const preFillRef = useRef<Record<string, any> | null>(null)
 
   // UI state
   const [submitting, setSubmitting] = useState(false)
@@ -220,13 +224,9 @@ export default function OnboardingPage() {
                 headers: { Authorization: `Bearer ${authToken}` },
               })
               if (profileRes.ok) {
-                const p = await profileRes.json()
-                if (p.graduation_year) setGradYear(String(p.graduation_year))
-                if (p.home_state) setHomeState(p.home_state)
-                if (p.gpa_weighted) setGpaWeighted(String(p.gpa_weighted))
-                if (p.sat_total) setSatTotal(String(p.sat_total))
-                if (p.act_composite) setActComposite(String(p.act_composite))
-                if (p.intended_majors) setIntendedMajors(p.intended_majors)
+                // Store in ref — applied by the step===2 useEffect below to avoid
+                // batching races between the migration effect and setStep(2).
+                preFillRef.current = await profileRes.json()
               }
             } catch { /* non-fatal — pre-population is best-effort */ }
           }
@@ -262,6 +262,22 @@ export default function OnboardingPage() {
     }, 300)
     return () => { if (tenantSearchRef.current) clearTimeout(tenantSearchRef.current) }
   }, [tenantQuery, needsOrg, selectedTenant, apiUrl])
+
+  // ── Apply pre-filled profile data once step 2 is committed ──────────────────
+  // The migration effect stores raw profile JSON in preFillRef to avoid batching
+  // races with setStep(2). This effect fires after React commits step===2 and
+  // applies the values into controlled-input state cleanly.
+  useEffect(() => {
+    if (step !== 2 || !preFillRef.current) return
+    const p = preFillRef.current
+    preFillRef.current = null  // consume once
+    if (p.graduation_year) setGradYear(String(p.graduation_year))
+    if (p.home_state) setHomeState(p.home_state)
+    if (p.gpa_weighted) setGpaWeighted(String(p.gpa_weighted))
+    if (p.sat_total) setSatTotal(String(p.sat_total))
+    if (p.act_composite) setActComposite(String(p.act_composite))
+    if (p.intended_majors) setIntendedMajors(p.intended_majors)
+  }, [step])
 
   // ── School autocomplete ─────────────────────────────────────────────────────
   useEffect(() => {
