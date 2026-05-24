@@ -134,6 +134,11 @@ export default function OnboardingPage() {
   const [searchingCollege, setSearchingCollege] = useState(false)
   const collegeSearchRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // Pre-population from counselor-created data (invite-link students)
+  const [onboardingUserId, setOnboardingUserId] = useState<number | null>(null)
+  const [existingCollegeCount, setExistingCollegeCount] = useState(0)
+  const [navigating, setNavigating] = useState(false)  // brief lock during step 2→3 transition
+
   // UI state
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -191,9 +196,11 @@ export default function OnboardingPage() {
         // Prefer account_type from accept-invite (reads directly from pre-created user row).
         // Fall back to auth/sync result if accept-invite fails (e.g. token already used).
         let resolvedType: string | null = null
+        let acceptedUserId: number | null = null
         if (acceptRes.ok) {
           const acceptData = await acceptRes.json()
           resolvedType = acceptData.user?.account_type || null
+          acceptedUserId = acceptData.user?.id || null
         }
         if (!resolvedType && syncRes.ok) {
           const syncData = await syncRes.json()
@@ -202,6 +209,24 @@ export default function OnboardingPage() {
 
         if (resolvedType === 'student') {
           setAccountType('student')
+          // Pre-populate profile fields if the counselor already filled them in
+          if (acceptedUserId) {
+            setOnboardingUserId(acceptedUserId)
+            try {
+              const profileRes = await fetch(`${apiUrl}/profile/${acceptedUserId}`, {
+                headers: { Authorization: `Bearer ${authToken}` },
+              })
+              if (profileRes.ok) {
+                const p = await profileRes.json()
+                if (p.graduation_year) setGradYear(String(p.graduation_year))
+                if (p.home_state) setHomeState(p.home_state)
+                if (p.gpa_weighted) setGpaWeighted(String(p.gpa_weighted))
+                if (p.sat_total) setSatTotal(String(p.sat_total))
+                if (p.act_composite) setActComposite(String(p.act_composite))
+                if (p.intended_majors) setIntendedMajors(p.intended_majors)
+              }
+            } catch { /* non-fatal — pre-population is best-effort */ }
+          }
           setStep(2)
           return
         }
@@ -290,8 +315,25 @@ export default function OnboardingPage() {
   }
 
   // ── Step 2 → 3 ─────────────────────────────────────────────────────────────
-  const handleProfileNext = () => {
+  const handleProfileNext = async () => {
     setError('')
+    // If this is an invite-link student, check whether the counselor pre-populated
+    // a college list so Step 3 can show a contextual message instead of the blank slate.
+    if (onboardingUserId) {
+      setNavigating(true)
+      try {
+        const token = await getToken()
+        const res = await fetch(`${apiUrl}/lists/${onboardingUserId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setExistingCollegeCount(data.colleges?.length ?? 0)
+        }
+      } catch { /* non-fatal */ } finally {
+        setNavigating(false)
+      }
+    }
     setStep(3)
   }
 
@@ -464,10 +506,29 @@ export default function OnboardingPage() {
 
   const getStarterQuestions = (): string[] => {
     if (isStudent) {
-      const hasColleges = selectedColleges.length > 0
+      const hasNewColleges = selectedColleges.length > 0
+      const hasCounselorList = existingCollegeCount > 0
+      const hasColleges = hasNewColleges || hasCounselorList
       const hasMajor = intendedMajors.trim() && !intendedMajors.toLowerCase().includes('help me figure')
 
       if (hasColleges) {
+        // If counselor already set up a list, lead with "walk me through my list"
+        if (hasCounselorList) {
+          const qs: string[] = ['Walk me through my college list and help me figure out where to start']
+          if (hasNewColleges) {
+            const college = selectedColleges[0].name
+            qs.push(`How competitive am I at ${college}?`)
+            qs.push(`Find me 5 more schools similar to ${college}`)
+          } else {
+            qs.push('Which schools on my list are the best fit for me?')
+            qs.push('Help me understand what makes a college a good match')
+          }
+          if (hasMajor) qs.push(`What kind of careers can a degree in ${intendedMajors} lead to?`)
+          else qs.push('Help me figure out what I want to study')
+          return qs
+        }
+
+        // No counselor list — student added their own colleges
         const college = selectedColleges[0].name
         const qs = [
           `Tell me about ${college} — what's it really like there?`,
@@ -543,7 +604,7 @@ export default function OnboardingPage() {
 
   const headerSubtitle = step === 1 ? 'Tell us a bit about yourself so we can personalize your experience.'
     : step === 2 ? 'Give us a little info so we can help you better — no worries if you\'re not sure yet.'
-    : step === 3 ? 'Any colleges already on your radar? We\'ll add them to your research list.'
+    : step === 3 ? (existingCollegeCount > 0 ? 'Your counselor already added colleges to your list.' : 'Any colleges already on your radar? We\'ll add them to your research list.')
     : step === 4 ? soarContent.tagline
     : step === 5 ? 'Add a student so you can start researching together. You can always do this later from your dashboard.'
     : 'Pick a question to get started, or type your own.'
@@ -844,21 +905,24 @@ export default function OnboardingPage() {
             <div className="mt-6 flex items-center gap-3">
               <button
                 onClick={() => setStep(1)}
-                className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50 transition-colors"
+                disabled={navigating}
+                className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 ← Back
               </button>
               <button
                 onClick={handleProfileNext}
-                className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-xl transition-colors text-sm"
+                disabled={navigating}
+                className="flex-1 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-2.5 rounded-xl transition-colors text-sm"
               >
-                Next →
+                {navigating ? 'Loading…' : 'Next →'}
               </button>
             </div>
             <div className="text-center mt-3">
               <button
                 onClick={handleProfileNext}
-                className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2"
+                disabled={navigating}
+                className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Skip this step
               </button>
@@ -872,9 +936,13 @@ export default function OnboardingPage() {
             <StepDots step={3} />
 
             <div className="mb-1">
-              <h2 className="text-base font-bold text-gray-800">Any colleges on your list?</h2>
+              <h2 className="text-base font-bold text-gray-800">
+                {existingCollegeCount > 0 ? 'Anything to add to your list?' : 'Any colleges on your list?'}
+              </h2>
               <p className="text-xs text-gray-400 mt-0.5">
-                Start typing a name and we&apos;ll find it. Totally fine to skip — Soar can help you build your list.
+                {existingCollegeCount > 0
+                  ? `Your counselor has already set up a research list for you — ${existingCollegeCount} college${existingCollegeCount !== 1 ? 's' : ''} so far. Any you want to add or make sure are on there?`
+                  : "Start typing a name and we'll find it. Totally fine to skip — Soar can help you build your list."}
               </p>
             </div>
 
@@ -932,7 +1000,9 @@ export default function OnboardingPage() {
 
             {selectedColleges.length === 0 && (
               <p className="mt-3 text-xs text-gray-400 italic">
-                No colleges added yet — that&apos;s totally okay! Soar can help you build your list from scratch.
+                {existingCollegeCount > 0
+                  ? "Your existing list will be ready to explore when you start chatting."
+                  : "No colleges added yet — that's totally okay! Soar can help you build your list from scratch."}
               </p>
             )}
 
