@@ -226,7 +226,9 @@ export default function OnboardingPage() {
               if (profileRes.ok) {
                 // Store in ref — applied by the step===2 useEffect below to avoid
                 // batching races between the migration effect and setStep(2).
-                preFillRef.current = await profileRes.json()
+                const json = await profileRes.json()
+                // GET /profile/{id} returns { profile: { ... } } — unwrap the envelope
+                preFillRef.current = json.profile ?? json
               }
             } catch { /* non-fatal — pre-population is best-effort */ }
           }
