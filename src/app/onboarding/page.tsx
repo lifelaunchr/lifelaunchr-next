@@ -349,7 +349,8 @@ export default function OnboardingPage() {
         })
         if (res.ok) {
           const data = await res.json()
-          setExistingCollegeCount(data.colleges?.length ?? 0)
+          // GET /lists/{id} returns { research: [...], scholarships: [...], enrichment: [...] }
+          setExistingCollegeCount(data.research?.length ?? data.colleges?.length ?? 0)
         }
       } catch { /* non-fatal */ } finally {
         setNavigating(false)
