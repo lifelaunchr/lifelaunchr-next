@@ -998,7 +998,7 @@ function StudentAssignmentPanel({
           sectionLabel={assignPanel.sectionLabel}
           studentId={student.id}
           track={track}
-          onAssigned={() => { loadData(); setAssignPanel(null) }}
+          onAssigned={() => { loadData() }}
           onClose={() => setAssignPanel(null)}
         />
       )}
