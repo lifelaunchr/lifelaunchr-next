@@ -5,6 +5,7 @@ interface WelcomeCardProps {
   accountType?: 'student' | 'counselor' | 'parent'
   isFreeTier?: boolean
   isFirstSession?: boolean
+  collegeCount?: number
 }
 
 const STARTERS = [
@@ -78,10 +79,23 @@ function getHowDoesThisWorkMessage(accountType?: 'student' | 'counselor' | 'pare
   return 'How does Soar work, and what can it help me with as a student applying to colleges?'
 }
 
-export function WelcomeCard({ onSendMessage, accountType, isFreeTier, isFirstSession }: WelcomeCardProps) {
-  const starters = isFirstSession
+export function WelcomeCard({ onSendMessage, accountType, isFreeTier, isFirstSession, collegeCount }: WelcomeCardProps) {
+  const hasCollegeList = accountType === 'student' && (collegeCount ?? 0) > 0
+
+  const baseStarters = isFirstSession
     ? FIRST_SESSION_STARTERS[accountType || 'student'] || FIRST_SESSION_STARTERS.student
     : STARTERS
+
+  // When a student already has colleges on their list, swap the generic "where to begin"
+  // chip for one that leads them into their existing list.
+  const starters = hasCollegeList
+    ? baseStarters.map((s) =>
+        s === "I'm starting my college search — help me figure out where to begin" ||
+        s === 'Help me find colleges that fit my profile'
+          ? 'Walk me through my college list — let\'s figure out where to start'
+          : s
+      )
+    : baseStarters
 
   const heading = isFirstSession
     ? 'Welcome! Let\u2019s get started.'

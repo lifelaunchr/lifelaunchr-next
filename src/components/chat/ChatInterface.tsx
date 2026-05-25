@@ -148,6 +148,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
   const [activeSessionId, setActiveSessionId] = useState<number | null>(null)
   const [isCounselor, setIsCounselor] = useState(false)
   const [isParent, setIsParent] = useState(false)
+  const [studentCollegeCount, setStudentCollegeCount] = useState(0)
   const [isAdmin, setIsAdmin] = useState(false)
   const [myStudents, setMyStudents] = useState<Array<{ id: number; full_name: string; email: string; has_safety_flag?: boolean }>>([])
   const [safetyStudent, setSafetyStudent] = useState<SafetyStudent | null>(null)
@@ -491,6 +492,25 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
     }
     fetchConnections()
   }, [isLoaded, userId, getToken, apiUrl])
+
+  // Fetch student's college list count so WelcomeCard can show list-aware chips.
+  // Only runs for students (not counselors or parents viewing a student).
+  useEffect(() => {
+    if (!myDbUserId || isCounselor || isParent) return
+    const fetchCollegeCount = async () => {
+      try {
+        const token = await getToken()
+        const res = await fetch(`${apiUrl}/lists/${myDbUserId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setStudentCollegeCount(data.research?.length ?? 0)
+        }
+      } catch { /* non-fatal */ }
+    }
+    fetchCollegeCount()
+  }, [myDbUserId, isCounselor, isParent, getToken, apiUrl])
 
   // Auto-select the first student when a parent has no valid selection.
   // Also clears a stale forStudentId if the saved student is no longer connected.
@@ -1580,6 +1600,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                 accountType={isCounselor ? 'counselor' : isParent ? 'parent' : 'student'}
                 isFreeTier={!!(usageData?.effective_limit && usageData.effective_limit <= 30)}
                 isFirstSession={!!(userId && usageData && !usageData.first_session_completed)}
+                collegeCount={studentCollegeCount}
               />
             ) : (
               messages.map((msg) => (
