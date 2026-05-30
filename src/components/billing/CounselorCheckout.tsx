@@ -31,7 +31,6 @@ export default function CounselorCheckout() {
   const [error, setError]     = useState('')
 
   const monthly = calculateMonthlyPrice(count)
-  const annual  = monthly * 12 * 0.8  // 20% annual discount
 
   async function handleSubscribe() {
     setLoading(true)
@@ -103,23 +102,11 @@ export default function CounselorCheckout() {
         borderRadius: 8,
         padding: '14px 18px',
         marginBottom: 20,
-        display: 'flex',
-        gap: 32,
-        flexWrap: 'wrap',
       }}>
-        <div>
-          <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Monthly</p>
-          <p style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0c1b33' }}>
-            ${monthly.toFixed(2)}<span style={{ fontSize: '0.85rem', fontWeight: 400, color: '#6b7280' }}>/mo</span>
-          </p>
-        </div>
-        <div>
-          <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Annual (save 20%)</p>
-          <p style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0369a1' }}>
-            ${(annual / 12).toFixed(2)}<span style={{ fontSize: '0.85rem', fontWeight: 400, color: '#6b7280' }}>/mo</span>
-          </p>
-          <p style={{ fontSize: '0.75rem', color: '#6b7280' }}>${annual.toFixed(2)} billed annually</p>
-        </div>
+        <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Monthly total</p>
+        <p style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0c1b33' }}>
+          ${monthly.toFixed(2)}<span style={{ fontSize: '0.85rem', fontWeight: 400, color: '#6b7280' }}>/mo</span>
+        </p>
       </div>
 
       {error && (

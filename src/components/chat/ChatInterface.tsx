@@ -138,6 +138,10 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
   const [limitModalData, setLimitModalData] = useState<LimitReachedData | null>(null)
   const [currentResearchSessionId, setCurrentResearchSessionId] = useState<number | null>(null)
   const [showNewSessionBanner, setShowNewSessionBanner] = useState(false)
+  const [showUpgradedBanner, setShowUpgradedBanner] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return new URLSearchParams(window.location.search).get('upgraded') === 'true'
+  })
   const [showSessionsHelp, setShowSessionsHelp] = useState(false)
   const [tourActive, setTourActive] = useState(false)
   const [generatingSummary, setGeneratingSummary] = useState(false)
@@ -1016,6 +1020,14 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
 
   return (
     <div className="flex flex-col h-screen bg-slate-50 overflow-hidden">
+      {/* Upgrade success banner */}
+      {showUpgradedBanner && (
+        <div className="flex items-center justify-between bg-blue-600 text-white text-sm px-4 py-2 flex-shrink-0 z-40">
+          <span>🎉 You&apos;re on the paid plan — your new session limits are active. Welcome!</span>
+          <button onClick={() => setShowUpgradedBanner(false)} className="text-white/70 hover:text-white ml-4">✕</button>
+        </div>
+      )}
+
       {/* New research session banner */}
       {showNewSessionBanner && (
         <div className="flex items-center justify-between bg-emerald-600 text-white text-sm px-4 py-2 flex-shrink-0 z-40">

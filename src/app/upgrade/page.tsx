@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import CounselorCheckout from '@/components/billing/CounselorCheckout'
+import SessionsInfoButton from '@/components/billing/SessionsInfoButton'
 
 export const metadata: Metadata = {
   title: 'Plans & Pricing — Soar by LifeLaunchr',
@@ -54,15 +55,12 @@ const STUDENT_FEATURES = [
 ]
 
 const COUNSELOR_FEATURES = [
-  { label: 'Your research sessions/month', starter: '5', paid: '15', enterprise: 'Custom' },
-  { label: 'Student sessions/month (per student)', starter: '5', paid: '15', enterprise: 'Custom' },
-  { label: 'Active students', starter: 'Up to 3', paid: 'Unlimited', enterprise: 'Unlimited' },
-  { label: 'Student profiles and college lists', starter: '✓', paid: '✓', enterprise: '✓' },
-  { label: 'Session reports and meeting briefs', starter: '✓', paid: '✓', enterprise: '✓' },
-  { label: 'Research history', starter: '90 days', paid: '1 year', enterprise: 'Custom' },
-  { label: 'Practice branding', starter: '', paid: '✓', enterprise: '✓' },
-  { label: 'Team access', starter: '', paid: '✓', enterprise: '✓' },
-  { label: 'Priority support', starter: '', paid: '', enterprise: '✓' },
+  { label: 'Your research sessions/month', starter: '5', paid: '15' },
+  { label: "Each student's monthly pool", starter: '5 sessions', paid: 'Up to 25 sessions' },
+  { label: 'Active students', starter: 'Up to 3', paid: 'Unlimited' },
+  { label: 'Student profiles and college lists', starter: '✓', paid: '✓' },
+  { label: 'Session reports and meeting briefs', starter: '✓', paid: '✓' },
+  { label: 'Research history', starter: '90 days', paid: '1 year' },
 ]
 
 const TOOLS = [
@@ -153,10 +151,10 @@ export default function UpgradePage() {
       <div style={{ background: '#0c1b33', color: '#fff', padding: '48px 16px 40px', textAlign: 'center' }}>
         <div style={{ maxWidth: 680, margin: '0 auto' }}>
           <h1 style={{ fontSize: 'clamp(1.5rem, 4vw, 2.1rem)', fontWeight: 800, lineHeight: 1.25, marginBottom: 20, color: '#fff' }}>
-            Your students are already using AI for college and career planning. Soar helps you guide them as they do.
+            Soar is free to start. Upgrade when you&apos;re ready.
           </h1>
           <p style={{ fontSize: '1rem', color: '#a0aec0', lineHeight: 1.7, marginBottom: 32, maxWidth: 580, margin: '0 auto 32px' }}>
-            Soar connects counselors, students, and parents around a shared research record, built from real data on colleges, scholarships, majors, and careers, grounded in counseling methodology, and updated every time your student has a conversation. You see what they researched. They get accurate answers. Everyone arrives at your next session ready to do real work.
+            For counselors: add students to your plan and unlock the full shared research record. For students and families: upgrade for more sessions and essay tools. Questions about any plan? Email help@lifelaunchr.com.
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link
@@ -217,12 +215,8 @@ export default function UpgradePage() {
                 <tr>
                   <td style={{ ...cell, fontWeight: 600, color: '#374151' }}>Price</td>
                   <td style={{ ...cell, textAlign: 'center', color: '#374151' }}>$0</td>
-                  <td style={{ ...cell, textAlign: 'center', background: '#f0f9ff' }}>
-                    <a href={`mailto:${SUPPORT_EMAIL}?subject=Soar Plus beta pricing`} style={{ color: '#0369a1', fontWeight: 600, textDecoration: 'none', fontSize: '0.82rem' }}>Lock in beta pricing</a>
-                  </td>
-                  <td style={{ ...cell, textAlign: 'center' }}>
-                    <a href={`mailto:${SUPPORT_EMAIL}?subject=Soar Pro beta pricing`} style={{ color: '#0369a1', fontWeight: 600, textDecoration: 'none', fontSize: '0.82rem' }}>Lock in beta pricing</a>
-                  </td>
+                  <td style={{ ...cell, textAlign: 'center', background: '#f0f9ff', color: '#0369a1', fontWeight: 600 }}>$12/mo</td>
+                  <td style={{ ...cell, textAlign: 'center', color: '#374151', fontWeight: 600 }}>$25/mo</td>
                 </tr>
                 {STUDENT_FEATURES.map((row) => (
                   <tr key={row.label}>
@@ -235,6 +229,28 @@ export default function UpgradePage() {
               </tbody>
             </table>
           </div>
+          <div style={{ marginTop: 12, background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '10px 14px', fontSize: '0.82rem', color: '#92400e' }}>
+            Plus and Pro self-serve checkout coming soon. To upgrade now, email{' '}
+            <a href={`mailto:${SUPPORT_EMAIL}?subject=Student plan upgrade`} style={{ color: '#92400e', fontWeight: 600 }}>{SUPPORT_EMAIL}</a>.
+          </div>
+        </div>
+
+        {/* Parents section */}
+        <div style={{ marginBottom: 48 }}>
+          <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#0c1b33', marginBottom: 6, paddingBottom: 8, borderBottom: '2px solid #e2e8f0' }}>
+            👨‍👩‍👧 For Parents
+          </h2>
+          <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '20px 24px', marginTop: 16 }}>
+            <p style={{ fontSize: '0.9rem', color: '#374151', lineHeight: 1.7, marginBottom: 12 }}>
+              Parent accounts are always free. When you use Soar on your student&apos;s behalf, sessions draw from their shared pool — not a separate parent limit. A student connected to a paid counselor plan gets up to 25 sessions/month shared across the student, parent, and counselor.
+            </p>
+            <p style={{ fontSize: '0.9rem', color: '#374151', lineHeight: 1.7 }}>
+              Want your student to have more sessions? Upgrade their account to Plus or Pro.{' '}
+              <a href={`mailto:${SUPPORT_EMAIL}?subject=Student plan upgrade`} style={{ color: '#0369a1', fontWeight: 600 }}>
+                Email us to get started →
+              </a>
+            </p>
+          </div>
         </div>
 
         {/* Tier cards — Counselors */}
@@ -246,10 +262,9 @@ export default function UpgradePage() {
             <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff', borderRadius: 12, overflow: 'hidden', border: '1px solid #e2e8f0', fontSize: '0.85rem' }}>
               <thead>
                 <tr style={{ background: '#f8fafc' }}>
-                  <th style={{ ...headCell, textAlign: 'left', color: '#6b7280', width: '40%' }}></th>
+                  <th style={{ ...headCell, textAlign: 'left', color: '#6b7280', width: '45%' }}></th>
                   <th style={{ ...headCell, textAlign: 'center', color: '#0c1b33' }}>Starter</th>
                   <th style={{ ...headCell, textAlign: 'center', color: '#0369a1', background: '#f0f9ff' }}>Paid</th>
-                  <th style={{ ...headCell, textAlign: 'center', color: '#0c1b33' }}>Enterprise</th>
                 </tr>
               </thead>
               <tbody>
@@ -259,21 +274,26 @@ export default function UpgradePage() {
                   <td style={{ ...cell, textAlign: 'center', background: '#f0f9ff' }}>
                     <a href={`mailto:${SUPPORT_EMAIL}?subject=Soar counselor paid plan`} style={{ color: '#0369a1', fontWeight: 600, textDecoration: 'none', fontSize: '0.82rem' }}>Lock in beta pricing</a>
                   </td>
-                  <td style={{ ...cell, textAlign: 'center' }}>
-                    <a href={`mailto:${SUPPORT_EMAIL}?subject=Soar Enterprise`} style={{ color: '#0369a1', fontWeight: 600, textDecoration: 'none', fontSize: '0.82rem' }}>Contact us</a>
-                  </td>
                 </tr>
                 {COUNSELOR_FEATURES.map((row) => (
                   <tr key={row.label}>
-                    <td style={{ ...cell, color: '#374151' }}>{row.label}</td>
+                    <td style={{ ...cell, color: '#374151' }}>
+                      {row.label.includes('monthly pool') ? (
+                        <>{row.label} *</>
+                      ) : row.label}
+                    </td>
                     <td style={{ ...cell, textAlign: 'center', color: row.starter === '✓' ? '#16a34a' : '#374151' }}>{row.starter || <span style={{ color: '#d1d5db' }}>—</span>}</td>
                     <td style={{ ...cell, textAlign: 'center', background: '#f0f9ff', color: row.paid === '✓' ? '#16a34a' : '#374151' }}>{row.paid || <span style={{ color: '#d1d5db' }}>—</span>}</td>
-                    <td style={{ ...cell, textAlign: 'center', color: row.enterprise === '✓' ? '#16a34a' : '#374151' }}>{row.enterprise || <span style={{ color: '#d1d5db' }}>—</span>}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+
+          {/* Pool footnote */}
+          <p style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: 8, marginBottom: 0 }}>
+            * Pool = student&apos;s own sessions + parent contribution + counselor contribution. <SessionsInfoButton />
+          </p>
 
           {/* Self-serve checkout */}
           <CounselorCheckout />
@@ -282,6 +302,30 @@ export default function UpgradePage() {
           <div style={{ marginTop: 16, background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '14px 18px', fontSize: '0.875rem', color: '#92400e', lineHeight: 1.65 }}>
             <strong>Beta pricing, locked in forever.</strong> Upgrade now and your rate is guaranteed for as long as you remain subscribed. When we raise prices at public launch, yours stays the same. Questions?{' '}
             <a href={`mailto:${SUPPORT_EMAIL}`} style={{ color: '#92400e', fontWeight: 600 }}>{SUPPORT_EMAIL}</a>
+          </div>
+
+          {/* Add-ons */}
+          <div style={{ marginTop: 20, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '16px 20px' }}>
+            <p style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0c1b33', marginBottom: 10 }}>
+              Need more? Available as add-ons — email us to discuss:
+            </p>
+            <ul style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {[
+                'Essay coaching modules (CommonApp personal statement, UC PIQs, Why essays)',
+                'Practice branding — your logo, colors, and custom assistant name',
+                'Custom SLA, FERPA compliance, and extended data retention',
+                'Annual billing (20% off)',
+                'Enterprise / school district pricing',
+              ].map(item => (
+                <li key={item} style={{ fontSize: '0.85rem', color: '#374151', lineHeight: 1.5 }}>{item}</li>
+              ))}
+            </ul>
+            <p style={{ marginTop: 12, fontSize: '0.85rem', color: '#374151' }}>
+              Questions?{' '}
+              <a href={`mailto:${SUPPORT_EMAIL}?subject=Soar add-ons inquiry`} style={{ color: '#0369a1', fontWeight: 600 }}>
+                {SUPPORT_EMAIL}
+              </a>
+            </p>
           </div>
         </div>
 
