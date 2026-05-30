@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useAuth } from '@clerk/nextjs'
+import { useAuth, SignInButton, SignUpButton } from '@clerk/nextjs'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'https://lifelaunchr.onrender.com'
 
@@ -25,7 +25,7 @@ function unitRate(count: number): number {
 }
 
 export default function CounselorCheckout() {
-  const { getToken } = useAuth()
+  const { getToken, isSignedIn } = useAuth()
   const [count, setCount]     = useState(10)
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState('')
@@ -113,27 +113,69 @@ export default function CounselorCheckout() {
         <p style={{ fontSize: '0.83rem', color: '#dc2626', marginBottom: 12 }}>{error}</p>
       )}
 
-      <button
-        onClick={handleSubscribe}
-        disabled={loading}
-        style={{
-          background: loading ? '#93c5fd' : '#3b82f6',
-          color: '#fff',
-          fontWeight: 700,
-          fontSize: '0.95rem',
-          padding: '11px 28px',
-          borderRadius: 8,
-          border: 'none',
-          cursor: loading ? 'not-allowed' : 'pointer',
-          width: '100%',
-        }}
-      >
-        {loading ? 'Redirecting to checkout…' : `Subscribe — ${count} students`}
-      </button>
+      {isSignedIn ? (
+        <button
+          onClick={handleSubscribe}
+          disabled={loading}
+          style={{
+            background: loading ? '#93c5fd' : '#3b82f6',
+            color: '#fff',
+            fontWeight: 700,
+            fontSize: '0.95rem',
+            padding: '11px 28px',
+            borderRadius: 8,
+            border: 'none',
+            cursor: loading ? 'not-allowed' : 'pointer',
+            width: '100%',
+          }}
+        >
+          {loading ? 'Redirecting to checkout…' : `Subscribe — ${count} students`}
+        </button>
+      ) : (
+        <div>
+          <p style={{ fontSize: '0.85rem', color: '#374151', marginBottom: 12, fontWeight: 500 }}>
+            You&apos;ll need a free Soar account to subscribe:
+          </p>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <SignUpButton mode="modal" fallbackRedirectUrl="/upgrade">
+              <button style={{
+                flex: 1,
+                background: '#3b82f6',
+                color: '#fff',
+                fontWeight: 700,
+                fontSize: '0.9rem',
+                padding: '10px 16px',
+                borderRadius: 8,
+                border: 'none',
+                cursor: 'pointer',
+              }}>
+                Create free account
+              </button>
+            </SignUpButton>
+            <SignInButton mode="modal" fallbackRedirectUrl="/upgrade">
+              <button style={{
+                flex: 1,
+                background: '#fff',
+                color: '#374151',
+                fontWeight: 600,
+                fontSize: '0.9rem',
+                padding: '10px 16px',
+                borderRadius: 8,
+                border: '1px solid #d1d5db',
+                cursor: 'pointer',
+              }}>
+                Sign in
+              </button>
+            </SignInButton>
+          </div>
+        </div>
+      )}
 
       <p style={{ fontSize: '0.78rem', color: '#9ca3af', marginTop: 10, textAlign: 'center' }}>
-        Secure checkout via Stripe. Cancel anytime. Students and families?{' '}
-        <a href="mailto:help@lifelaunchr.com" style={{ color: '#9ca3af' }}>Contact us to upgrade.</a>
+        {isSignedIn
+          ? <>Secure checkout via Stripe. Cancel anytime. Students and families?{' '}<a href="mailto:help@lifelaunchr.com" style={{ color: '#9ca3af' }}>Contact us to upgrade.</a></>
+          : 'Free accounts include 3 students and 5 sessions/month — no credit card required.'
+        }
       </p>
     </div>
   )
