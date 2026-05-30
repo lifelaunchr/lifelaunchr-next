@@ -52,17 +52,39 @@ function marginalRate(tiers: PriceTier[], count: number): number {
 
 export default function CounselorCheckout() {
   const { getToken, isSignedIn } = useAuth()
-  const [count, setCount]       = useState(10)
-  const [loading, setLoading]   = useState(false)
-  const [error, setError]       = useState('')
-  const [tiers, setTiers]       = useState<PriceTier[]>(FALLBACK_TIERS)
+  const [count, setCount]            = useState(10)
+  const [activeStudentCount, setActiveStudentCount] = useState<number | null>(null)
+  const [loading, setLoading]        = useState(false)
+  const [error, setError]            = useState('')
+  const [tiers, setTiers]            = useState<PriceTier[]>(FALLBACK_TIERS)
 
+  // Fetch live price tiers
   useEffect(() => {
     fetch(`${API}/billing/price-tiers`)
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.tiers?.length) setTiers(d.tiers) })
       .catch(() => {/* keep fallback */})
   }, [])
+
+  // When signed in, fetch actual student count and default the picker to it
+  useEffect(() => {
+    if (!isSignedIn) return
+    getToken().then(token => {
+      fetch(`${API}/my-students`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (Array.isArray(data) && data.length > 0) {
+            const n = data.length
+            setActiveStudentCount(n)
+            // Default picker to their actual count (minimum 4 for paid tier)
+            setCount(Math.max(n, 4))
+          }
+        })
+        .catch(() => {/* leave default */})
+    })
+  }, [isSignedIn, getToken])
 
   const monthly = calculateFromTiers(tiers, count)
 
@@ -127,6 +149,30 @@ export default function CounselorCheckout() {
             students — ${marginalRate(tiers, count).toFixed(2)}/student (graduated) + $29.95 base
           </span>
         </div>
+
+        {/* Warn if selected count is below their actual student count */}
+        {activeStudentCount !== null && count < activeStudentCount && (
+          <div style={{
+            marginTop: 10,
+            background: '#fffbeb',
+            border: '1px solid #fcd34d',
+            borderRadius: 8,
+            padding: '10px 14px',
+            fontSize: '0.82rem',
+            color: '#92400e',
+            lineHeight: 1.5,
+          }}>
+            ⚠️ You currently have <strong>{activeStudentCount} active students</strong>.
+            Set this to at least {activeStudentCount} so all of them are covered by your plan.
+          </div>
+        )}
+
+        {/* Confirm when count matches or exceeds their actual student count */}
+        {activeStudentCount !== null && count >= activeStudentCount && (
+          <p style={{ fontSize: '0.8rem', color: '#16a34a', marginTop: 8 }}>
+            ✓ Covers all {activeStudentCount} of your current students
+          </p>
+        )}
       </div>
 
       {/* Price preview */}
