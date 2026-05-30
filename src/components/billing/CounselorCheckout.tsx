@@ -1,46 +1,70 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth, SignInButton } from '@clerk/nextjs'
 import Link from 'next/link'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'https://lifelaunchr.onrender.com'
 const ALLOWLIST_ENABLED = process.env.NEXT_PUBLIC_CLERK_ALLOWLIST_ENABLED === 'true'
 
-// Matches Stripe's graduated tier structure for price_1Tcu... (test) / price_1Tcak... (live)
-// Graduated = tiers apply progressively; flat fee charged once when that tier is entered.
-// Tier 1: units  1–3  → $0.00/unit, $0.00 flat
-// Tier 2: units  4–25 → $5.99/unit, $29.95 flat (charged once when count > 3)
-// Tier 3: units 26–75 → $4.99/unit, $0.00 flat
-// Tier 4: units 76+   → $3.99/unit, $0.00 flat
-function calculateMonthlyPrice(count: number): number {
-  if (count <= 3) return 0
+interface PriceTier {
+  unit_amount: number   // dollars
+  flat_amount: number   // dollars
+  up_to: number | null  // null = unlimited final tier
+}
+
+// Hardcoded fallback — used if the API call fails.
+// Keep in sync with Stripe if prices ever change, but ideally the live fetch below takes over.
+const FALLBACK_TIERS: PriceTier[] = [
+  { unit_amount: 0,    flat_amount: 0,     up_to: 3  },
+  { unit_amount: 5.99, flat_amount: 29.95, up_to: 25 },
+  { unit_amount: 4.99, flat_amount: 0,     up_to: 75 },
+  { unit_amount: 3.99, flat_amount: 0,     up_to: null },
+]
+
+// Graduated: tiers apply progressively; flat fee charged once per tier entered.
+function calculateFromTiers(tiers: PriceTier[], count: number): number {
   let total = 0
-  // Tier 2: units 4–25
-  const tier2 = Math.min(count, 25) - 3
-  total += tier2 * 5.99 + 29.95
-  // Tier 3: units 26–75
-  if (count > 25) total += (Math.min(count, 75) - 25) * 4.99
-  // Tier 4: units 76+
-  if (count > 75) total += (count - 75) * 3.99
+  let tierStart = 1
+  for (const tier of tiers) {
+    const tierEnd = tier.up_to ?? Infinity
+    if (count < tierStart) break
+    const unitsInTier = Math.min(count, tierEnd) - tierStart + 1
+    if (unitsInTier > 0) {
+      total += unitsInTier * tier.unit_amount
+      if (tier.flat_amount > 0) total += tier.flat_amount
+    }
+    tierStart = (tier.up_to ?? 0) + 1
+  }
   return total
 }
 
-// Marginal rate for the next student added at this count
-function marginalRate(count: number): number {
-  if (count <= 3)  return 0
-  if (count <= 25) return 5.99
-  if (count <= 75) return 4.99
-  return 3.99
+// Per-unit rate for the tier containing `count`
+function marginalRate(tiers: PriceTier[], count: number): number {
+  let tierStart = 1
+  for (const tier of tiers) {
+    const tierEnd = tier.up_to ?? Infinity
+    if (count >= tierStart && count <= tierEnd) return tier.unit_amount
+    tierStart = (tier.up_to ?? 0) + 1
+  }
+  return 0
 }
 
 export default function CounselorCheckout() {
   const { getToken, isSignedIn } = useAuth()
-  const [count, setCount]     = useState(10)
-  const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState('')
+  const [count, setCount]       = useState(10)
+  const [loading, setLoading]   = useState(false)
+  const [error, setError]       = useState('')
+  const [tiers, setTiers]       = useState<PriceTier[]>(FALLBACK_TIERS)
 
-  const monthly = calculateMonthlyPrice(count)
+  useEffect(() => {
+    fetch(`${API}/billing/price-tiers`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.tiers?.length) setTiers(d.tiers) })
+      .catch(() => {/* keep fallback */})
+  }, [])
+
+  const monthly = calculateFromTiers(tiers, count)
 
   async function handleSubscribe() {
     setLoading(true)
@@ -100,7 +124,7 @@ export default function CounselorCheckout() {
             }}
           />
           <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>
-            students — ${marginalRate(count).toFixed(2)}/student (graduated) + $29.95 base
+            students — ${marginalRate(tiers, count).toFixed(2)}/student (graduated) + $29.95 base
           </span>
         </div>
       </div>
