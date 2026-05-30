@@ -1,9 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { useAuth, SignInButton, SignUpButton } from '@clerk/nextjs'
+import { useAuth, SignInButton } from '@clerk/nextjs'
+import Link from 'next/link'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'https://lifelaunchr.onrender.com'
+const ALLOWLIST_ENABLED = process.env.NEXT_PUBLIC_CLERK_ALLOWLIST_ENABLED === 'true'
 
 // Matches Stripe's graduated tier structure for price_1Tcu... (test) / price_1Tcak... (live)
 // Tier 1: 1–3 students  → $0
@@ -131,14 +133,16 @@ export default function CounselorCheckout() {
         >
           {loading ? 'Redirecting to checkout…' : `Subscribe — ${count} students`}
         </button>
-      ) : (
+      ) : ALLOWLIST_ENABLED ? (
+        /* Invite-only mode — open sign-up is disabled */
         <div>
           <p style={{ fontSize: '0.85rem', color: '#374151', marginBottom: 12, fontWeight: 500 }}>
-            You&apos;ll need a free Soar account to subscribe:
+            Soar is currently invite-only. Request access and we&apos;ll get you set up:
           </p>
           <div style={{ display: 'flex', gap: 10 }}>
-            <SignUpButton mode="modal" fallbackRedirectUrl="/upgrade">
-              <button style={{
+            <Link
+              href="/#request-access"
+              style={{
                 flex: 1,
                 background: '#3b82f6',
                 color: '#fff',
@@ -146,12 +150,54 @@ export default function CounselorCheckout() {
                 fontSize: '0.9rem',
                 padding: '10px 16px',
                 borderRadius: 8,
-                border: 'none',
+                textDecoration: 'none',
+                textAlign: 'center',
+                display: 'block',
+              }}
+            >
+              Request an invite →
+            </Link>
+            <SignInButton mode="modal" fallbackRedirectUrl="/upgrade">
+              <button style={{
+                flex: 1,
+                background: '#fff',
+                color: '#374151',
+                fontWeight: 600,
+                fontSize: '0.9rem',
+                padding: '10px 16px',
+                borderRadius: 8,
+                border: '1px solid #d1d5db',
                 cursor: 'pointer',
               }}>
-                Create free account
+                Sign in
               </button>
-            </SignUpButton>
+            </SignInButton>
+          </div>
+        </div>
+      ) : (
+        /* Open sign-up mode */
+        <div>
+          <p style={{ fontSize: '0.85rem', color: '#374151', marginBottom: 12, fontWeight: 500 }}>
+            You&apos;ll need a free Soar account to subscribe:
+          </p>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <Link
+              href="/sign-up"
+              style={{
+                flex: 1,
+                background: '#3b82f6',
+                color: '#fff',
+                fontWeight: 700,
+                fontSize: '0.9rem',
+                padding: '10px 16px',
+                borderRadius: 8,
+                textDecoration: 'none',
+                textAlign: 'center',
+                display: 'block',
+              }}
+            >
+              Create free account
+            </Link>
             <SignInButton mode="modal" fallbackRedirectUrl="/upgrade">
               <button style={{
                 flex: 1,
@@ -174,7 +220,9 @@ export default function CounselorCheckout() {
       <p style={{ fontSize: '0.78rem', color: '#9ca3af', marginTop: 10, textAlign: 'center' }}>
         {isSignedIn
           ? <>Secure checkout via Stripe. Cancel anytime. Students and families?{' '}<a href="mailto:help@lifelaunchr.com" style={{ color: '#9ca3af' }}>Contact us to upgrade.</a></>
-          : 'Free accounts include 3 students and 5 sessions/month — no credit card required.'
+          : ALLOWLIST_ENABLED
+            ? <>Already have an account? Sign in above. Questions? <a href="mailto:help@lifelaunchr.com" style={{ color: '#9ca3af' }}>Email us.</a></>
+            : 'Free accounts include 3 students and 5 sessions/month — no credit card required.'
         }
       </p>
     </div>
