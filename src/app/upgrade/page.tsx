@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import CounselorCheckout from '@/components/billing/CounselorCheckout'
 
 export const metadata: Metadata = {
   title: 'Plans & Pricing — Soar by LifeLaunchr',
@@ -273,6 +274,9 @@ export default function UpgradePage() {
               </tbody>
             </table>
           </div>
+
+          {/* Self-serve checkout */}
+          <CounselorCheckout />
 
           {/* Beta pricing note */}
           <div style={{ marginTop: 16, background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '14px 18px', fontSize: '0.875rem', color: '#92400e', lineHeight: 1.65 }}>

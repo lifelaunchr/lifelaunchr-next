@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { useAuth } from '@clerk/nextjs'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
@@ -92,7 +93,7 @@ export default function AddFamilyModal({ open, onClose, onSuccess, counselors }:
 
   // ── Result / UI state ─────────────────────────────────────────────────────
   const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError] = useState<React.ReactNode>('')
   const [result, setResult] = useState<FamilyResult | null>(null)
   const [resultNames, setResultNames] = useState({ studentName: '', parentNames: [] as string[] })
 
@@ -220,7 +221,15 @@ export default function AddFamilyModal({ open, onClose, onSuccess, counselors }:
               `To add more students, upgrade ${name}'s plan or archive inactive students from their roster.`
             )
           }
-          throw new Error("You've reached your student limit. Upgrade your plan or archive inactive students to add more.")
+          setError(
+            <>
+              You&apos;ve reached your student limit.{' '}
+              <Link href="/upgrade" className="underline font-semibold">Upgrade your plan</Link>
+              {' '}or archive inactive students to add more.
+            </>
+          )
+          setSubmitting(false)
+          return
         }
         throw new Error(typeof detail === 'string' ? detail : 'Error ' + res.status)
       }
