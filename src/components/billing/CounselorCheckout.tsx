@@ -8,22 +8,30 @@ const API = process.env.NEXT_PUBLIC_API_URL || 'https://lifelaunchr.onrender.com
 const ALLOWLIST_ENABLED = process.env.NEXT_PUBLIC_CLERK_ALLOWLIST_ENABLED === 'true'
 
 // Matches Stripe's graduated tier structure for price_1Tcu... (test) / price_1Tcak... (live)
-// Tier 1: 1–3 students  → $0
-// Tier 2: 4–25 students → $29.95 flat + $5.95 × count
-// Tier 3: 26–75 students → $29.95 flat + $4.95 × count
-// Tier 4: 76+           → $29.95 flat + $3.95 × count
+// Graduated = tiers apply progressively; flat fee charged once when that tier is entered.
+// Tier 1: units  1–3  → $0.00/unit, $0.00 flat
+// Tier 2: units  4–25 → $5.99/unit, $29.95 flat (charged once when count > 3)
+// Tier 3: units 26–75 → $4.99/unit, $0.00 flat
+// Tier 4: units 76+   → $3.99/unit, $0.00 flat
 function calculateMonthlyPrice(count: number): number {
-  if (count <= 3)  return 0
-  if (count <= 25) return 29.95 + count * 5.95
-  if (count <= 75) return 29.95 + count * 4.95
-  return 29.95 + count * 3.95
+  if (count <= 3) return 0
+  let total = 0
+  // Tier 2: units 4–25
+  const tier2 = Math.min(count, 25) - 3
+  total += tier2 * 5.99 + 29.95
+  // Tier 3: units 26–75
+  if (count > 25) total += (Math.min(count, 75) - 25) * 4.99
+  // Tier 4: units 76+
+  if (count > 75) total += (count - 75) * 3.99
+  return total
 }
 
-function unitRate(count: number): number {
+// Marginal rate for the next student added at this count
+function marginalRate(count: number): number {
   if (count <= 3)  return 0
-  if (count <= 25) return 5.95
-  if (count <= 75) return 4.95
-  return 3.95
+  if (count <= 25) return 5.99
+  if (count <= 75) return 4.99
+  return 3.99
 }
 
 export default function CounselorCheckout() {
@@ -92,7 +100,7 @@ export default function CounselorCheckout() {
             }}
           />
           <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>
-            students × ${unitRate(count).toFixed(2)}/student + $29.95 base
+            students — ${marginalRate(count).toFixed(2)}/student (graduated) + $29.95 base
           </span>
         </div>
       </div>
