@@ -69,17 +69,21 @@ export default function CounselorCheckout() {
 
   const tiers = interval === 'annual' ? tiersAnnual : tiersMonthly
 
-  // Fetch live price tiers for both intervals
+  // Fetch live price tiers for both intervals (auth required; unauthenticated visitors use fallback)
   useEffect(() => {
-    fetch(`${API}/billing/price-tiers?interval=monthly`)
-      .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d?.tiers?.length) setTiersMonthly(d.tiers) })
-      .catch(() => {/* keep fallback */})
-    fetch(`${API}/billing/price-tiers?interval=annual`)
-      .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d?.tiers?.length) setTiersAnnual(d.tiers) })
-      .catch(() => {/* keep fallback */})
-  }, [])
+    if (!isSignedIn) return
+    getToken().then(token => {
+      const headers = { Authorization: `Bearer ${token}` }
+      fetch(`${API}/billing/price-tiers?interval=monthly`, { headers })
+        .then(r => r.ok ? r.json() : null)
+        .then(d => { if (d?.tiers?.length) setTiersMonthly(d.tiers) })
+        .catch(() => {/* keep fallback */})
+      fetch(`${API}/billing/price-tiers?interval=annual`, { headers })
+        .then(r => r.ok ? r.json() : null)
+        .then(d => { if (d?.tiers?.length) setTiersAnnual(d.tiers) })
+        .catch(() => {/* keep fallback */})
+    })
+  }, [isSignedIn, getToken])
 
   // When signed in, check tenant admin status and fetch active student count
   useEffect(() => {
