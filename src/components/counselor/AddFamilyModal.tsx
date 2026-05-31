@@ -213,12 +213,29 @@ export default function AddFamilyModal({ open, onClose, onSuccess, counselors }:
       if (!res.ok) {
         const d = await res.json().catch(() => ({}))
         const detail = d.detail
+        if (detail?.code === 'PRACTICE_AT_CAPACITY') {
+          if (detail?.tenant_admin) {
+            setError(
+              <>
+                Your practice has reached its student limit ({detail.active}/{detail.limit}).{' '}
+                <Link href="/upgrade" className="underline font-semibold">Update your plan</Link>
+                {' '}to add more students.
+              </>
+            )
+          } else {
+            setError(
+              'Your practice has reached its student limit. Contact your practice admin to update the plan.'
+            )
+          }
+          setSubmitting(false)
+          return
+        }
         if (detail === 'COUNSELOR_AT_CAPACITY' || detail?.code === 'COUNSELOR_AT_CAPACITY') {
           if (isTenantAdmin && detail?.code === 'COUNSELOR_AT_CAPACITY') {
             const name = counselors?.find(c => c.id === selectedCounselorId)?.full_name || 'This counselor'
             throw new Error(
-              `${name} is at their student limit (${detail.active}/${detail.limit}). ` +
-              `To add more students, upgrade ${name}'s plan or archive inactive students from their roster.`
+              `${name} is at their personal student limit (${detail.active}/${detail.limit}). ` +
+              `Go to their profile to adjust the limit.`
             )
           }
           setError(

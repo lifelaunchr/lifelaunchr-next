@@ -15,11 +15,17 @@ interface PriceTier {
 
 // Hardcoded fallback — used if the API call fails.
 // Keep in sync with Stripe if prices ever change, but ideally the live fetch below takes over.
-const FALLBACK_TIERS: PriceTier[] = [
-  { unit_amount: 0,    flat_amount: 0,     up_to: 3  },
-  { unit_amount: 5.99, flat_amount: 29.95, up_to: 25 },
-  { unit_amount: 4.99, flat_amount: 0,     up_to: 75 },
-  { unit_amount: 3.99, flat_amount: 0,     up_to: null },
+const FALLBACK_TIERS_MONTHLY: PriceTier[] = [
+  { unit_amount: 0,    flat_amount: 0,      up_to: 3  },
+  { unit_amount: 5.99, flat_amount: 29.95,  up_to: 25 },
+  { unit_amount: 4.99, flat_amount: 0,      up_to: 75 },
+  { unit_amount: 3.99, flat_amount: 0,      up_to: null },
+]
+const FALLBACK_TIERS_ANNUAL: PriceTier[] = [
+  { unit_amount: 0,     flat_amount: 0,       up_to: 3  },
+  { unit_amount: 59.90, flat_amount: 299.50,  up_to: 25 },
+  { unit_amount: 49.90, flat_amount: 0,       up_to: 75 },
+  { unit_amount: 39.90, flat_amount: 0,       up_to: null },
 ]
 
 // Graduated: tiers apply progressively; flat fee charged once per tier entered.
@@ -52,41 +58,72 @@ function marginalRate(tiers: PriceTier[], count: number): number {
 
 export default function CounselorCheckout() {
   const { getToken, isSignedIn } = useAuth()
-  const [count, setCount]            = useState(10)
+  const [count, setCount]                   = useState(10)
   const [activeStudentCount, setActiveStudentCount] = useState<number | null>(null)
-  const [loading, setLoading]        = useState(false)
-  const [error, setError]            = useState('')
-  const [tiers, setTiers]            = useState<PriceTier[]>(FALLBACK_TIERS)
+  const [isTenantAdmin, setIsTenantAdmin]   = useState<boolean | null>(null)
+  const [loading, setLoading]               = useState(false)
+  const [error, setError]                   = useState('')
+  const [interval, setInterval]             = useState<'monthly' | 'annual'>('monthly')
+  const [tiersMonthly, setTiersMonthly]     = useState<PriceTier[]>(FALLBACK_TIERS_MONTHLY)
+  const [tiersAnnual, setTiersAnnual]       = useState<PriceTier[]>(FALLBACK_TIERS_ANNUAL)
 
-  // Fetch live price tiers
+  const tiers = interval === 'annual' ? tiersAnnual : tiersMonthly
+
+  // Fetch live price tiers for both intervals
   useEffect(() => {
-    fetch(`${API}/billing/price-tiers`)
+    fetch(`${API}/billing/price-tiers?interval=monthly`)
       .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d?.tiers?.length) setTiers(d.tiers) })
+      .then(d => { if (d?.tiers?.length) setTiersMonthly(d.tiers) })
+      .catch(() => {/* keep fallback */})
+    fetch(`${API}/billing/price-tiers?interval=annual`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.tiers?.length) setTiersAnnual(d.tiers) })
       .catch(() => {/* keep fallback */})
   }, [])
 
-  // When signed in, fetch actual student count and default the picker to it
+  // When signed in, check tenant admin status and fetch active student count
   useEffect(() => {
     if (!isSignedIn) return
     getToken().then(token => {
-      fetch(`${API}/my-students`, {
+      fetch(`${API}/my-usage`, {
         headers: { Authorization: `Bearer ${token}` },
       })
         .then(r => r.ok ? r.json() : null)
         .then(data => {
-          if (Array.isArray(data) && data.length > 0) {
-            const n = data.length
+          if (data) setIsTenantAdmin(!!data.is_tenant_admin)
+        })
+        .catch(() => {})
+
+      // Fetch tenant-wide active student count via subscription-status
+      fetch(`${API}/billing/subscription-status`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data && typeof data.active_student_count === 'number') {
+            const n = data.active_student_count
             setActiveStudentCount(n)
-            // Default picker to their actual count (minimum 4 for paid tier)
             setCount(Math.max(n, 4))
           }
         })
-        .catch(() => {/* leave default */})
+        .catch(() => {
+          // Fallback: fetch /my-students for counselor-level count
+          fetch(`${API}/my-students`, { headers: { Authorization: `Bearer ${token}` } })
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+              if (Array.isArray(data) && data.length > 0) {
+                const n = data.length
+                setActiveStudentCount(n)
+                setCount(Math.max(n, 4))
+              }
+            })
+            .catch(() => {})
+        })
     })
   }, [isSignedIn, getToken])
 
-  const monthly = calculateFromTiers(tiers, count)
+  const total   = calculateFromTiers(tiers, count)
+  const isAnnual = interval === 'annual'
 
   async function handleSubscribe() {
     setLoading(true)
@@ -96,7 +133,7 @@ export default function CounselorCheckout() {
       const res = await fetch(`${API}/billing/create-checkout-session`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body:    JSON.stringify({ student_count: count }),
+        body:    JSON.stringify({ student_count: count, billing_interval: interval }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.detail || 'Something went wrong')
@@ -105,6 +142,27 @@ export default function CounselorCheckout() {
       setError(e instanceof Error ? e.message : 'Something went wrong — try again or email help@lifelaunchr.com')
       setLoading(false)
     }
+  }
+
+  // Signed-in non-admin: show contact-admin message
+  if (isSignedIn && isTenantAdmin === false) {
+    return (
+      <div style={{
+        background: '#f9fafb',
+        border: '1px solid #e5e7eb',
+        borderRadius: 12,
+        padding: '24px 28px',
+        marginTop: 20,
+      }}>
+        <p style={{ fontSize: '0.95rem', fontWeight: 600, color: '#374151', marginBottom: 8 }}>
+          Your practice admin manages the subscription.
+        </p>
+        <p style={{ fontSize: '0.85rem', color: '#6b7280', lineHeight: 1.6 }}>
+          Contact your practice admin to update the plan or add more students.
+          Questions? <a href="mailto:help@lifelaunchr.com" style={{ color: '#3b82f6' }}>Email us.</a>
+        </p>
+      </div>
+    )
   }
 
   return (
@@ -120,8 +178,35 @@ export default function CounselorCheckout() {
       </p>
       <p style={{ fontSize: '0.82rem', color: '#6b7280', marginBottom: 20, lineHeight: 1.5 }}>
         $29.95/month + per-student fee. Volume discounts apply automatically.
-        Annual billing saves 20%.
+        Annual billing — 2 months free.
       </p>
+
+      {/* Billing interval toggle */}
+      <div style={{ marginBottom: 20 }}>
+        <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#374151', display: 'block', marginBottom: 8 }}>
+          Billing interval
+        </label>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {(['monthly', 'annual'] as const).map(opt => (
+            <button
+              key={opt}
+              onClick={() => setInterval(opt)}
+              style={{
+                padding: '7px 18px',
+                borderRadius: 8,
+                border: interval === opt ? '2px solid #3b82f6' : '1px solid #d1d5db',
+                background: interval === opt ? '#eff6ff' : '#fff',
+                color: interval === opt ? '#1d4ed8' : '#374151',
+                fontWeight: interval === opt ? 700 : 500,
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+              }}
+            >
+              {opt === 'monthly' ? 'Monthly' : 'Annual — 2 months free'}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Student count picker */}
       <div style={{ marginBottom: 20 }}>
@@ -146,7 +231,10 @@ export default function CounselorCheckout() {
             }}
           />
           <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>
-            students — ${marginalRate(tiers, count).toFixed(2)}/student (graduated) + $29.95 base
+            {isAnnual
+              ? `students — $${marginalRate(tiers, count).toFixed(2)}/student/year (graduated) + $299.50 base/year`
+              : `students — $${marginalRate(tiers, count).toFixed(2)}/student (graduated) + $29.95 base`
+            }
           </span>
         </div>
 
@@ -162,7 +250,7 @@ export default function CounselorCheckout() {
             color: '#92400e',
             lineHeight: 1.5,
           }}>
-            ⚠️ You currently have <strong>{activeStudentCount} active students</strong>.
+            ⚠️ Your practice currently has <strong>{activeStudentCount} active students</strong>.
             Set this to at least {activeStudentCount} so all of them are covered by your plan.
           </div>
         )}
@@ -170,7 +258,7 @@ export default function CounselorCheckout() {
         {/* Confirm when count matches or exceeds their actual student count */}
         {activeStudentCount !== null && count >= activeStudentCount && (
           <p style={{ fontSize: '0.8rem', color: '#16a34a', marginTop: 8 }}>
-            ✓ Covers all {activeStudentCount} of your current students
+            ✓ Covers all {activeStudentCount} of your practice&apos;s current students
           </p>
         )}
       </div>
@@ -183,10 +271,20 @@ export default function CounselorCheckout() {
         padding: '14px 18px',
         marginBottom: 20,
       }}>
-        <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Monthly total</p>
-        <p style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0c1b33' }}>
-          ${monthly.toFixed(2)}<span style={{ fontSize: '0.85rem', fontWeight: 400, color: '#6b7280' }}>/mo</span>
+        <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          {isAnnual ? 'Annual total (billed once per year)' : 'Monthly total'}
         </p>
+        <p style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0c1b33' }}>
+          ${total.toFixed(2)}
+          <span style={{ fontSize: '0.85rem', fontWeight: 400, color: '#6b7280' }}>
+            {isAnnual ? '/yr' : '/mo'}
+          </span>
+        </p>
+        {isAnnual && (
+          <p style={{ fontSize: '0.78rem', color: '#16a34a', marginTop: 4 }}>
+            Saves ${(calculateFromTiers(tiersMonthly, count) * 12 - total).toFixed(2)} vs. monthly
+          </p>
+        )}
       </div>
 
       {error && (
@@ -209,7 +307,7 @@ export default function CounselorCheckout() {
             width: '100%',
           }}
         >
-          {loading ? 'Redirecting to checkout…' : `Subscribe — ${count} students`}
+          {loading ? 'Redirecting to checkout…' : `Subscribe — ${count} students${isAnnual ? ' (annual)' : ''}`}
         </button>
       ) : ALLOWLIST_ENABLED ? (
         /* Invite-only mode — open sign-up is disabled */
