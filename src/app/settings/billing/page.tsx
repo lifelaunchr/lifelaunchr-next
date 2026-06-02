@@ -165,7 +165,7 @@ export default function BillingPage() {
     )
   }
 
-  const isSubscribed = status?.plan && status.plan !== 'counselor_starter' && status.plan !== 'free'
+  const isSubscribed = status?.is_subscribed
   const isAnnual = status?.billing_interval === 'annual'
   const countChanged = newCount !== (status?.student_count ?? 0)
 

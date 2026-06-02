@@ -110,8 +110,8 @@ export default function CounselorCheckout() {
             setActiveStudentCount(n)
             setCount(Math.max(n, 4))
           }
-          // If already subscribed, show manage link instead of checkout form
-          if (data?.plan && data.plan !== 'counselor_starter' && data.plan !== 'free') {
+          // If already subscribed (active Stripe subscription), show manage link instead of checkout form
+          if (data?.is_subscribed) {
             setIsSubscribed(true)
           }
         })
