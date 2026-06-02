@@ -172,7 +172,7 @@ export default function CounselorCheckout() {
           <p style={{ fontSize: '0.95rem', fontWeight: 600, color: '#166534', marginBottom: 4 }}>
             ✓ Your practice has an active Soar subscription.
           </p>
-          <p style={{ fontSize: '0.85rem', color: '#4ade80', color: '#15803d', lineHeight: 1.5 }}>
+          <p style={{ fontSize: '0.85rem', color: '#15803d', lineHeight: 1.5 }}>
             Manage your plan, update student count, or view invoices.
           </p>
         </div>
