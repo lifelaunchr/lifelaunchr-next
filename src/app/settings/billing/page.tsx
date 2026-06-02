@@ -13,6 +13,7 @@ interface SubscriptionStatus {
   renewal_date: number | null   // Unix timestamp from Stripe
   billing_interval: 'monthly' | 'annual'
   period_total: number | null
+  is_subscribed: boolean
 }
 
 function formatDate(ts: number | null): string {
