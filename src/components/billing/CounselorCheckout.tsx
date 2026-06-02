@@ -345,16 +345,16 @@ export default function CounselorCheckout() {
       {isSignedIn ? (
         <button
           onClick={handleSubscribe}
-          disabled={loading}
+          disabled={loading || count < activeStudentCount}
           style={{
-            background: loading ? '#93c5fd' : '#3b82f6',
+            background: (loading || count < activeStudentCount) ? '#93c5fd' : '#3b82f6',
             color: '#fff',
             fontWeight: 700,
             fontSize: '0.95rem',
             padding: '11px 28px',
             borderRadius: 8,
             border: 'none',
-            cursor: loading ? 'not-allowed' : 'pointer',
+            cursor: (loading || count < activeStudentCount) ? 'not-allowed' : 'pointer',
             width: '100%',
           }}
         >
