@@ -59,7 +59,7 @@ function marginalRate(tiers: PriceTier[], count: number): number {
 export default function CounselorCheckout() {
   const { getToken, isSignedIn } = useAuth()
   const [count, setCount]                   = useState(10)
-  const [activeStudentCount, setActiveStudentCount] = useState<number | null>(null)
+  const [activeStudentCount, setActiveStudentCount] = useState<number>(0)
   const [isTenantAdmin, setIsTenantAdmin]   = useState<boolean | null>(null)
   const [isSubscribed, setIsSubscribed]     = useState(false)
   const [loading, setLoading]               = useState(false)
@@ -290,7 +290,7 @@ export default function CounselorCheckout() {
         </div>
 
         {/* Warn if selected count is below their actual student count */}
-        {activeStudentCount !== null && count < activeStudentCount && (
+        {activeStudentCount > 0 && count < activeStudentCount && (
           <div style={{
             marginTop: 10,
             background: '#fffbeb',
@@ -307,7 +307,7 @@ export default function CounselorCheckout() {
         )}
 
         {/* Confirm when count matches or exceeds their actual student count */}
-        {activeStudentCount !== null && count >= activeStudentCount && (
+        {activeStudentCount > 0 && count >= activeStudentCount && (
           <p style={{ fontSize: '0.8rem', color: '#16a34a', marginTop: 8 }}>
             ✓ Covers all {activeStudentCount}{' '}of your practice&apos;s current students
           </p>
