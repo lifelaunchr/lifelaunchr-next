@@ -262,7 +262,7 @@ export default function CounselorCheckout() {
         {/* Confirm when count matches or exceeds their actual student count */}
         {activeStudentCount !== null && count >= activeStudentCount && (
           <p style={{ fontSize: '0.8rem', color: '#16a34a', marginTop: 8 }}>
-            ✓ Covers all {activeStudentCount} of your practice&apos;s current students
+            ✓ Covers all {activeStudentCount}{' '}of your practice&apos;s current students
           </p>
         )}
       </div>
