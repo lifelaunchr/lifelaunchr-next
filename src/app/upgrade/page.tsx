@@ -57,7 +57,7 @@ const STUDENT_FEATURES = [
 const COUNSELOR_FEATURES = [
   { label: 'Your research sessions/month', starter: '5', paid: '15' },
   { label: "Each student's monthly pool", starter: '5 sessions', paid: 'Up to 25 sessions' },
-  { label: 'Active students', starter: 'Up to 3', paid: 'Unlimited' },
+  { label: 'Active students', starter: 'Up to 3', paid: 'Based on plan' },
   { label: 'Student profiles and college lists', starter: '✓', paid: '✓' },
   { label: 'Session reports and meeting briefs', starter: '✓', paid: '✓' },
   { label: 'Research history', starter: '90 days', paid: '1 year' },
@@ -231,7 +231,6 @@ export default function UpgradePage() {
                 'Essay coaching modules (CommonApp personal statement, UC PIQs, Why essays)',
                 'Practice branding — your logo, colors, and custom assistant name',
                 'Custom SLA, FERPA compliance, and extended data retention',
-                'Annual billing (20% off)',
                 'Enterprise / school district pricing',
               ].map(item => (
                 <li key={item} style={{ fontSize: '0.85rem', color: '#374151', lineHeight: 1.5 }}>{item}</li>

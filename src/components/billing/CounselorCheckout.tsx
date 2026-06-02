@@ -61,6 +61,7 @@ export default function CounselorCheckout() {
   const [count, setCount]                   = useState(10)
   const [activeStudentCount, setActiveStudentCount] = useState<number | null>(null)
   const [isTenantAdmin, setIsTenantAdmin]   = useState<boolean | null>(null)
+  const [isSubscribed, setIsSubscribed]     = useState(false)
   const [loading, setLoading]               = useState(false)
   const [error, setError]                   = useState('')
   const [interval, setInterval]             = useState<'monthly' | 'annual'>('monthly')
@@ -109,6 +110,10 @@ export default function CounselorCheckout() {
             setActiveStudentCount(n)
             setCount(Math.max(n, 4))
           }
+          // If already subscribed, show manage link instead of checkout form
+          if (data?.plan && data.plan !== 'counselor_starter' && data.plan !== 'free') {
+            setIsSubscribed(true)
+          }
         })
         .catch(() => {
           // Fallback: fetch /my-students for counselor-level count
@@ -146,6 +151,48 @@ export default function CounselorCheckout() {
       setError(e instanceof Error ? e.message : 'Something went wrong — try again or email help@lifelaunchr.com')
       setLoading(false)
     }
+  }
+
+  // Signed-in tenant admin who is already subscribed: show manage link
+  if (isSignedIn && isTenantAdmin && isSubscribed) {
+    return (
+      <div style={{
+        background: '#f0fdf4',
+        border: '1px solid #bbf7d0',
+        borderRadius: 12,
+        padding: '20px 28px',
+        marginTop: 20,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 16,
+        flexWrap: 'wrap',
+      }}>
+        <div>
+          <p style={{ fontSize: '0.95rem', fontWeight: 600, color: '#166534', marginBottom: 4 }}>
+            ✓ Your practice has an active Soar subscription.
+          </p>
+          <p style={{ fontSize: '0.85rem', color: '#4ade80', color: '#15803d', lineHeight: 1.5 }}>
+            Manage your plan, update student count, or view invoices.
+          </p>
+        </div>
+        <a
+          href="/settings/billing"
+          style={{
+            background: '#16a34a',
+            color: '#fff',
+            fontWeight: 700,
+            fontSize: '0.9rem',
+            padding: '9px 20px',
+            borderRadius: 8,
+            textDecoration: 'none',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          Manage subscription →
+        </a>
+      </div>
+    )
   }
 
   // Signed-in non-admin: show contact-admin message

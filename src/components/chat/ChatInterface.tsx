@@ -1440,6 +1440,16 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                 </Link>
               )}
 
+              {usageData?.is_tenant_admin && (
+                <Link
+                  href="/settings/billing"
+                  className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                >
+                  <span className="text-base leading-none">💳</span>
+                  <span>Billing & Plan</span>
+                </Link>
+              )}
+
               {/* Student profile + lists — shown when a student is selected (counselor/parent) */}
               {(isCounselor || isParent) && forStudentId && (
                 <>
