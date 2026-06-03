@@ -202,6 +202,11 @@ export default function BillingPage() {
   // ── Subscribed ────────────────────────────────────────────────────────────
   return (
     <div style={pageWrap}>
+      <div style={{ marginBottom: 20 }}>
+        <Link href="/chat" style={{ fontSize: '0.85rem', color: '#6b7280', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+          ← Back to Soar
+        </Link>
+      </div>
       <h1 style={h1}>Billing & Plan</h1>
 
       {/* Current plan summary */}
