@@ -201,12 +201,18 @@ export default function BillingPage() {
 
   // ── Subscribed ────────────────────────────────────────────────────────────
   return (
-    <div style={pageWrap}>
-      <div style={{ marginBottom: 20 }}>
-        <Link href="/chat" style={{ fontSize: '0.85rem', color: '#6b7280', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+    <div>
+      {/* Header */}
+      <header style={{ background: '#0c1b33', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} className="px-4 sm:px-6 py-3">
+        <Link href="/" style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>
+          <span style={{ color: '#7dd3fc' }}>Soar</span> by LifeLaunchr
+        </Link>
+        <Link href="/chat" style={{ fontSize: '0.82rem', color: '#8888aa', textDecoration: 'none', border: '1px solid #444466', padding: '4px 12px', borderRadius: 6 }}>
           ← Back to Soar
         </Link>
-      </div>
+      </header>
+
+      <div style={pageWrap}>
       <h1 style={h1}>Billing & Plan</h1>
 
       {/* Current plan summary */}
@@ -366,6 +372,7 @@ export default function BillingPage() {
       <p style={{ fontSize: '0.8rem', color: '#9ca3af', textAlign: 'center', marginTop: 8 }}>
         Questions? <a href="mailto:help@lifelaunchr.com" style={{ color: '#9ca3af' }}>help@lifelaunchr.com</a>
       </p>
+      </div>
     </div>
   )
 }
@@ -387,6 +394,7 @@ const pageWrap: React.CSSProperties = {
   maxWidth: 640,
   margin: '0 auto',
   padding: '32px 16px 64px',
+  // header handles top spacing
   fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
 }
 
