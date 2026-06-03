@@ -29,11 +29,13 @@ export default function BillingPage() {
   const [loadingStatus, setLoadingStatus] = useState(true)
 
   // Update plan state
-  const [newCount, setNewCount]     = useState<number>(4)
-  const [updating, setUpdating]     = useState(false)
-  const [updateError, setUpdateError] = useState('')
+  const [newCount, setNewCount]         = useState<number>(4)
+  const [updating, setUpdating]         = useState(false)
+  const [updateError, setUpdateError]   = useState('')
   const [prorationPreview, setProrationPreview] = useState<number | null>(null)
-  const [showConfirm, setShowConfirm] = useState(false)
+  const [newPeriodTotal, setNewPeriodTotal] = useState<number | null>(null)
+  const [previewRenewalDate, setPreviewRenewalDate] = useState<number | null>(null)
+  const [showConfirm, setShowConfirm]   = useState(false)
 
   // Portal
   const [portalLoading, setPortalLoading] = useState(false)
@@ -64,11 +66,6 @@ export default function BillingPage() {
   }, [isLoaded, isSignedIn, getToken])
 
   async function handleDryRun() {
-    if (!status?.billing_interval || status.billing_interval !== 'annual') {
-      // Monthly — no proration preview needed, go straight to confirm
-      setShowConfirm(true)
-      return
-    }
     setUpdating(true)
     setUpdateError('')
     try {
@@ -81,6 +78,8 @@ export default function BillingPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.detail || 'Something went wrong')
       setProrationPreview(data.proration_amount ?? null)
+      setNewPeriodTotal(data.new_period_total ?? null)
+      setPreviewRenewalDate(data.next_renewal_date ?? null)
       setShowConfirm(true)
     } catch (e: unknown) {
       setUpdateError(e instanceof Error ? e.message : 'Something went wrong')
@@ -268,20 +267,35 @@ export default function BillingPage() {
           </p>
         )}
 
-        {/* Proration preview (annual only) */}
-        {showConfirm && isAnnual && prorationPreview !== null && (
-          <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8, padding: '12px 16px', marginBottom: 14, fontSize: '0.85rem', color: '#0c4a6e' }}>
-            {prorationPreview >= 0
-              ? <>A prorated charge of <strong>${prorationPreview.toFixed(2)}</strong> will be applied today for the additional students.</>
-              : <>A prorated credit of <strong>${Math.abs(prorationPreview).toFixed(2)}</strong> will be applied to your next invoice.</>
-            }
-          </div>
-        )}
-
-        {/* Monthly confirm note */}
-        {showConfirm && !isAnnual && (
-          <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8, padding: '12px 16px', marginBottom: 14, fontSize: '0.85rem', color: '#0c4a6e' }}>
-            Your plan will update to <strong>{newCount} students</strong> effective next billing cycle.
+        {/* Confirmation preview */}
+        {showConfirm && (
+          <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8, padding: '12px 16px', marginBottom: 14, fontSize: '0.85rem', color: '#0c4a6e', lineHeight: 1.6 }}>
+            {isAnnual ? (
+              <>
+                {prorationPreview !== null && prorationPreview > 0 && (
+                  <p style={{ margin: '0 0 6px 0' }}>
+                    You&apos;ll be charged <strong>${prorationPreview.toFixed(2)}</strong> today as a prorated adjustment.
+                  </p>
+                )}
+                {prorationPreview !== null && prorationPreview < 0 && (
+                  <p style={{ margin: '0 0 6px 0' }}>
+                    A credit of <strong>${Math.abs(prorationPreview).toFixed(2)}</strong> will be applied to your next invoice.
+                  </p>
+                )}
+                <p style={{ margin: 0 }}>
+                  Then{' '}
+                  {newPeriodTotal != null ? <><strong>${newPeriodTotal.toFixed(2)}</strong>/year</> : 'your new annual total'}
+                  {previewRenewalDate ? <> on <strong>{formatDate(previewRenewalDate)}</strong></> : ''} and annually thereafter.
+                </p>
+              </>
+            ) : (
+              <p style={{ margin: 0 }}>
+                No charge today. Your new monthly total of{' '}
+                {newPeriodTotal != null ? <><strong>${newPeriodTotal.toFixed(2)}/mo</strong></> : 'the updated amount'}{' '}
+                will apply starting{' '}
+                {previewRenewalDate ? <strong>{formatDate(previewRenewalDate)}</strong> : 'your next billing date'}.
+              </p>
+            )}
           </div>
         )}
 
@@ -305,7 +319,7 @@ export default function BillingPage() {
                 cursor: countChanged ? 'pointer' : 'not-allowed',
               }}
             >
-              {updating ? 'Checking…' : isAnnual ? 'Preview change' : 'Update plan'}
+              {updating ? 'Checking…' : 'Preview change'}
             </button>
           ) : (
             <>
@@ -317,7 +331,7 @@ export default function BillingPage() {
                 {updating ? 'Updating…' : 'Confirm update'}
               </button>
               <button
-                onClick={() => { setShowConfirm(false); setProrationPreview(null) }}
+                onClick={() => { setShowConfirm(false); setProrationPreview(null); setNewPeriodTotal(null); setPreviewRenewalDate(null) }}
                 style={{ background: '#fff', color: '#374151', fontWeight: 500, fontSize: '0.9rem', padding: '9px 20px', borderRadius: 8, border: '1px solid #d1d5db', cursor: 'pointer' }}
               >
                 Cancel
