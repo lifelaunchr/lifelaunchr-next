@@ -218,8 +218,7 @@ export default function AddFamilyModal({ open, onClose, onSuccess, counselors }:
             setError(
               <>
                 Your practice has reached its student limit ({detail.active}/{detail.limit}).{' '}
-                <Link href="/upgrade" className="underline font-semibold">Update your plan</Link>
-                {' '}to add more students.
+                <Link href="/settings/billing" className="underline font-semibold">Update your plan →</Link>
               </>
             )
           } else {
