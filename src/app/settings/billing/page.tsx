@@ -171,14 +171,21 @@ export default function BillingPage() {
 
   // ── Free / unsubscribed ───────────────────────────────────────────────────
   if (!isSubscribed) {
+    const freeLimit = 3
+    const isOverFreeLimit = (status?.active_student_count ?? 0) > freeLimit
     return (
       <div style={pageWrap}>
         <h1 style={h1}>Billing & Plan</h1>
         <div style={card}>
           <p style={{ fontWeight: 700, color: '#0c1b33', marginBottom: 4 }}>You&apos;re on the free plan</p>
-          <p style={{ color: '#6b7280', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: 20 }}>
+          <p style={{ color: '#6b7280', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: isOverFreeLimit ? 12 : 20 }}>
             Free includes up to 3 active students and 5 research sessions/month.
           </p>
+          {isOverFreeLimit && (
+            <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, padding: '10px 14px', fontSize: '0.85rem', color: '#dc2626', marginBottom: 16 }}>
+              ⚠️ Your practice has <strong>{status?.active_student_count} active students</strong> but the free plan only covers <strong>3</strong>. Upgrade to cover your full practice.
+            </div>
+          )}
           <Link
             href="/upgrade"
             style={{
