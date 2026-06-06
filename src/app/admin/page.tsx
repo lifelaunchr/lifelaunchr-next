@@ -81,6 +81,8 @@ interface TenantRow {
   session_report_cc_emails: string | null
   editate_auth_token: string | null
   editate_org_id: string | null
+  active_student_count: number | null
+  max_students: number | null
 }
 
 interface TenantSettings {
@@ -1038,6 +1040,11 @@ export default function AdminPage() {
                       <td className="px-2 py-2 sm:px-4 sm:py-3">
                         <p className="font-medium text-gray-800">{t.display_name}</p>
                         {!t.is_active && <span className="text-xs text-gray-400">inactive</span>}
+                        {t.max_students !== null && t.active_student_count !== null && t.active_student_count > t.max_students && (
+                          <span className="inline-flex items-center gap-1 mt-0.5 px-1.5 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                            ⚠️ Over limit ({t.active_student_count}/{t.max_students})
+                          </span>
+                        )}
                       </td>
                       <td className="px-2 py-2 sm:px-4 sm:py-3 text-gray-500 font-mono text-xs">{t.subdomain}</td>
                       <td className="px-2 py-2 sm:px-4 sm:py-3">
