@@ -530,6 +530,17 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
     }
   }, [isParent, myStudents, forStudentId])
 
+  // Clear stale forStudentId for counselors when their student list loads and the
+  // saved student is no longer connected (archived, removed, or inherited from a
+  // different account via shared localStorage). Mirrors the parent stale-check above.
+  useEffect(() => {
+    if (!isCounselor || myStudents.length === 0) return
+    if (forStudentId !== null && !myStudents.some(s => s.id === forStudentId)) {
+      setForStudentId(null)
+      localStorage.removeItem('ll_for_student_id')
+    }
+  }, [isCounselor, myStudents, forStudentId])
+
   // ── Onboarding auto-select: if counselor just invited a student, select them ──
   useEffect(() => {
     const studentId = sessionStorage.getItem('onboarding_for_student_id')
