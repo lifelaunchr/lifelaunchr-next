@@ -107,12 +107,14 @@ function AssignPanel({
 }) {
   const { getToken } = useAuth()
   const [exercises, setExercises] = useState<LibraryExercise[]>([])
-  const [previouslyAssigned, setPreviouslyAssigned] = useState<Set<number>>(new Set())
+  // Map of exerciseId → assignmentId for all currently-assigned exercises
+  const [assignedMap, setAssignedMap] = useState<Map<number, number>>(new Map())
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [note, setNote] = useState('')
   const [assigning, setAssigning] = useState<number | null>(null)
-  const [newlyAssigned, setNewlyAssigned] = useState<Set<number>>(new Set())
+  const [unassigning, setUnassigning] = useState<number | null>(null)
+  const [unassignWarning, setUnassignWarning] = useState<number | null>(null)
   const [expandedId, setExpandedId] = useState<number | null>(null)
 
   useEffect(() => {
@@ -129,10 +131,10 @@ function AssignPanel({
       ])
         .then(([libData, assignData]) => {
           setExercises(libData.exercises || [])
-          const ids = new Set<number>(
-            (assignData.assignments || []).map((a: WritingAssignment) => a.exercise_id)
+          const idMap = new Map<number, number>(
+            (assignData.assignments || []).map((a: WritingAssignment) => [a.exercise_id, a.id])
           )
-          setPreviouslyAssigned(ids)
+          setAssignedMap(idMap)
           setLoading(false)
         })
         .catch(err => { setFetchError(err.message || 'Failed to load'); setLoading(false) })
@@ -154,11 +156,36 @@ function AssignPanel({
         }),
       })
       if (res.ok) {
-        setNewlyAssigned(s => { const n = new Set(s); n.add(exerciseId); return n })
+        const data = await res.json()
+        const assignmentId: number = data.assignment?.id
+        setAssignedMap(m => { const n = new Map(m); n.set(exerciseId, assignmentId); return n })
         onAssigned()
       }
     } finally {
       setAssigning(null)
+    }
+  }
+
+  const unassign = async (exerciseId: number, force = false) => {
+    const assignmentId = assignedMap.get(exerciseId)
+    if (!assignmentId) return
+    setUnassigning(exerciseId)
+    try {
+      const tok = await getToken()
+      if (!tok) return
+      const res = await fetch(`${API}/writing/assignments/${assignmentId}${force ? '?force=true' : ''}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${tok}` },
+      })
+      if (res.ok) {
+        setAssignedMap(m => { const n = new Map(m); n.delete(exerciseId); return n })
+        setUnassignWarning(null)
+        onAssigned()
+      } else if (res.status === 409) {
+        setUnassignWarning(exerciseId)
+      }
+    } finally {
+      setUnassigning(null)
     }
   }
 
@@ -174,7 +201,7 @@ function AssignPanel({
   }
 
   // "Suggested next" = first unit that has at least one unassigned exercise
-  const isAssigned = (id: number) => previouslyAssigned.has(id) || newlyAssigned.has(id)
+  const isAssigned = (id: number) => assignedMap.has(id)
   const suggestedUnit = unitOrder.find(u => unitMap[u].some(ex => !isAssigned(ex.id)))
 
   return (
@@ -257,13 +284,13 @@ function AssignPanel({
                             key={ex.id}
                             className={`rounded-xl border p-3.5 transition-all ${
                               done
-                                ? 'bg-slate-800/30 border-slate-700/30 opacity-50'
+                                ? 'bg-slate-800/30 border-slate-700/30'
                                 : 'bg-slate-700/40 border-slate-600/40'
                             }`}
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div className="flex-1 min-w-0">
-                                <p className={`text-sm font-medium leading-tight ${done ? 'text-slate-400' : 'text-white'}`}>
+                                <p className={`text-sm font-medium leading-tight ${done ? 'text-slate-500' : 'text-white'}`}>
                                   {ex.title}
                                 </p>
                                 {ex.prompt_text && !done && (
@@ -291,17 +318,33 @@ function AssignPanel({
                                   )}
                                 </div>
                               </div>
-                              <button
-                                onClick={() => !done && assign(ex.id)}
-                                disabled={done || assigning === ex.id}
-                                className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                                  done
-                                    ? 'bg-green-500/10 text-green-500/60 cursor-default'
-                                    : 'bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-50'
-                                }`}
-                              >
-                                {done ? '✓' : assigning === ex.id ? '…' : 'Assign'}
-                              </button>
+                              {done ? (
+                                <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                                  <button
+                                    onClick={() => unassigning !== ex.id && unassign(ex.id)}
+                                    disabled={unassigning === ex.id}
+                                    className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all bg-slate-700/40 hover:bg-red-500/20 text-slate-400 hover:text-red-400 disabled:opacity-50"
+                                  >
+                                    {unassigning === ex.id ? '…' : 'Unassign'}
+                                  </button>
+                                  {unassignWarning === ex.id && (
+                                    <div className="text-[10px] text-amber-400 text-right leading-relaxed">
+                                      Student has submitted work.{' '}
+                                      <button onClick={() => unassign(ex.id, true)} className="underline">Unassign anyway</button>
+                                      {' · '}
+                                      <button onClick={() => setUnassignWarning(null)} className="underline text-slate-400">Cancel</button>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => assign(ex.id)}
+                                  disabled={assigning === ex.id}
+                                  className="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-50"
+                                >
+                                  {assigning === ex.id ? '…' : 'Assign'}
+                                </button>
+                              )}
                             </div>
                           </div>
                         )
@@ -692,6 +735,8 @@ function StudentAssignmentPanel({
   const [assessmentCompleted, setAssessmentCompleted] = useState<boolean | null>(null)
   // Per-student allowed section keys — fetched from backend which applies per-student flags
   const [allowedSectionKeys, setAllowedSectionKeys] = useState<Set<string> | null>(null)
+  const [unassigningRowId, setUnassigningRowId] = useState<number | null>(null)
+  const [unassignRowWarning, setUnassignRowWarning] = useState<number | null>(null)
 
   // Derive per-student enabledModules by intersecting counselor modules with student's allowed sections
   const studentModules: EnabledModules = allowedSectionKeys === null ? enabledModules : {
@@ -760,6 +805,28 @@ function StudentAssignmentPanel({
   }, [student.id, getToken, onCountChanged])
 
   useEffect(() => { loadData() }, [loadData])
+
+  const unassignAssignment = async (assignmentId: number, force = false) => {
+    setUnassigningRowId(assignmentId)
+    try {
+      const tok = await getToken()
+      if (!tok) return
+      const res = await fetch(`${API}/writing/assignments/${assignmentId}${force ? '?force=true' : ''}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${tok}` },
+      })
+      if (res.ok) {
+        const updated = assignments.filter(a => a.id !== assignmentId)
+        setAssignments(updated)
+        setUnassignRowWarning(null)
+        onCountChanged(student.id, updated.length, updated.filter(a => a.status === 'submitted').length)
+      } else if (res.status === 409) {
+        setUnassignRowWarning(assignmentId)
+      }
+    } finally {
+      setUnassigningRowId(null)
+    }
+  }
 
   // Fetch personality assessment status for this student
   useEffect(() => {
@@ -934,6 +1001,26 @@ function StudentAssignmentPanel({
                             >
                               {a.status === 'submitted' ? 'Review' : 'View'}
                             </button>
+                          )}
+                          {/* Unassign — shown for unreviewed assignments only */}
+                          {!readOnly && a.status !== 'reviewed' && (
+                            <div className="flex flex-col items-end gap-0.5">
+                              <button
+                                onClick={() => unassignAssignment(a.id)}
+                                disabled={unassigningRowId === a.id}
+                                className="text-xs text-slate-600 hover:text-red-400 transition-colors px-2 py-1 rounded-lg hover:bg-red-500/10 disabled:opacity-50"
+                              >
+                                {unassigningRowId === a.id ? '…' : 'Unassign'}
+                              </button>
+                              {unassignRowWarning === a.id && (
+                                <div className="text-[10px] text-amber-400 text-right leading-relaxed">
+                                  Student submitted work.{' '}
+                                  <button onClick={() => unassignAssignment(a.id, true)} className="underline">Unassign anyway</button>
+                                  {' · '}
+                                  <button onClick={() => setUnassignRowWarning(null)} className="underline text-slate-500">Cancel</button>
+                                </div>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>
