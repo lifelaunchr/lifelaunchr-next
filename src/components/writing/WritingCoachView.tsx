@@ -64,6 +64,7 @@ interface LibraryExercise {
   id: number
   title: string
   prompt_text: string | null
+  framing_content: string | null
   exercise_type: string
   word_limit: number | null
   time_limit_minutes: number | null
@@ -294,17 +295,35 @@ function AssignPanel({
                                 <p className={`text-sm font-medium leading-tight ${done ? 'text-slate-500' : 'text-white'}`}>
                                   {ex.title}
                                 </p>
-                                {ex.prompt_text && !done && (
+                                {(ex.prompt_text || ex.framing_content) && !done && (
                                   <div className="mt-1">
-                                    <p className={`text-xs text-slate-400 ${expandedId === ex.id ? '' : 'line-clamp-2'}`}>
-                                      {ex.prompt_text}
-                                    </p>
-                                    <button
-                                      onClick={e => { e.stopPropagation(); setExpandedId(expandedId === ex.id ? null : ex.id) }}
-                                      className="text-[10px] text-violet-400 hover:text-violet-300 mt-0.5"
-                                    >
-                                      {expandedId === ex.id ? 'Show less' : 'Read more'}
-                                    </button>
+                                    {ex.prompt_text ? (
+                                      <>
+                                        <p className={`text-xs text-slate-400 ${expandedId === ex.id ? '' : 'line-clamp-2'}`}>
+                                          {ex.prompt_text}
+                                        </p>
+                                        <button
+                                          onClick={e => { e.stopPropagation(); setExpandedId(expandedId === ex.id ? null : ex.id) }}
+                                          className="text-[10px] text-violet-400 hover:text-violet-300 mt-0.5"
+                                        >
+                                          {expandedId === ex.id ? 'Show less' : 'Read more'}
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <>
+                                        {expandedId === ex.id && (
+                                          <p className="text-xs text-slate-400 mb-0.5 whitespace-pre-wrap">
+                                            {ex.framing_content}
+                                          </p>
+                                        )}
+                                        <button
+                                          onClick={e => { e.stopPropagation(); setExpandedId(expandedId === ex.id ? null : ex.id) }}
+                                          className="text-[10px] text-violet-400 hover:text-violet-300 mt-0.5"
+                                        >
+                                          {expandedId === ex.id ? 'Hide content' : 'Show content'}
+                                        </button>
+                                      </>
+                                    )}
                                   </div>
                                 )}
                                 <div className="flex gap-2 mt-1.5 flex-wrap">
