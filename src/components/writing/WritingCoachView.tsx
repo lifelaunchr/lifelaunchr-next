@@ -35,6 +35,7 @@ interface WritingAssignment {
   assigned_at: string
   exercise_title: string
   prompt_text: string | null
+  framing_content: string | null
   exercise_type: string
   word_limit: number | null
   time_limit_minutes: number | null
@@ -524,12 +525,16 @@ function ReviewPanel({
 
         <div className="flex-1 overflow-y-auto p-5 space-y-6">
 
-          {/* ── Prompt ── */}
-          {assignment.prompt_text && (
+          {/* ── Prompt / Content ── */}
+          {(assignment.prompt_text || assignment.framing_content) && (
             <div>
-              <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Prompt</p>
+              <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">
+                {assignment.prompt_text ? 'Prompt' : 'Content'}
+              </p>
               <div className="bg-slate-700/20 rounded-xl border border-slate-700/30 px-4 py-3">
-                <p className="text-sm text-slate-300 leading-relaxed">{assignment.prompt_text}</p>
+                <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
+                  {assignment.prompt_text ?? assignment.framing_content}
+                </p>
               </div>
             </div>
           )}
