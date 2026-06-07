@@ -113,6 +113,7 @@ function AssignPanel({
   const [note, setNote] = useState('')
   const [assigning, setAssigning] = useState<number | null>(null)
   const [newlyAssigned, setNewlyAssigned] = useState<Set<number>>(new Set())
+  const [expandedId, setExpandedId] = useState<number | null>(null)
 
   useEffect(() => {
     getToken().then(tok => {
@@ -266,7 +267,17 @@ function AssignPanel({
                                   {ex.title}
                                 </p>
                                 {ex.prompt_text && !done && (
-                                  <p className="text-xs text-slate-400 mt-1 line-clamp-2">{ex.prompt_text}</p>
+                                  <div className="mt-1">
+                                    <p className={`text-xs text-slate-400 ${expandedId === ex.id ? '' : 'line-clamp-2'}`}>
+                                      {ex.prompt_text}
+                                    </p>
+                                    <button
+                                      onClick={e => { e.stopPropagation(); setExpandedId(expandedId === ex.id ? null : ex.id) }}
+                                      className="text-[10px] text-violet-400 hover:text-violet-300 mt-0.5"
+                                    >
+                                      {expandedId === ex.id ? 'Show less' : 'Read more'}
+                                    </button>
+                                  </div>
                                 )}
                                 <div className="flex gap-2 mt-1.5 flex-wrap">
                                   <span className="text-[10px] text-slate-600 bg-slate-700/60 px-1.5 py-0.5 rounded">
@@ -469,6 +480,16 @@ function ReviewPanel({
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 space-y-6">
+
+          {/* ── Prompt ── */}
+          {assignment.prompt_text && (
+            <div>
+              <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Prompt</p>
+              <div className="bg-slate-700/20 rounded-xl border border-slate-700/30 px-4 py-3">
+                <p className="text-sm text-slate-300 leading-relaxed">{assignment.prompt_text}</p>
+              </div>
+            </div>
+          )}
 
           {/* ── Student Response ── */}
           <div>
