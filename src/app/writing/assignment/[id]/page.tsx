@@ -355,6 +355,19 @@ function AssignmentPageInner() {
           const err = await saveRes.json().catch(() => ({}))
           throw new Error((err as { detail?: string }).detail || 'Save failed')
         }
+        const saveData = await saveRes.json()
+        // Update responses in state so Drafts tab appears immediately
+        const newResponse: Response = {
+          id: saveData.response.id,
+          content,
+          structured_data: null,
+          word_count: wordCount(body),
+          revision_number: saveData.response.revision_number,
+          submitted_at: saveData.response.submitted_at,
+          coach_notes: null,
+          coach_reviewed_at: null,
+        }
+        setAssignment(prev => prev ? { ...prev, responses: [newResponse, ...prev.responses] } : prev)
       }
       // Mark as submitted
       const patchRes = await fetch(`${API}/writing/assignments/${assignmentId}`, {
@@ -364,6 +377,7 @@ function AssignmentPageInner() {
       })
       if (!patchRes.ok) throw new Error('Submit failed')
       setAssignment(prev => prev ? { ...prev, status: 'submitted' } : prev)
+      setActiveTab('history')
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Submit failed')
     } finally {
@@ -862,7 +876,14 @@ function AssignmentPageInner() {
                     <p className="text-sm text-slate-400 leading-relaxed max-w-xs mx-auto">
                       Your coach will review your work and send feedback. You&apos;ll see their notes here when ready.
                     </p>
-                    <p className="text-xs text-slate-600">Check the Drafts tab to see your submission.</p>
+                    {responses.length > 0 && (
+                      <button
+                        onClick={() => setActiveTab('history')}
+                        className="text-sm text-violet-400 hover:text-violet-300 transition-colors"
+                      >
+                        View your submission →
+                      </button>
+                    )}
                   </div>
                 )}
                 {/* ── Timed write ── */}
@@ -1047,13 +1068,13 @@ function AssignmentPageInner() {
                           {schema.fields.map(f => parsed[f.id] ? (
                             <div key={f.id}>
                               <p className="text-xs text-slate-500 mb-0.5 line-clamp-1">{f.label}</p>
-                              <p className="text-xs text-slate-300 line-clamp-2 whitespace-pre-wrap">{parsed[f.id]}</p>
+                              <p className="text-xs text-slate-300 whitespace-pre-wrap">{parsed[f.id]}</p>
                             </div>
                           ) : null)}
                         </div>
                       )
                     })() : (
-                      <p className="text-sm text-slate-300 line-clamp-3 whitespace-pre-wrap">{r.content}</p>
+                      <p className="text-sm text-slate-300 whitespace-pre-wrap">{r.content}</p>
                     )}
                     <button
                       onClick={() => {
@@ -1066,7 +1087,7 @@ function AssignmentPageInner() {
                       }}
                       className="mt-2 text-xs text-violet-400 hover:text-violet-300"
                     >
-                      Restore this draft →
+                      Edit &amp; resubmit →
                     </button>
                   </div>
                 ))}
