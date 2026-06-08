@@ -666,6 +666,11 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
       if (res.ok) {
         setUntagSuccess(true)
         setShowUntagConfirm(false)
+        // Optimistically remove this session from the sidebar immediately
+        // so it disappears before the fetchSessions round-trip completes.
+        if (activeSessionId) {
+          setSessions(prev => prev.filter(s => s.id !== activeSessionId))
+        }
         fetchSessions()
       } else {
         const detail = await res.json().catch(() => ({ detail: 'Failed to untag session' }))
@@ -678,7 +683,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
     } finally {
       setUntagging(false)
     }
-  }, [currentResearchSessionId, untagging, getToken, apiUrl, fetchSessions])
+  }, [currentResearchSessionId, untagging, getToken, apiUrl, fetchSessions, activeSessionId, setSessions])
 
   const loadSession = useCallback(async (sessionId: number) => {
     setSessionAccessError(null)
