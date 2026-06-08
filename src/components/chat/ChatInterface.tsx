@@ -671,6 +671,12 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
         if (activeSessionId) {
           setSessions(prev => prev.filter(s => s.id !== activeSessionId))
         }
+        // Clear the chat panel — the session no longer belongs to this student
+        setMessages([])
+        setConversationHistory([])
+        setServerSessionId(null)
+        setActiveSessionId(null)
+        setCurrentResearchSessionId(null)
         fetchSessions()
       } else {
         const detail = await res.json().catch(() => ({ detail: 'Failed to untag session' }))
@@ -683,7 +689,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
     } finally {
       setUntagging(false)
     }
-  }, [currentResearchSessionId, untagging, getToken, apiUrl, fetchSessions, activeSessionId, setSessions])
+  }, [currentResearchSessionId, untagging, getToken, apiUrl, fetchSessions, activeSessionId])
 
   const loadSession = useCallback(async (sessionId: number) => {
     setSessionAccessError(null)
