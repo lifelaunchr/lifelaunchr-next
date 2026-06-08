@@ -147,6 +147,9 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
   const [generatingSummary, setGeneratingSummary] = useState(false)
   const [summaryToast, setSummaryToast] = useState<{ kind: 'success' | 'error'; text: string } | null>(null)
   const [showSummaryConfirm, setShowSummaryConfirm] = useState(false)
+  const [showUntagConfirm, setShowUntagConfirm] = useState(false)
+  const [untagging, setUntagging] = useState(false)
+  const [untagSuccess, setUntagSuccess] = useState(false)
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
   const [sessions, setSessions] = useState<Session[]>([])
   const [activeSessionId, setActiveSessionId] = useState<number | null>(null)
@@ -644,6 +647,37 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
       setTimeout(() => setSummaryToast(null), 4000)
     }
   }, [currentResearchSessionId, generatingSummary, getToken, apiUrl])
+
+  // Reset untag state when the viewed session changes
+  useEffect(() => {
+    setShowUntagConfirm(false)
+    setUntagSuccess(false)
+  }, [currentResearchSessionId])
+
+  const handleUntag = useCallback(async () => {
+    if (!currentResearchSessionId || untagging) return
+    setUntagging(true)
+    try {
+      const token = await getToken()
+      const res = await fetch(`${apiUrl}/research-sessions/${currentResearchSessionId}/untag`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        setUntagSuccess(true)
+        setShowUntagConfirm(false)
+      } else {
+        const detail = await res.json().catch(() => ({ detail: 'Failed to untag session' }))
+        setSummaryToast({ kind: 'error', text: detail.detail || 'Failed to untag session' })
+        setShowUntagConfirm(false)
+      }
+    } catch {
+      setSummaryToast({ kind: 'error', text: 'Network error — could not untag session' })
+      setShowUntagConfirm(false)
+    } finally {
+      setUntagging(false)
+    }
+  }, [currentResearchSessionId, untagging, getToken, apiUrl])
 
   const loadSession = useCallback(async (sessionId: number) => {
     setSessionAccessError(null)
@@ -1547,6 +1581,20 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                         {generatingSummary ? 'Generating…' : 'Generate a summary of this session'}
                       </button>
                     )}
+                    {isCounselor && currentResearchSessionId && messages.length > 0 && !untagSuccess && (
+                      <button
+                        onClick={() => setShowUntagConfirm(true)}
+                        className="text-xs text-indigo-400 hover:text-indigo-700 transition-colors"
+                        title="This session was conducted under the wrong student"
+                      >
+                        · This was my own research
+                      </button>
+                    )}
+                    {isCounselor && untagSuccess && (
+                      <span className="text-xs text-green-600">
+                        ✓ Session removed from {s.full_name || s.email}&apos;s research
+                      </span>
+                    )}
                     {(!isParent || myStudents.length > 1) && (
                       <button
                         onClick={() => {
@@ -1790,6 +1838,64 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
           </div>
         </div>
       )}
+
+      {/* Untag session confirmation modal */}
+      {showUntagConfirm && (() => {
+        const untagStudent = myStudents.find((s) => s.id === forStudentId)
+        const studentName = untagStudent?.full_name || untagStudent?.email || 'this student'
+        return (
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => setShowUntagConfirm(false)}
+          >
+            <div
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-7"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start gap-4 mb-4">
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-xl">
+                  ⚠️
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-1">
+                    Remove student from this session?
+                  </h2>
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    This will remove <strong>{studentName}</strong> from this session and count it
+                    toward your own research instead. This cannot be undone.
+                  </p>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 mt-6">
+                <button
+                  onClick={() => setShowUntagConfirm(false)}
+                  disabled={untagging}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleUntag}
+                  disabled={untagging}
+                  className="px-4 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors disabled:bg-amber-400 flex items-center gap-2"
+                >
+                  {untagging ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Removing…
+                    </>
+                  ) : (
+                    'Remove from student'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Sessions help modal */}
       {showSessionsHelp && usageData && (
