@@ -781,7 +781,8 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
           return
         }
 
-        const reader = response.body!.getReader()
+        if (!response.body) throw new Error('response.body is null — browser streaming not supported')
+        const reader = response.body.getReader()
         const decoder = new TextDecoder()
         let buffer = ''
 
@@ -934,10 +935,12 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
         if (err instanceof Error && err.name === 'AbortError') {
           // User aborted — leave partial message as-is
         } else {
+          const errDetail = err instanceof Error ? `${err.name}: ${err.message}` : String(err)
+          console.error('[chat stream error]', err)
           setMessages((prev) =>
             prev.map((m) =>
               m.id === assistantMsgId
-                ? { ...m, content: 'Sorry, something went wrong. Please try again.' }
+                ? { ...m, content: `Sorry, something went wrong. Please try again.\n\n_Debug: ${errDetail}_` }
                 : m
             )
           )
