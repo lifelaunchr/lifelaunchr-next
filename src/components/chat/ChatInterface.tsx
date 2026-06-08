@@ -935,12 +935,11 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
         if (err instanceof Error && err.name === 'AbortError') {
           // User aborted — leave partial message as-is
         } else {
-          const errDetail = err instanceof Error ? `${err.name}: ${err.message}` : String(err)
           console.error('[chat stream error]', err)
           setMessages((prev) =>
             prev.map((m) =>
               m.id === assistantMsgId
-                ? { ...m, content: `Sorry, something went wrong. Please try again.\n\n_Debug: ${errDetail}_` }
+                ? { ...m, content: 'Sorry, something went wrong. Please try again.' }
                 : m
             )
           )
