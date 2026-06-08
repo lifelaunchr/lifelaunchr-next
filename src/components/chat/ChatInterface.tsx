@@ -666,6 +666,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
       if (res.ok) {
         setUntagSuccess(true)
         setShowUntagConfirm(false)
+        fetchSessions()
       } else {
         const detail = await res.json().catch(() => ({ detail: 'Failed to untag session' }))
         setSummaryToast({ kind: 'error', text: detail.detail || 'Failed to untag session' })
@@ -677,7 +678,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
     } finally {
       setUntagging(false)
     }
-  }, [currentResearchSessionId, untagging, getToken, apiUrl])
+  }, [currentResearchSessionId, untagging, getToken, apiUrl, fetchSessions])
 
   const loadSession = useCallback(async (sessionId: number) => {
     setSessionAccessError(null)
