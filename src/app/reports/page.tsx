@@ -483,6 +483,7 @@ function ReportsContent() {
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           coach_name: coachName,
+          student_id: formStudentId || null,
           student_first_name: nameParts[0] || '',
           student_last_name: nameParts.slice(1).join(' ') || '',
           report_type: reportType,
