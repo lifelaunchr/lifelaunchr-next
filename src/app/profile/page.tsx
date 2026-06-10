@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, Suspense } from 'react'
 import { useAuth, useUser } from '@clerk/nextjs'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import TranscriptDrawer from './TranscriptDrawer'
 
 interface Profile {
   gpa_weighted?: number | null
@@ -42,6 +43,10 @@ interface Profile {
   athletic_rating?: string
   academic_rigor_rating?: string
   coach_notes?: string
+  // Transcript analysis (loaded but not edited via the profile form)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  transcript_analysis?: Record<string, any> | null
+  transcript_analyzed_at?: string | null
 }
 
 interface HsSuggestion {
@@ -180,6 +185,16 @@ function ProfileContent() {
   const [counselorType, setCounselorType] = useState('')
   const [savingCounselor, setSavingCounselor] = useState(false)
 
+  // Transcript upload / analysis state
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [transcriptAnalysis, setTranscriptAnalysis] = useState<Record<string, any> | null>(null)
+  const [transcriptAnalyzedAt, setTranscriptAnalyzedAt] = useState<string | null>(null)
+  const [showTranscriptDrawer, setShowTranscriptDrawer] = useState(false)
+  const [uploadingTranscript, setUploadingTranscript] = useState(false)
+  const [reanalyzingTranscript, setReanalyzingTranscript] = useState(false)
+  const [transcriptError, setTranscriptError] = useState<string | null>(null)
+  const transcriptFileRef = useRef<HTMLInputElement>(null)
+
   // High school autocomplete state
   const [hsSearchState, setHsSearchState] = useState('')
   const [hsQuery, setHsQuery] = useState('')
@@ -246,6 +261,9 @@ function ProfileContent() {
           const data = await profRes.json()
           const p = data.profile || {}
           setProfile(normalizeProfile(p))
+          // Load transcript analysis from profile (stored in student_profile columns)
+          if (p.transcript_analysis) setTranscriptAnalysis(p.transcript_analysis)
+          if (p.transcript_analyzed_at) setTranscriptAnalyzedAt(p.transcript_analyzed_at)
           if (typeof data.can_write === 'boolean') setCanWrite(data.can_write)
           if (data.counselor_info) {
             setCounselorOrg(data.counselor_info.organization || '')
@@ -297,6 +315,81 @@ function ProfileContent() {
     }, 300)
     return () => { if (hsDebounceRef.current) clearTimeout(hsDebounceRef.current) }
   }, [hsQuery, hsSearchState, hsShowManual, apiUrl, getToken])
+
+  // ── Transcript handlers ────────────────────────────────────────────────────
+
+  const handleTranscriptUpload = async (file: File) => {
+    if (!targetId) return
+    setUploadingTranscript(true)
+    setTranscriptError(null)
+    try {
+      const token = await getToken()
+      const form = new FormData()
+      form.append('file', file)
+      const res = await fetch(`${apiUrl}/profile/${targetId}/transcript`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        setTranscriptError(err.detail || 'Upload failed')
+        return
+      }
+      const data = await res.json()
+      setTranscriptAnalysis(data.analysis)
+      setTranscriptAnalyzedAt(new Date().toISOString())
+      setShowTranscriptDrawer(true)
+    } catch {
+      setTranscriptError('Upload failed — please try again')
+    } finally {
+      setUploadingTranscript(false)
+    }
+  }
+
+  const handleTranscriptReanalyze = async () => {
+    if (!targetId) return
+    setReanalyzingTranscript(true)
+    setTranscriptError(null)
+    try {
+      const token = await getToken()
+      const res = await fetch(`${apiUrl}/profile/${targetId}/transcript/reanalyze`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        setTranscriptError(err.detail || 'Re-analysis failed')
+        return
+      }
+      const data = await res.json()
+      setTranscriptAnalysis(data.analysis)
+      setTranscriptAnalyzedAt(new Date().toISOString())
+    } catch {
+      setTranscriptError('Re-analysis failed — please try again')
+    } finally {
+      setReanalyzingTranscript(false)
+    }
+  }
+
+  const handleTranscriptDelete = async () => {
+    if (!targetId) return
+    if (!window.confirm('Delete the stored transcript? This cannot be undone.')) return
+    try {
+      const token = await getToken()
+      await fetch(`${apiUrl}/profile/${targetId}/transcript`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      setTranscriptAnalysis(null)
+      setTranscriptAnalyzedAt(null)
+      setShowTranscriptDrawer(false)
+    } catch {
+      // ignore
+    }
+  }
+
+  // ── Profile save ────────────────────────────────────────────────────────────
 
   const saveProfile = async () => {
     if (!targetId || !canWrite) return
@@ -414,6 +507,7 @@ function ProfileContent() {
     : accountType === 'counselor' ? 'My Info' : 'My Profile'
 
   return (
+    <>
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', background: '#f5f6fa', minHeight: '100dvh' }}>
       {/* Header */}
       <header style={{ background: '#0c1b33', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} className="px-4 sm:px-6 py-3">
@@ -660,6 +754,69 @@ function ProfileContent() {
               {field('Graduation Year', 'graduation_year', 'number', '2026')}
               {field('Home State', 'home_state', 'text', 'CA')}
             </div>
+
+            {/* Transcript upload / analysis row */}
+            {accountType !== 'parent' && (
+              <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 12, marginTop: 4 }}>
+                <input
+                  ref={transcriptFileRef}
+                  type="file"
+                  accept=".pdf,.txt"
+                  style={{ display: 'none' }}
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleTranscriptUpload(f); e.target.value = '' }}
+                />
+                {transcriptAnalysis ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', fontSize: '0.82rem' }}>
+                    <span style={{ color: '#059669' }}>📄 Transcript analyzed</span>
+                    {transcriptAnalyzedAt && (
+                      <span style={{ color: '#9ca3af' }}>
+                        {new Date(transcriptAnalyzedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </span>
+                    )}
+                    <button
+                      onClick={() => setShowTranscriptDrawer(true)}
+                      style={{ background: 'none', border: 'none', color: '#4f46e5', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem', padding: 0 }}
+                    >
+                      See analysis →
+                    </button>
+                    {canWrite && (
+                      <button
+                        onClick={() => transcriptFileRef.current?.click()}
+                        disabled={uploadingTranscript}
+                        style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '0.82rem', padding: 0 }}
+                      >
+                        {uploadingTranscript ? 'Uploading…' : 'Upload new'}
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    {canWrite && (
+                      <button
+                        onClick={() => transcriptFileRef.current?.click()}
+                        disabled={uploadingTranscript}
+                        style={{
+                          background: uploadingTranscript ? '#e0e7ff' : '#eef2ff',
+                          color: '#4f46e5',
+                          border: '1px dashed #a5b4fc',
+                          borderRadius: 7,
+                          padding: '7px 14px',
+                          fontSize: '0.8rem',
+                          fontWeight: 600,
+                          cursor: uploadingTranscript ? 'not-allowed' : 'pointer',
+                        }}
+                      >
+                        {uploadingTranscript ? '⏳ Analyzing transcript…' : '📄 Upload transcript for A-G + GPA analysis'}
+                      </button>
+                    )}
+                    <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>PDF or plain text · Encrypted at rest</span>
+                  </div>
+                )}
+                {transcriptError && (
+                  <div style={{ marginTop: 6, fontSize: '0.75rem', color: '#dc2626' }}>⚠ {transcriptError}</div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -1007,6 +1164,23 @@ function ProfileContent() {
 
       </div>
     </div>
+
+    {/* Transcript analysis drawer */}
+    {showTranscriptDrawer && transcriptAnalysis && (
+      <TranscriptDrawer
+        analysis={transcriptAnalysis}
+        analyzedAt={transcriptAnalyzedAt}
+        studentName={studentName}
+        canWrite={canWrite && accountType !== 'parent'}
+        uploading={uploadingTranscript}
+        reanalyzing={reanalyzingTranscript}
+        onClose={() => setShowTranscriptDrawer(false)}
+        onUpload={handleTranscriptUpload}
+        onReanalyze={handleTranscriptReanalyze}
+        onDelete={handleTranscriptDelete}
+      />
+    )}
+    </>
   )
 }
 
