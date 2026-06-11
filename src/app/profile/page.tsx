@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, Suspense } from 'react'
 import { useAuth, useUser } from '@clerk/nextjs'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import TranscriptDrawer from './TranscriptDrawer'
+import TranscriptDrawer, { type TranscriptMeta } from './TranscriptDrawer'
 
 interface Profile {
   gpa_weighted?: number | null
@@ -189,10 +189,12 @@ function ProfileContent() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [transcriptAnalysis, setTranscriptAnalysis] = useState<Record<string, any> | null>(null)
   const [transcriptAnalyzedAt, setTranscriptAnalyzedAt] = useState<string | null>(null)
+  const [transcripts, setTranscripts] = useState<TranscriptMeta[]>([])
   const [showTranscriptDrawer, setShowTranscriptDrawer] = useState(false)
   const [uploadingTranscript, setUploadingTranscript] = useState(false)
   const [reanalyzingTranscript, setReanalyzingTranscript] = useState(false)
   const [transcriptError, setTranscriptError] = useState<string | null>(null)
+  const [sameInstitutionWarning, setSameInstitutionWarning] = useState<{ existing_id: number; institution_name: string } | null>(null)
   const transcriptFileRef = useRef<HTMLInputElement>(null)
 
   // High school autocomplete state
@@ -264,6 +266,14 @@ function ProfileContent() {
           // Load transcript analysis from profile (stored in student_profile columns)
           if (p.transcript_analysis) setTranscriptAnalysis(p.transcript_analysis)
           if (p.transcript_analyzed_at) setTranscriptAnalyzedAt(p.transcript_analyzed_at)
+          // Load transcript metadata list (no encrypted content)
+          const trRes = await fetch(`${apiUrl}/profile/${targetId}/transcripts`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          if (trRes.ok) {
+            const trData = await trRes.json()
+            setTranscripts(trData.transcripts || [])
+          }
           if (typeof data.can_write === 'boolean') setCanWrite(data.can_write)
           if (data.counselor_info) {
             setCounselorOrg(data.counselor_info.organization || '')
@@ -322,6 +332,7 @@ function ProfileContent() {
     if (!targetId) return
     setUploadingTranscript(true)
     setTranscriptError(null)
+    setSameInstitutionWarning(null)
     try {
       const token = await getToken()
       const form = new FormData()
@@ -339,6 +350,8 @@ function ProfileContent() {
       const data = await res.json()
       setTranscriptAnalysis(data.analysis)
       setTranscriptAnalyzedAt(new Date().toISOString())
+      if (data.transcripts) setTranscripts(data.transcripts)
+      if (data.same_institution_warning) setSameInstitutionWarning(data.same_institution_warning)
       setShowTranscriptDrawer(true)
     } catch {
       setTranscriptError('Upload failed — please try again')
@@ -372,18 +385,25 @@ function ProfileContent() {
     }
   }
 
-  const handleTranscriptDelete = async () => {
+  const handleTranscriptDeleteById = async (transcriptId: number) => {
     if (!targetId) return
-    if (!window.confirm('Delete the stored transcript? This cannot be undone.')) return
     try {
       const token = await getToken()
-      await fetch(`${apiUrl}/profile/${targetId}/transcript`, {
+      const res = await fetch(`${apiUrl}/profile/${targetId}/transcripts/${transcriptId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       })
-      setTranscriptAnalysis(null)
-      setTranscriptAnalyzedAt(null)
-      setShowTranscriptDrawer(false)
+      if (!res.ok) return
+      const data = await res.json()
+      setTranscripts((prev) => prev.filter((t) => t.id !== transcriptId))
+      if (data.remaining === 0) {
+        setTranscriptAnalysis(null)
+        setTranscriptAnalyzedAt(null)
+        setShowTranscriptDrawer(false)
+      } else if (data.analysis) {
+        setTranscriptAnalysis(data.analysis)
+        setTranscriptAnalyzedAt(new Date().toISOString())
+      }
     } catch {
       // ignore
     }
@@ -767,7 +787,9 @@ function ProfileContent() {
                 />
                 {transcriptAnalysis ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', fontSize: '0.82rem' }}>
-                    <span style={{ color: '#059669' }}>📄 Transcript analyzed</span>
+                    <span style={{ color: '#059669' }}>
+                      📄 {transcripts.length > 1 ? `${transcripts.length} transcripts analyzed` : 'Transcript analyzed'}
+                    </span>
                     {transcriptAnalyzedAt && (
                       <span style={{ color: '#9ca3af' }}>
                         {new Date(transcriptAnalyzedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -785,7 +807,7 @@ function ProfileContent() {
                         disabled={uploadingTranscript}
                         style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '0.82rem', padding: 0 }}
                       >
-                        {uploadingTranscript ? 'Uploading…' : 'Upload new'}
+                        {uploadingTranscript ? 'Uploading…' : '+ Add transcript'}
                       </button>
                     )}
                   </div>
@@ -1170,14 +1192,17 @@ function ProfileContent() {
       <TranscriptDrawer
         analysis={transcriptAnalysis}
         analyzedAt={transcriptAnalyzedAt}
+        transcripts={transcripts}
         studentName={studentName}
         canWrite={canWrite && accountType !== 'parent'}
         uploading={uploadingTranscript}
         reanalyzing={reanalyzingTranscript}
+        sameInstitutionWarning={sameInstitutionWarning}
         onClose={() => setShowTranscriptDrawer(false)}
         onUpload={handleTranscriptUpload}
         onReanalyze={handleTranscriptReanalyze}
-        onDelete={handleTranscriptDelete}
+        onDeleteTranscript={handleTranscriptDeleteById}
+        onDismissSameInstitutionWarning={() => setSameInstitutionWarning(null)}
       />
     )}
     </>

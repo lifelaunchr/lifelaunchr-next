@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -19,10 +19,31 @@ interface AgCategory {
   language?: string | null
 }
 
-interface TranscriptAnalysis {
+interface SubjectProjection {
+  subject: string
+  status: 'on_track' | 'plan_needed' | 'concern'
+  completed_years: number
+  projected_years: number
+  rigor_observation: string | null
+  courses: string[]
+}
+
+export interface TranscriptMeta {
+  id: number
+  institution_name: string | null
+  institution_type: string | null
+  is_primary: boolean
+  file_name: string | null
+  file_size_bytes: number | null
+  uploaded_at: string | null
+}
+
+export interface TranscriptAnalysis {
   parse_error?: boolean
   error?: string
   raw_response?: string
+  transcript_type?: 'us_standard' | 'international' | null
+  international_narrative?: string | null
   student_info?: {
     name?: string | null
     school?: string | null
@@ -47,6 +68,7 @@ interface TranscriptAnalysis {
     f_arts?: AgCategory
     g_elective?: AgCategory
   }
+  subject_projection?: SubjectProjection[]
   preparation_flags?: Array<{
     severity: 'warning' | 'info'
     area: string
@@ -58,30 +80,41 @@ interface TranscriptAnalysis {
 interface Props {
   analysis: TranscriptAnalysis
   analyzedAt: string | null
+  transcripts: TranscriptMeta[]
   studentName?: string | null
   canWrite: boolean
   uploading: boolean
   reanalyzing: boolean
+  sameInstitutionWarning?: { existing_id: number; institution_name: string } | null
   onClose: () => void
   onUpload: (file: File) => void
   onReanalyze: () => void
-  onDelete: () => void
+  onDeleteTranscript: (id: number) => void
+  onDismissSameInstitutionWarning: () => void
 }
 
 // ── AG requirement rows config ────────────────────────────────────────────────
 
-const AG_ROWS: Array<{ key: keyof NonNullable<TranscriptAnalysis['ag_requirements']>; label: string; required: number; detail?: (cat: AgCategory) => string }> = [
+const AG_ROWS: Array<{
+  key: keyof NonNullable<TranscriptAnalysis['ag_requirements']>
+  label: string
+  required: number
+  detail?: (cat: AgCategory) => string
+}> = [
   { key: 'a_history', label: 'A · History / Social Studies', required: 2 },
   { key: 'b_english', label: 'B · English', required: 4 },
   {
     key: 'c_math', label: 'C · Mathematics', required: 3,
-    detail: (c) => c.highest_level ? `Highest: ${c.highest_level}${c.algebra2_met ? '' : ' — Algebra II not confirmed'}` : (c.algebra2_met === false ? 'Algebra II not confirmed' : ''),
+    detail: (c) =>
+      c.highest_level
+        ? `Highest: ${c.highest_level}${c.algebra2_met ? '' : ' — Algebra II not confirmed'}`
+        : c.algebra2_met === false ? 'Algebra II not confirmed' : '',
   },
   {
     key: 'd_science', label: 'D · Lab Science', required: 2,
     detail: (c) => {
       const big3 = [c.bio && 'Bio', c.chem && 'Chem', c.physics && 'Physics'].filter(Boolean)
-      return big3.length ? `Big 3 completed: ${big3.join(', ')}` : ''
+      return big3.length ? `Big 3: ${big3.join(', ')}` : ''
     },
   },
   {
@@ -101,10 +134,10 @@ function fmt(n: number | null | undefined, decimals = 2) {
 
 function trendBadge(trend?: string) {
   const map: Record<string, { label: string; color: string; bg: string }> = {
-    improving:          { label: '↑ Improving', color: '#065f46', bg: '#d1fae5' },
-    stable:             { label: '→ Stable',    color: '#1e40af', bg: '#dbeafe' },
-    declining:          { label: '↓ Declining', color: '#92400e', bg: '#fef3c7' },
-    insufficient_data:  { label: 'Not enough data', color: '#6b7280', bg: '#f3f4f6' },
+    improving:         { label: '↑ Improving',      color: '#065f46', bg: '#d1fae5' },
+    stable:            { label: '→ Stable',          color: '#1e40af', bg: '#dbeafe' },
+    declining:         { label: '↓ Declining',       color: '#92400e', bg: '#fef3c7' },
+    insufficient_data: { label: 'Not enough data',   color: '#6b7280', bg: '#f3f4f6' },
   }
   const t = map[trend ?? ''] ?? { label: trend ?? 'Unknown', color: '#6b7280', bg: '#f3f4f6' }
   return (
@@ -116,21 +149,118 @@ function trendBadge(trend?: string) {
 
 function qualityBadge(quality?: string) {
   const map: Record<string, { label: string; color: string }> = {
-    complete:      { label: 'Complete data', color: '#059669' },
-    partial:       { label: 'Partial data', color: '#d97706' },
-    insufficient:  { label: 'Insufficient data', color: '#dc2626' },
+    complete:     { label: 'Complete data',     color: '#059669' },
+    partial:      { label: 'Partial data',      color: '#d97706' },
+    insufficient: { label: 'Insufficient data', color: '#dc2626' },
   }
   const q = map[quality ?? ''] ?? { label: quality ?? '', color: '#6b7280' }
   return <span style={{ color: q.color, fontSize: '0.75rem', fontWeight: 600 }}>({q.label})</span>
 }
 
+function instTypeBadge(type: string | null) {
+  const map: Record<string, { label: string; bg: string; color: string }> = {
+    high_school:       { label: 'High School',   bg: '#dbeafe', color: '#1e40af' },
+    community_college: { label: 'Comm. College', bg: '#d1fae5', color: '#065f46' },
+    online:            { label: 'Online',         bg: '#f3e8ff', color: '#7c3aed' },
+    other:             { label: 'Other',          bg: '#f3f4f6', color: '#6b7280' },
+  }
+  const b = map[type ?? ''] ?? { label: type ?? 'Unknown', bg: '#f3f4f6', color: '#6b7280' }
+  return (
+    <span style={{ background: b.bg, color: b.color, borderRadius: 10, padding: '1px 8px', fontSize: '0.7rem', fontWeight: 600 }}>
+      {b.label}
+    </span>
+  )
+}
+
+// ── Status chip with tooltip ──────────────────────────────────────────────────
+
+const STATUS_COPY: Record<string, { label: string; color: string; bg: string; border: string; tip: string }> = {
+  on_track: {
+    label: 'On track',
+    color: '#065f46', bg: '#d1fae5', border: '#6ee7b7',
+    tip: 'Based on courses completed and current grade level, the student is projected to finish the standard sequence by graduation.',
+  },
+  plan_needed: {
+    label: 'Plan needed',
+    color: '#92400e', bg: '#fef3c7', border: '#fde68a',
+    tip: 'The student will fall short of the standard sequence unless specific courses are intentionally scheduled. There is still time to address this.',
+  },
+  concern: {
+    label: 'Concern',
+    color: '#991b1b', bg: '#fef2f2', border: '#fecaca',
+    tip: 'The student is significantly behind in this subject with limited time remaining. Discuss options with the counselor as soon as possible.',
+  },
+}
+
+function StatusChip({ status }: { status: string }) {
+  const [show, setShow] = useState(false)
+  const s = STATUS_COPY[status] ?? { label: status, color: '#6b7280', bg: '#f3f4f6', border: '#e5e7eb', tip: '' }
+  return (
+    <span style={{ position: 'relative', display: 'inline-block' }}>
+      <span
+        onMouseEnter={() => setShow(true)}
+        onMouseLeave={() => setShow(false)}
+        style={{
+          background: s.bg, color: s.color, border: `1px solid ${s.border}`,
+          borderRadius: 10, padding: '2px 9px', fontSize: '0.73rem', fontWeight: 600,
+          cursor: 'default', userSelect: 'none',
+        }}
+      >
+        {s.label} <span style={{ fontSize: '0.65rem', opacity: 0.7 }}>ⓘ</span>
+      </span>
+      {show && s.tip && (
+        <div style={{
+          position: 'absolute', bottom: '100%', left: 0, marginBottom: 6,
+          background: '#1e293b', color: '#f8fafc', borderRadius: 8,
+          padding: '8px 12px', fontSize: '0.75rem', lineHeight: 1.5,
+          width: 240, zIndex: 100, boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+          pointerEvents: 'none',
+        }}>
+          {s.tip}
+        </div>
+      )}
+    </span>
+  )
+}
+
+// ── Collapsible course list ───────────────────────────────────────────────────
+
+function CourseList({ courses }: { courses: string[] }) {
+  const [expanded, setExpanded] = useState(false)
+  if (!courses.length) return null
+  const shown = expanded ? courses : courses.slice(0, 3)
+  return (
+    <div style={{ marginTop: 4 }}>
+      {shown.map((c, i) => (
+        <span key={i} style={{
+          display: 'inline-block', background: '#f1f5f9', borderRadius: 6,
+          padding: '1px 7px', fontSize: '0.68rem', color: '#475569',
+          marginRight: 4, marginBottom: 3,
+        }}>
+          {c}
+        </span>
+      ))}
+      {courses.length > 3 && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          style={{ background: 'none', border: 'none', color: '#6366f1', fontSize: '0.7rem', cursor: 'pointer', padding: '1px 0' }}
+        >
+          {expanded ? 'show less' : `+${courses.length - 3} more`}
+        </button>
+      )}
+    </div>
+  )
+}
+
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function TranscriptDrawer({
-  analysis, analyzedAt, studentName, canWrite,
-  uploading, reanalyzing, onClose, onUpload, onReanalyze, onDelete,
+  analysis, analyzedAt, transcripts, studentName, canWrite,
+  uploading, reanalyzing, sameInstitutionWarning,
+  onClose, onUpload, onReanalyze, onDeleteTranscript, onDismissSameInstitutionWarning,
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]
@@ -139,27 +269,27 @@ export default function TranscriptDrawer({
   }
 
   const isParsed = !analysis.parse_error
+  const isInternational = analysis.transcript_type === 'international'
 
   return (
     <>
       {/* Backdrop */}
       <div
         onClick={onClose}
-        style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 1000,
-        }}
+        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 1000 }}
       />
 
       {/* Drawer panel */}
       <div style={{
         position: 'fixed', top: 0, right: 0, bottom: 0,
-        width: 'min(560px, 100vw)',
+        width: 'min(580px, 100vw)',
         background: '#fff',
         boxShadow: '-4px 0 24px rgba(0,0,0,0.12)',
         zIndex: 1001,
         display: 'flex', flexDirection: 'column',
         overflowY: 'auto',
       }}>
+
         {/* Header */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -183,6 +313,98 @@ export default function TranscriptDrawer({
         {/* Body */}
         <div style={{ padding: '20px 24px', flex: 1 }}>
 
+          {/* Same-institution warning */}
+          {sameInstitutionWarning && (
+            <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '12px 14px', marginBottom: 16, fontSize: '0.82rem', color: '#92400e' }}>
+              <div style={{ fontWeight: 600, marginBottom: 4 }}>⚠ Possible duplicate institution</div>
+              <div>You already have a transcript from <strong>{sameInstitutionWarning.institution_name}</strong>. For the same school, the most recent transcript usually contains all prior coursework. Both are kept — the analysis combines them. You can delete the older one if it's redundant.</div>
+              <button onClick={onDismissSameInstitutionWarning} style={{ marginTop: 8, background: 'none', border: 'none', color: '#92400e', textDecoration: 'underline', cursor: 'pointer', fontSize: '0.78rem', padding: 0 }}>
+                Dismiss
+              </button>
+            </div>
+          )}
+
+          {/* Uploaded transcripts list */}
+          {transcripts.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+                Uploaded Transcripts
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {transcripts.map((t) => (
+                  <div key={t.id} style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8,
+                    padding: '8px 12px',
+                  }}>
+                    <span style={{ fontSize: '1rem' }}>📄</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#0c1b33', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        {t.institution_name || t.file_name || 'Transcript'}
+                        {instTypeBadge(t.institution_type)}
+                        {t.is_primary && (
+                          <span style={{ background: '#e0e7ff', color: '#3730a3', borderRadius: 10, padding: '1px 7px', fontSize: '0.68rem', fontWeight: 600 }}>Primary</span>
+                        )}
+                      </div>
+                      {t.uploaded_at && (
+                        <div style={{ fontSize: '0.7rem', color: '#9ca3af', marginTop: 1 }}>
+                          Uploaded {new Date(t.uploaded_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </div>
+                      )}
+                    </div>
+                    {canWrite && (
+                      confirmDeleteId === t.id ? (
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: '0.75rem' }}>
+                          <span style={{ color: '#dc2626' }}>Delete?</span>
+                          <button
+                            onClick={() => { onDeleteTranscript(t.id); setConfirmDeleteId(null) }}
+                            style={{ background: '#dc2626', color: '#fff', border: 'none', borderRadius: 5, padding: '3px 10px', cursor: 'pointer', fontSize: '0.75rem' }}
+                          >
+                            Yes
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteId(null)}
+                            style={{ background: 'none', border: '1px solid #e5e7eb', borderRadius: 5, padding: '3px 10px', cursor: 'pointer', fontSize: '0.75rem', color: '#6b7280' }}
+                          >
+                            No
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmDeleteId(t.id)}
+                          title="Delete this transcript"
+                          style={{ background: 'none', border: 'none', color: '#d1d5db', cursor: 'pointer', fontSize: '0.9rem', padding: '2px 4px', lineHeight: 1 }}
+                          onMouseEnter={(e) => (e.currentTarget.style.color = '#dc2626')}
+                          onMouseLeave={(e) => (e.currentTarget.style.color = '#d1d5db')}
+                        >
+                          🗑
+                        </button>
+                      )
+                    )}
+                  </div>
+                ))}
+              </div>
+              {canWrite && (
+                <div style={{ marginTop: 8 }}>
+                  <input ref={fileRef} type="file" accept=".pdf,.txt" onChange={handleFileChange} style={{ display: 'none' }} />
+                  <button
+                    onClick={() => fileRef.current?.click()}
+                    disabled={uploading || reanalyzing}
+                    style={{
+                      background: 'none', color: '#6366f1',
+                      border: '1px dashed #c7d2fe', borderRadius: 7,
+                      padding: '6px 14px', fontSize: '0.78rem', fontWeight: 600,
+                      cursor: uploading ? 'not-allowed' : 'pointer',
+                      opacity: uploading || reanalyzing ? 0.6 : 1,
+                    }}
+                  >
+                    {uploading ? '⏳ Uploading…' : '+ Add another transcript'}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Parse error state */}
           {!isParsed && (
             <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: 16, marginBottom: 20 }}>
@@ -195,15 +417,27 @@ export default function TranscriptDrawer({
             </div>
           )}
 
+          {/* International narrative */}
+          {isParsed && isInternational && analysis.international_narrative && (
+            <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 10, padding: '12px 14px', marginBottom: 20 }}>
+              <div style={{ fontWeight: 700, fontSize: '0.82rem', color: '#0c4a6e', marginBottom: 6 }}>
+                🌐 International Transcript
+              </div>
+              <div style={{ fontSize: '0.82rem', color: '#0c4a6e', lineHeight: 1.55 }}>
+                {analysis.international_narrative}
+              </div>
+            </div>
+          )}
+
           {/* Student info */}
           {isParsed && analysis.student_info && (
             <div style={{ background: '#f8fafc', borderRadius: 10, padding: '12px 14px', marginBottom: 20, fontSize: '0.82rem', color: '#374151' }}>
               {analysis.student_info.name && <div><strong>Student:</strong> {analysis.student_info.name}</div>}
-              {(studentName && !analysis.student_info.name) && <div><strong>Student:</strong> {studentName}</div>}
+              {studentName && !analysis.student_info.name && <div><strong>Student:</strong> {studentName}</div>}
               {analysis.student_info.school && <div><strong>School:</strong> {analysis.student_info.school}</div>}
-              <div style={{ display: 'flex', gap: 16, marginTop: analysis.student_info.name || analysis.student_info.school ? 4 : 0, flexWrap: 'wrap' }}>
-                {analysis.student_info.graduation_year && <span><strong>Grad Year:</strong> {analysis.student_info.graduation_year}</span>}
-                {analysis.student_info.current_grade && <span><strong>Current Grade:</strong> {analysis.student_info.current_grade}</span>}
+              <div style={{ display: 'flex', gap: 16, marginTop: 4, flexWrap: 'wrap' }}>
+                {analysis.student_info.graduation_year && <span><strong>Grad:</strong> {analysis.student_info.graduation_year}</span>}
+                {analysis.student_info.current_grade && <span><strong>Grade:</strong> {analysis.student_info.current_grade}</span>}
               </div>
             </div>
           )}
@@ -236,7 +470,7 @@ export default function TranscriptDrawer({
                     <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 700, color: '#374151' }}>
                       {fmt(analysis.gpa.weighted_uncapped)}
                     </td>
-                    <td style={{ padding: '8px 10px', color: '#9ca3af', fontSize: '0.72rem' }}>+1 per Honors/AP/IB</td>
+                    <td style={{ padding: '8px 10px', color: '#9ca3af', fontSize: '0.72rem' }}>+1 per Honors/AP/IB/CC</td>
                   </tr>
                   <tr>
                     <td style={{ padding: '8px 10px', color: '#374151' }}>Weighted (capped, UC)</td>
@@ -277,10 +511,48 @@ export default function TranscriptDrawer({
             </div>
           )}
 
-          {/* A-G Requirements */}
+          {/* ── Core Subject Overview ─────────────────────────────────────── */}
+          {isParsed && analysis.subject_projection && analysis.subject_projection.length > 0 && (
+            <div style={{ marginBottom: 22 }}>
+              <h3 style={{ margin: '0 0 10px', fontSize: '0.875rem', fontWeight: 700, color: '#0c1b33' }}>Core Subject Overview</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {analysis.subject_projection.map((proj) => (
+                  <div key={proj.subject} style={{
+                    borderRadius: 8, border: '1px solid #e2e8f0',
+                    padding: '9px 12px',
+                    background: proj.status === 'concern' ? '#fef2f2' : proj.status === 'plan_needed' ? '#fffbeb' : '#f0fdf4',
+                    borderColor: proj.status === 'concern' ? '#fecaca' : proj.status === 'plan_needed' ? '#fde68a' : '#bbf7d0',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                      <div style={{ fontWeight: 600, fontSize: '0.82rem', color: '#0c1b33' }}>{proj.subject}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                          {proj.completed_years} / {proj.projected_years} yr{proj.projected_years !== 1 ? 's' : ''} projected
+                        </span>
+                        <StatusChip status={proj.status} />
+                      </div>
+                    </div>
+                    {proj.rigor_observation && (
+                      <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: 4, fontStyle: 'italic' }}>
+                        {proj.rigor_observation}
+                      </div>
+                    )}
+                    {proj.courses && proj.courses.length > 0 && (
+                      <CourseList courses={proj.courses} />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── UC/CSU A-G Requirements (California) ─────────────────────── */}
           {isParsed && analysis.ag_requirements && (
             <div style={{ marginBottom: 22 }}>
-              <h3 style={{ margin: '0 0 10px', fontSize: '0.875rem', fontWeight: 700, color: '#0c1b33' }}>A-G Requirements</h3>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+                <h3 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 700, color: '#0c1b33' }}>UC/CSU A-G Requirements</h3>
+                <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>(California)</span>
+              </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {AG_ROWS.map(({ key, label, required, detail }) => {
                   const cat = analysis.ag_requirements?.[key]
@@ -290,7 +562,8 @@ export default function TranscriptDrawer({
                   return (
                     <div key={key} style={{
                       display: 'flex', alignItems: 'flex-start', gap: 8, padding: '7px 10px',
-                      borderRadius: 8, background: cat.satisfied ? '#f0fdf4' : total > 0 ? '#fffbeb' : '#fef2f2',
+                      borderRadius: 8,
+                      background: cat.satisfied ? '#f0fdf4' : total > 0 ? '#fffbeb' : '#fef2f2',
                       border: `1px solid ${cat.satisfied ? '#bbf7d0' : total > 0 ? '#fde68a' : '#fecaca'}`,
                     }}>
                       <span style={{ fontSize: '0.9rem', marginTop: 1, flexShrink: 0 }}>
@@ -303,6 +576,9 @@ export default function TranscriptDrawer({
                           {cat.in_progress > 0 ? ` · ${cat.in_progress} in progress` : ''}
                           {detailText ? ` · ${detailText}` : ''}
                         </div>
+                        {cat.courses && cat.courses.length > 0 && (
+                          <CourseList courses={cat.courses} />
+                        )}
                       </div>
                     </div>
                   )
@@ -342,24 +618,10 @@ export default function TranscriptDrawer({
         {/* Footer actions */}
         {canWrite && (
           <div style={{
-            padding: '16px 24px',
-            borderTop: '1px solid #e2e8f0',
+            padding: '16px 24px', borderTop: '1px solid #e2e8f0',
             display: 'flex', gap: 10, flexWrap: 'wrap',
             position: 'sticky', bottom: 0, background: '#fff',
           }}>
-            <input ref={fileRef} type="file" accept=".pdf,.txt" onChange={handleFileChange} style={{ display: 'none' }} />
-            <button
-              onClick={() => fileRef.current?.click()}
-              disabled={uploading || reanalyzing}
-              style={{
-                background: '#4f46e5', color: '#fff', border: 'none', borderRadius: 7,
-                padding: '8px 16px', fontSize: '0.8rem', fontWeight: 600,
-                cursor: uploading ? 'not-allowed' : 'pointer',
-                opacity: uploading || reanalyzing ? 0.6 : 1,
-              }}
-            >
-              {uploading ? 'Uploading…' : '⬆ Upload New'}
-            </button>
             <button
               onClick={onReanalyze}
               disabled={uploading || reanalyzing}
@@ -370,20 +632,7 @@ export default function TranscriptDrawer({
                 opacity: uploading || reanalyzing ? 0.6 : 1,
               }}
             >
-              {reanalyzing ? 'Re-analyzing…' : '↻ Re-analyze'}
-            </button>
-            <button
-              onClick={onDelete}
-              disabled={uploading || reanalyzing}
-              style={{
-                background: '#fff', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 7,
-                padding: '8px 16px', fontSize: '0.8rem', fontWeight: 600,
-                cursor: 'pointer',
-                opacity: uploading || reanalyzing ? 0.6 : 1,
-                marginLeft: 'auto',
-              }}
-            >
-              🗑 Delete
+              {reanalyzing ? 'Re-analyzing…' : '↻ Re-analyze all'}
             </button>
           </div>
         )}
