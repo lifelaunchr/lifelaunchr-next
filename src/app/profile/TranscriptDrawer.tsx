@@ -52,6 +52,7 @@ interface TranscriptAnalysis {
     area: string
     message: string
   }>
+  name_mismatch?: boolean
 }
 
 interface Props {
