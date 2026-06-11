@@ -484,6 +484,14 @@ export default function TranscriptDrawer({
               {analysis.gpa.notes && (
                 <div style={{ marginTop: 6, fontSize: '0.75rem', color: '#6b7280', fontStyle: 'italic' }}>{analysis.gpa.notes}</div>
               )}
+              <div style={{ marginTop: 8, fontSize: '0.72rem', color: '#9ca3af', lineHeight: 1.4 }}>
+                ℹ️ These are estimates based on transcript data. UC and CSU calculate official GPAs using
+                honors designations from the{' '}
+                <a href="https://hs-articulation.ucop.edu/agcourselist" target="_blank" rel="noopener noreferrer"
+                   style={{ color: '#6366f1', textDecoration: 'underline' }}>UCOP A-G course list</a>
+                {' '}(California students), or reported courses and grades (all other students).
+                Treat this as guidance, not an official calculation.
+              </div>
             </div>
           )}
 
