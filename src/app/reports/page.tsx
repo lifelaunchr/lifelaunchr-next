@@ -795,7 +795,7 @@ function ReportsContent() {
       {/* Top nav */}
       <header id="reports-header" style={headerSt}>
         <Link href="/" style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>
-          <span style={{ color: '#7dd3fc' }}>Soar</span> by LifeLaunchr
+          <span style={{ color: '#7dd3fc' }}>Soar</span>
         </Link>
         <Link href="/chat" style={{ fontSize: '0.82rem', color: '#8888aa', textDecoration: 'none', border: '1px solid #444466', padding: '4px 12px', borderRadius: 6 }}>
           ← Back to Soar

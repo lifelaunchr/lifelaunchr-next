@@ -21,7 +21,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: 'Soar by LifeLaunchr',
+    default: 'Soar',
     template: '%s | Soar',
   },
   description:
@@ -41,27 +41,27 @@ export const metadata: Metadata = {
     'Soar',
   ],
   openGraph: {
-    title: 'Soar by LifeLaunchr',
+    title: 'Soar',
     description:
       'The AI college and career planning assistant that keeps counselors, students, and parents on the same page. Built on real data, deep counseling methodology, and a shared research record.',
     url: process.env.NEXT_PUBLIC_APP_URL ?? 'https://lifelaunchr-next.vercel.app',
-    siteName: 'Soar by LifeLaunchr',
+    siteName: 'Soar',
     images: [
       {
-        url: '/og-image.png?v=2',
+        url: '/og-image.png?v=3',
         width: 1200,
         height: 630,
-        alt: 'Soar by LifeLaunchr',
+        alt: 'Soar',
       },
     ],
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Soar by LifeLaunchr',
+    title: 'Soar',
     description:
       'The AI college and career planning assistant that keeps counselors, students, and parents on the same page. Built on real data, deep counseling methodology, and a shared research record.',
-    images: ['/og-image.png?v=2'],
+    images: ['/og-image.png?v=3'],
   },
   icons: {
     icon: [

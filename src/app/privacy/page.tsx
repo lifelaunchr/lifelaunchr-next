@@ -12,7 +12,7 @@ export default function PrivacyPage() {
       <header className="border-b border-gray-100">
         <div className="mx-auto max-w-3xl px-6 py-4 flex items-center justify-between">
           <Link href="/" className="text-lg font-semibold text-gray-900 tracking-tight">
-            Soar <span className="text-sm font-normal text-gray-400">by LifeLaunchr</span>
+            Soar
           </Link>
           <Link href="/chat" className="text-sm text-gray-500 hover:text-gray-800 transition-colors">
             Go to app →

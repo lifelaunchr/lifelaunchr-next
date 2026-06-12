@@ -8,9 +8,9 @@ function SoarLogo() {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 168 24"
+      viewBox="0 0 75 24"
       className="h-7 w-auto"
-      aria-label="Soar by LifeLaunchr"
+      aria-label="Soar"
     >
       {/* Graduation cap — diamond board */}
       <polygon points="11,1 22,7 11,13 0,7" fill="#7dd3fc" />
@@ -28,12 +28,6 @@ function SoarLogo() {
         fontSize="17" fontWeight="700"
         fill="white" letterSpacing="-0.4"
       >Soar</text>
-      <text
-        x="76" y="18"
-        fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-        fontSize="11" fontWeight="400"
-        fill="rgba(255,255,255,0.55)"
-      >by LifeLaunchr</text>
     </svg>
   )
 }
@@ -108,7 +102,7 @@ export function ChatHeader({
             <SoarLogo />
           ) : (
             <h1 className="text-base font-semibold tracking-tight leading-none">
-              <span className="text-sky-300">{botName}</span> by LifeLaunchr
+              <span className="text-sky-300">{botName}</span>
             </h1>
           )}
           <span className="text-xs text-white/45 truncate">

@@ -439,7 +439,7 @@ function ActivitiesContent() {
           <Link href="/chat" style={{ color: '#6b7280', textDecoration: 'none', fontSize: '0.875rem' }}>← Back to Soar</Link>
           <span style={{ color: '#e2e8f0' }}>|</span>
           <Link href="/" style={{ textDecoration: 'none' }}>
-            <span style={{ fontWeight: 700, fontSize: '1rem', color: '#0c1b33' }}><span style={{ color: '#7dd3fc' }}>Soar</span> by LifeLaunchr</span>
+            <span style={{ fontWeight: 700, fontSize: '1rem', color: '#0c1b33' }}><span style={{ color: '#7dd3fc' }}>Soar</span></span>
           </Link>
         </div>
         {canWrite && (

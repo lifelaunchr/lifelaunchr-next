@@ -66,7 +66,6 @@ export default function Home() {
         <div className="mx-auto max-w-5xl px-6 py-4 flex items-center justify-between">
           <span className="text-lg font-semibold tracking-tight" style={{ color: '#fff' }}>
             <span style={{ color: '#7dd3fc' }}>Soar</span>{' '}
-            <span className="text-sm font-normal" style={{ color: '#8888aa' }}>by LifeLaunchr</span>
           </span>
           <nav className="flex items-center gap-5">
             <Link href="/upgrade" className="text-sm transition-colors" style={{ color: '#a0aec0' }}>

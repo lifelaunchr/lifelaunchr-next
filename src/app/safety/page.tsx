@@ -1,7 +1,7 @@
 import Link from 'next/link'
 
 export const metadata = {
-  title: 'How We Keep Students Safe — Soar by LifeLaunchr',
+  title: 'How We Keep Students Safe — Soar',
 }
 
 const layers = [
@@ -65,7 +65,7 @@ export default function SafetyPage() {
       {/* Header */}
       <header style={{ background: '#0c1b33', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }} className="px-4 sm:px-6 py-3">
         <Link href="/" style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>
-          <span style={{ color: '#7dd3fc' }}>Soar</span> by LifeLaunchr
+          <span style={{ color: '#7dd3fc' }}>Soar</span>
         </Link>
         <Link href="/chat" style={{ fontSize: '0.82rem', color: '#8888aa', textDecoration: 'none', border: '1px solid #444466', padding: '4px 12px', borderRadius: 6 }}>
           Go to Soar →

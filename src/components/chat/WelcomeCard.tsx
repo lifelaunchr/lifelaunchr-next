@@ -99,7 +99,7 @@ export function WelcomeCard({ onSendMessage, accountType, isFreeTier, isFirstSes
 
   const heading = isFirstSession
     ? 'Welcome! Let\u2019s get started.'
-    : 'Welcome to Soar by LifeLaunchr'
+    : 'Welcome to Soar'
 
   const subtitle = isFirstSession
     ? accountType === 'counselor'

@@ -2,7 +2,7 @@ import type { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Soar by LifeLaunchr',
+    name: 'Soar',
     short_name: 'Soar',
     description: 'Your AI-powered college planning advisor',
     start_url: '/',
