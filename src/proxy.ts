@@ -73,6 +73,23 @@ function accessLoginPage(redirect: string, error = false): NextResponse {
   })
 }
 
+// When the same Vercel deployment is served from withsoar.ai (satellite) AND
+// soar.lifelaunchr.com (primary), we must tell Clerk which domain we're on at
+// request time — static env vars can't differentiate between the two.
+// The second arg to clerkMiddleware can be an async (request) => options fn;
+// we return satellite options only when the Host header is withsoar.ai.
+const clerkOptions = async (req: Request) => {
+  const host = (req.headers as Headers).get('host') ?? ''
+  if (host === 'withsoar.ai' || host === 'www.withsoar.ai') {
+    return {
+      isSatellite: true,
+      domain: 'https://soar.lifelaunchr.com',
+      signInUrl: 'https://soar.lifelaunchr.com/sign-in',
+    }
+  }
+  return {}
+}
+
 export default clerkMiddleware(async (auth, req) => {
   const url = new URL(req.url)
 
@@ -146,7 +163,7 @@ export default clerkMiddleware(async (auth, req) => {
       return NextResponse.redirect(new URL('/', req.url))
     }
   }
-})
+}, clerkOptions)
 
 export const config = {
   matcher: [

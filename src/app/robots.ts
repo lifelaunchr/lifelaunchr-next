@@ -3,6 +3,6 @@ import { MetadataRoute } from 'next'
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: { userAgent: '*', allow: '/', disallow: ['/api/', '/admin'] },
-    sitemap: 'https://soar.lifelaunchr.com/sitemap.xml',
+    sitemap: 'https://withsoar.ai/sitemap.xml',
   }
 }
