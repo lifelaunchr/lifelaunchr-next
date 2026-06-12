@@ -36,20 +36,17 @@
   <!-- === Text content (right of divider) === -->
 
   <!-- "Soar" main title -->
-  <text x="340" y="240" font-family="'Helvetica Neue', Arial, sans-serif" font-size="130" font-weight="800" fill="#ffffff" letter-spacing="-3">Soar</text>
+  <text x="340" y="220" font-family="'Helvetica Neue', Arial, sans-serif" font-size="130" font-weight="800" fill="#ffffff" letter-spacing="-3">Soar</text>
 
-  <!-- "by LifeLaunchr" subtitle -->
-  <text x="344" y="300" font-family="'Helvetica Neue', Arial, sans-serif" font-size="36" font-weight="400" fill="#7dd3fc" letter-spacing="1">by LifeLaunchr</text>
-
-  <!-- Divider line under subtitle -->
-  <rect x="340" y="330" width="500" height="2" rx="1" fill="#38bdf8" opacity="0.3"/>
+  <!-- Divider line under title -->
+  <rect x="340" y="270" width="500" height="2" rx="1" fill="#38bdf8" opacity="0.3"/>
 
   <!-- Tagline (two lines) -->
-  <text x="340" y="385" font-family="'Helvetica Neue', Arial, sans-serif" font-size="30" font-weight="400" fill="#93c5fd" letter-spacing="0.5">College and Career Planning,</text>
-  <text x="340" y="425" font-family="'Helvetica Neue', Arial, sans-serif" font-size="30" font-weight="400" fill="#93c5fd" letter-spacing="0.5">Built for the Whole Team.</text>
+  <text x="340" y="330" font-family="'Helvetica Neue', Arial, sans-serif" font-size="30" font-weight="400" fill="#93c5fd" letter-spacing="0.5">College and Career Planning,</text>
+  <text x="340" y="370" font-family="'Helvetica Neue', Arial, sans-serif" font-size="30" font-weight="400" fill="#93c5fd" letter-spacing="0.5">Built for the Whole Team.</text>
 
   <!-- URL bottom -->
-  <text x="340" y="540" font-family="'Helvetica Neue', Arial, sans-serif" font-size="22" font-weight="400" fill="#38bdf8" opacity="0.6" letter-spacing="1">soar.lifelaunchr.com</text>
+  <text x="340" y="540" font-family="'Helvetica Neue', Arial, sans-serif" font-size="22" font-weight="400" fill="#38bdf8" opacity="0.6" letter-spacing="1">withsoar.ai</text>
 
   <!-- Small decorative dots -->
   <circle cx="920" cy="200" r="3" fill="#38bdf8" opacity="0.2"/>
