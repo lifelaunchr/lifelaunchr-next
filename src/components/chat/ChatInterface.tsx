@@ -1209,7 +1209,8 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
 
           {/* Bottom nav — pinned but scrollable when tall */}
           {userId && (
-            <div className="border-t border-white/10 p-3 flex-shrink-0 flex flex-col gap-0.5 overflow-y-auto max-h-[60vh]">
+            <div className="relative flex-shrink-0">
+            <div className="border-t border-white/10 p-3 flex flex-col gap-0.5 overflow-y-auto max-h-[calc(100vh-160px)] pb-8">
               {/* Usage bar — sessions (primary) or messages (fallback) */}
               {userId && usageData && (usageData.session_limit != null || usageData.effective_limit != null) && (
                 <div id="tour-session-counter" className="mb-2 px-3">
@@ -1427,7 +1428,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                 <Link
                   id="tour-nav-students"
                   href="/dashboard"
-                  className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                  className="flex items-center gap-3 px-3 py-2 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
                 >
                   <span className="text-base leading-none">📋</span>
                   <span>My Students</span>
@@ -1439,7 +1440,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                 <Link
                   id="tour-nav-lists"
                   href="/lists"
-                  className="flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                  className="flex items-center gap-3 px-3 py-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
                 >
                   <span className="text-base leading-none flex-shrink-0">📋</span>
                   <span className="flex flex-col min-w-0">
@@ -1454,7 +1455,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                 <Link
                   id="tour-nav-activities"
                   href="/activities"
-                  className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                  className="flex items-center gap-3 px-3 py-2 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
                 >
                   <span className="text-base leading-none">🏆</span>
                   <span>My Activities</span>
@@ -1462,7 +1463,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
               )}
 
               {/* Session & Research Summaries — all roles */}
-              <Link id="tour-nav-reports" href="/reports" className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all">
+              <Link id="tour-nav-reports" href="/reports" className="flex items-center gap-3 px-3 py-2 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all">
                 <span className="text-base leading-none">📝</span>
                 <span>Session &amp; Research Summaries</span>
               </Link>
@@ -1474,7 +1475,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                 <Link
                   id="tour-nav-writing"
                   href={isParent && forStudentId ? `/writing?for=${forStudentId}` : '/writing'}
-                  className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                  className="flex items-center gap-3 px-3 py-2 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
                 >
                   <span className="text-base leading-none">✍️</span>
                   <span>Writing</span>
@@ -1488,7 +1489,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                   <p className="text-[10px] uppercase tracking-widest text-slate-600 px-3 mb-0.5">Student</p>
                   <Link
                     href={`/profile?for=${forStudentId}`}
-                    className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                    className="flex items-center gap-3 px-3 py-2 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
                   >
                     <span className="text-base leading-none">🧑‍🎓</span>
                     <span>Student Profile</span>
@@ -1496,7 +1497,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                   <Link
                     id="tour-nav-lists"
                     href={`/lists?for=${forStudentId}`}
-                    className="flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                    className="flex items-center gap-3 px-3 py-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
                   >
                     <span className="text-base leading-none flex-shrink-0">📋</span>
                     <span className="flex flex-col min-w-0">
@@ -1506,7 +1507,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                   </Link>
                   <Link
                     href={`/activities?for=${forStudentId}`}
-                    className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                    className="flex items-center gap-3 px-3 py-2 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
                   >
                     <span className="text-base leading-none">🏆</span>
                     <span>Activities</span>
@@ -1520,7 +1521,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
               {/* Tutorials — all roles */}
               <Link
                 href="/tutorials"
-                className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                className="flex items-center gap-3 px-3 py-2 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
               >
                 <span className="text-base leading-none">🎬</span>
                 <span>Tutorials</span>
@@ -1530,7 +1531,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
               {(isAdmin || usageData?.is_tenant_admin) && (
                 <Link
                   href="/admin"
-                  className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                  className="flex items-center gap-3 px-3 py-2 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
                 >
                   <span className="text-base leading-none">⚙️</span>
                   <span>Admin Dashboard</span>
@@ -1541,7 +1542,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
               {usageData?.is_tenant_admin && (
                 <Link
                   href="/settings/billing"
-                  className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                  className="flex items-center gap-3 px-3 py-2 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
                 >
                   <span className="text-base leading-none">💳</span>
                   <span>Billing &amp; Plan</span>
@@ -1560,7 +1561,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
               {/* My Info / Profile */}
               <Link
                 href="/profile"
-                className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                className="flex items-center gap-3 px-3 py-2 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
               >
                 <span className="text-base leading-none">👤</span>
                 <span>{isCounselor || isParent ? 'My Info' : 'Profile'}</span>
@@ -1593,6 +1594,9 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                 </div>
               )}
 
+            </div>
+            {/* Scroll hint — fade suggests more items below */}
+            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-[#1a1a2e] to-transparent" />
             </div>
           )}
         </aside>
