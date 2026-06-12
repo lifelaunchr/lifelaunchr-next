@@ -1210,7 +1210,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
           {/* Bottom nav — pinned but scrollable when tall */}
           {userId && (
             <div className="relative flex-shrink-0">
-            <div className="border-t border-white/10 p-3 flex flex-col gap-0.5 overflow-y-auto max-h-[calc(100vh-160px)] pb-8">
+            <div className="border-t border-white/10 p-3 flex flex-col gap-0.5 overflow-y-auto max-h-[60vh] pb-6">
               {/* Usage bar — sessions (primary) or messages (fallback) */}
               {userId && usageData && (usageData.session_limit != null || usageData.effective_limit != null) && (
                 <div id="tour-session-counter" className="mb-2 px-3">
@@ -1384,7 +1384,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                     }
                     setShowAddFamily(true)
                   }}
-                  className="flex items-center gap-3 px-3 py-2 text-xs text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all w-full text-left"
+                  className="flex items-center gap-3 px-3 py-1.5 text-xs text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all w-full text-left"
                 >
                   <span className="text-base leading-none">➕</span>
                   <span>Add Family</span>
@@ -1399,7 +1399,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                     setInviteCopied(true)
                     setTimeout(() => setInviteCopied(false), 2000)
                   }}
-                  className="flex items-center gap-3 px-3 py-2 text-xs text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all w-full text-left"
+                  className="flex items-center gap-3 px-3 py-1.5 text-xs text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all w-full text-left"
                 >
                   <span className="text-base leading-none">{inviteCopied ? '✅' : '🔗'}</span>
                   <span>{inviteCopied ? 'Copied!' : 'Copy invite link'}</span>
@@ -1412,7 +1412,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                   href={schedulingLink}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-3 px-3 py-2 text-xs text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all w-full text-left"
+                  className="flex items-center gap-3 px-3 py-1.5 text-xs text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all w-full text-left"
                 >
                   <span className="text-base leading-none">📅</span>
                   <span>Schedule a session</span>
@@ -1428,7 +1428,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                 <Link
                   id="tour-nav-students"
                   href="/dashboard"
-                  className="flex items-center gap-3 px-3 py-2 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                  className="flex items-center gap-3 px-3 py-1.5 text-xs text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
                 >
                   <span className="text-base leading-none">📋</span>
                   <span>My Students</span>
@@ -1440,9 +1440,9 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                 <Link
                   id="tour-nav-lists"
                   href="/lists"
-                  className="flex items-center gap-3 px-3 py-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                  className="flex items-center gap-3 px-3 py-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
                 >
-                  <span className="text-base leading-none flex-shrink-0">📋</span>
+                  <span className="text-sm leading-none flex-shrink-0">📋</span>
                   <span className="flex flex-col min-w-0">
                     <span className="text-sm leading-tight">My Lists</span>
                     <span className="text-[10px] text-slate-500 leading-tight truncate">colleges · scholarships · programs</span>
@@ -1455,7 +1455,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                 <Link
                   id="tour-nav-activities"
                   href="/activities"
-                  className="flex items-center gap-3 px-3 py-2 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                  className="flex items-center gap-3 px-3 py-1.5 text-xs text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
                 >
                   <span className="text-base leading-none">🏆</span>
                   <span>My Activities</span>
@@ -1463,7 +1463,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
               )}
 
               {/* Session & Research Summaries — all roles */}
-              <Link id="tour-nav-reports" href="/reports" className="flex items-center gap-3 px-3 py-2 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all">
+              <Link id="tour-nav-reports" href="/reports" className="flex items-center gap-3 px-3 py-1.5 text-xs text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all">
                 <span className="text-base leading-none">📝</span>
                 <span>Session &amp; Research Summaries</span>
               </Link>
@@ -1475,7 +1475,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                 <Link
                   id="tour-nav-writing"
                   href={isParent && forStudentId ? `/writing?for=${forStudentId}` : '/writing'}
-                  className="flex items-center gap-3 px-3 py-2 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                  className="flex items-center gap-3 px-3 py-1.5 text-xs text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
                 >
                   <span className="text-base leading-none">✍️</span>
                   <span>Writing</span>
@@ -1489,7 +1489,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                   <p className="text-[10px] uppercase tracking-widest text-slate-600 px-3 mb-0.5">Student</p>
                   <Link
                     href={`/profile?for=${forStudentId}`}
-                    className="flex items-center gap-3 px-3 py-2 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                    className="flex items-center gap-3 px-3 py-1.5 text-xs text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
                   >
                     <span className="text-base leading-none">🧑‍🎓</span>
                     <span>Student Profile</span>
@@ -1497,9 +1497,9 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                   <Link
                     id="tour-nav-lists"
                     href={`/lists?for=${forStudentId}`}
-                    className="flex items-center gap-3 px-3 py-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                    className="flex items-center gap-3 px-3 py-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
                   >
-                    <span className="text-base leading-none flex-shrink-0">📋</span>
+                    <span className="text-sm leading-none flex-shrink-0">📋</span>
                     <span className="flex flex-col min-w-0">
                       <span className="text-sm leading-tight">Lists</span>
                       <span className="text-[10px] text-slate-500 leading-tight truncate">colleges · scholarships · programs</span>
@@ -1507,7 +1507,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                   </Link>
                   <Link
                     href={`/activities?for=${forStudentId}`}
-                    className="flex items-center gap-3 px-3 py-2 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                    className="flex items-center gap-3 px-3 py-1.5 text-xs text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
                   >
                     <span className="text-base leading-none">🏆</span>
                     <span>Activities</span>
@@ -1521,19 +1521,28 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
               {/* Tutorials — all roles */}
               <Link
                 href="/tutorials"
-                className="flex items-center gap-3 px-3 py-2 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                className="flex items-center gap-3 px-3 py-1.5 text-xs text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
               >
-                <span className="text-base leading-none">🎬</span>
+                <span className="text-sm leading-none">🎬</span>
                 <span>Tutorials</span>
+              </Link>
+
+              {/* My Info / Profile */}
+              <Link
+                href="/profile"
+                className="flex items-center gap-3 px-3 py-1.5 text-xs text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+              >
+                <span className="text-sm leading-none">👤</span>
+                <span>{isCounselor || isParent ? 'My Info' : 'Profile'}</span>
               </Link>
 
               {/* Admin Dashboard — admins and tenant admins */}
               {(isAdmin || usageData?.is_tenant_admin) && (
                 <Link
                   href="/admin"
-                  className="flex items-center gap-3 px-3 py-2 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                  className="flex items-center gap-3 px-3 py-1.5 text-xs text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
                 >
-                  <span className="text-base leading-none">⚙️</span>
+                  <span className="text-sm leading-none">⚙️</span>
                   <span>Admin Dashboard</span>
                 </Link>
               )}
@@ -1542,30 +1551,12 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
               {usageData?.is_tenant_admin && (
                 <Link
                   href="/settings/billing"
-                  className="flex items-center gap-3 px-3 py-2 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                  className="flex items-center gap-3 px-3 py-1.5 text-xs text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
                 >
-                  <span className="text-base leading-none">💳</span>
+                  <span className="text-sm leading-none">💳</span>
                   <span>Billing &amp; Plan</span>
                 </Link>
               )}
-
-              <div className="border-t border-white/10 mt-1 mb-1" />
-
-              {/* Logged-in user */}
-              {clerkUser && (
-                <div className="text-[10px] text-slate-500 px-3 pb-0.5 truncate">
-                  {clerkUser.fullName || clerkUser.emailAddresses[0]?.emailAddress || ''}
-                </div>
-              )}
-
-              {/* My Info / Profile */}
-              <Link
-                href="/profile"
-                className="flex items-center gap-3 px-3 py-2 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
-              >
-                <span className="text-base leading-none">👤</span>
-                <span>{isCounselor || isParent ? 'My Info' : 'Profile'}</span>
-              </Link>
 
               {/* Student connections — informational, at the very bottom */}
               {!isCounselor && !isParent && myConnections &&
