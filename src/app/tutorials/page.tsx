@@ -1,27 +1,21 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 // ── Add video IDs here as you upload new tutorials ────────────────────────────
 // Find each ID in the video's Vimeo URL: vimeo.com/1234567890 → id: '1234567890'
-//
-// thumbnail (optional): right-click the thumbnail on vimeo.com/manage/videos →
-//   Settings → Thumbnail → "Copy Image Address". Paste that URL here.
-//   If omitted, a dark gradient placeholder is shown instead.
-//
 // New videos go at the BOTTOM — the first item in this list is the first card.
-const VIDEOS: { id: string; title: string; description?: string; thumbnail?: string }[] = [
+// Thumbnails are fetched automatically from Vimeo; no manual steps needed.
+const VIDEOS: { id: string; title: string; description?: string }[] = [
   {
     id: '1197542498',
     title: 'Why Soar is Different',
     description: 'Soar is a shared workspace where counselors, students, and parents work together — not just a tool for managing a process. A two-minute overview from LifeLaunchr founder Swami Swaminathan.',
-    // thumbnail: 'https://i.vimeocdn.com/video/..._640x360.jpg',
   },
   {
     id: '1198259270',
     title: 'Invite Your First Family',
-    description: 'The single most important first step: invite a student and their parents. Once you do, you can start researching on the student\'s behalf immediately. Takes about two minutes.',
-    // thumbnail: 'https://i.vimeocdn.com/video/..._640x360.jpg',
+    description: "The single most important first step: invite a student and their parents. Once you do, you can start researching on the student's behalf immediately. Takes about two minutes.",
   },
 ]
 // ─────────────────────────────────────────────────────────────────────────────
@@ -31,7 +25,27 @@ const SHOWCASE_EMBED = 'https://vimeo.com/showcase/12272683/embed?autoplay=0'
 
 export default function TutorialsPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [thumbnails, setThumbnails] = useState<Record<string, string>>({})
   const hasVideos = VIDEOS.length > 0
+
+  // Fetch thumbnails from Vimeo oEmbed API (works for unlisted videos)
+  useEffect(() => {
+    if (!hasVideos) return
+    VIDEOS.forEach(async (video) => {
+      try {
+        const res = await fetch(
+          `https://vimeo.com/api/oembed.json?url=https://vimeo.com/${video.id}&width=640`
+        )
+        if (!res.ok) return
+        const data = await res.json()
+        if (data.thumbnail_url) {
+          setThumbnails((prev) => ({ ...prev, [video.id]: data.thumbnail_url }))
+        }
+      } catch {
+        // silently skip — gradient placeholder will show
+      }
+    })
+  }, [hasVideos])
 
   return (
     <div className="flex flex-col h-screen bg-[#0c1b33]">
@@ -96,10 +110,10 @@ export default function TutorialsPage() {
               >
                 {/* Thumbnail */}
                 <div className="relative aspect-video bg-white/5 overflow-hidden">
-                  {video.thumbnail ? (
+                  {thumbnails[video.id] ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img
-                      src={video.thumbnail}
+                      src={thumbnails[video.id]}
                       alt={video.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
