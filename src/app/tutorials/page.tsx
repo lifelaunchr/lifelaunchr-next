@@ -1,34 +1,21 @@
-'use client'
-
-import { useAuth } from '@clerk/nextjs'
-import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
+export const metadata = {
+  title: 'Tutorials | Soar by LifeLaunchr',
+  description: 'Short video tutorials to help counselors and students get the most out of Soar.',
+}
 
 export default function TutorialsPage() {
-  const { isLoaded, userId } = useAuth()
-  const router = useRouter()
-
-  useEffect(() => {
-    if (isLoaded && !userId) {
-      router.replace('/sign-in')
-    }
-  }, [isLoaded, userId, router])
-
-  if (!isLoaded || !userId) return null
-
   return (
     <div className="flex flex-col h-screen bg-[#0c1b33]">
       {/* Header */}
       <div className="flex-shrink-0 px-6 py-4 border-b border-white/10 flex items-center gap-3">
+        <h1 className="text-white font-semibold text-lg">Tutorials</h1>
+        <span className="text-[11px] text-slate-500 flex-1">How to get the most out of Soar</span>
         <a
           href="/chat"
-          className="text-slate-400 hover:text-white transition-colors text-sm"
+          className="text-sky-400 hover:text-sky-300 transition-colors text-sm font-medium"
         >
-          ← Back to Soar
+          Open Soar →
         </a>
-        <span className="text-slate-600">|</span>
-        <h1 className="text-white font-semibold text-lg">Tutorials</h1>
-        <span className="text-[11px] text-slate-500 ml-1">How to get the most out of Soar</span>
       </div>
 
       {/* Full-height Vimeo showcase embed */}
