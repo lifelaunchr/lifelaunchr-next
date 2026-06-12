@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import { ClerkProvider } from '@clerk/nextjs'
+import { headers } from 'next/headers'
 import Script from 'next/script'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/next'
@@ -85,13 +86,20 @@ export const metadata: Metadata = {
 const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID
 const FB_PIXEL_ID = process.env.NEXT_PUBLIC_FB_PIXEL_ID
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const headersList = await headers()
+  const host = headersList.get('host') ?? ''
+  const isWithSoar = host === 'withsoar.ai' || host === 'www.withsoar.ai'
+  const satelliteProps = isWithSoar
+    ? { isSatellite: true, domain: 'lifelaunchr.com', signInUrl: 'https://soar.lifelaunchr.com/sign-in' }
+    : {}
+
   return (
-    <ClerkProvider afterSignOutUrl="/chat">
+    <ClerkProvider afterSignOutUrl="/chat" {...satelliteProps}>
       <html lang="en" suppressHydrationWarning>
         <body className={inter.className}>
           <BetaBanner />

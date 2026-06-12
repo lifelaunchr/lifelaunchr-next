@@ -152,6 +152,18 @@ export default clerkMiddleware(async (auth, req) => {
   const { userId } = await auth()
   const { pathname } = url
 
+  // On the satellite domain (withsoar.ai), sign-in and sign-up live on the
+  // primary domain. Redirect rather than trying to render Clerk's sign-in
+  // component locally (which would show a blank page on a satellite).
+  const host = (req.headers as Headers).get('host') ?? ''
+  if (host === 'withsoar.ai' || host === 'www.withsoar.ai') {
+    if (pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up')) {
+      return NextResponse.redirect(
+        `https://soar.lifelaunchr.com${pathname}${url.search}`
+      )
+    }
+  }
+
   // Signed-in users hitting the landing page get redirected to /chat immediately,
   // before any HTML is sent to the browser.
   if (userId && pathname === '/') {
