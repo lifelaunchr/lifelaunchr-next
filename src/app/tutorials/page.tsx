@@ -6,8 +6,16 @@ import { useState } from 'react'
 // Find each ID in the video's Vimeo URL: vimeo.com/1234567890 → id: '1234567890'
 // Thumbnails and embeds are generated automatically from the ID.
 const VIDEOS: { id: string; title: string; description?: string }[] = [
-  // { id: '1234567890', title: 'Introducing Soar by LifeLaunchr', description: 'A quick overview of what Soar can do.' },
-  // { id: '0987654321', title: 'Getting Started as a Counselor', description: '' },
+  {
+    id: '1197542498',
+    title: 'Why Soar is Different',
+    description: 'Soar is a shared workspace where counselors, students, and parents work together — not just a tool for managing a process. A two-minute overview from LifeLaunchr founder Swami Swaminathan.',
+  },
+  {
+    id: '1198259270',
+    title: 'Invite Your First Family',
+    description: 'The single most important first step: invite a student and their parents. Once you do, you can start researching on the student\'s behalf immediately. Takes about two minutes.',
+  },
 ]
 // ─────────────────────────────────────────────────────────────────────────────
 
