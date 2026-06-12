@@ -153,8 +153,14 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
   const [sessions, setSessions] = useState<Session[]>([])
   const [activeSessionId, setActiveSessionId] = useState<number | null>(null)
-  const [isCounselor, setIsCounselor] = useState(false)
-  const [isParent, setIsParent] = useState(false)
+  const [isCounselor, setIsCounselor] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return localStorage.getItem('ll_account_type') === 'counselor'
+  })
+  const [isParent, setIsParent] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return localStorage.getItem('ll_account_type') === 'parent'
+  })
   const [studentCollegeCount, setStudentCollegeCount] = useState(0)
   const [isAdmin, setIsAdmin] = useState(false)
   const [myStudents, setMyStudents] = useState<Array<{ id: number; full_name: string; email: string; has_safety_flag?: boolean }>>([])
@@ -236,6 +242,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
       // Also clear forStudentId — students must never inherit a counselor's selected student
       setForStudentId(null)
       localStorage.removeItem('ll_for_student_id')
+      localStorage.removeItem('ll_account_type')
     }
     prevUserIdRef.current = curr
   }, [isLoaded, userId])
@@ -307,6 +314,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
         setIsCounselor(counselor)
         setIsParent(parent)
         setIsAdmin(!!data.is_admin)
+        localStorage.setItem('ll_account_type', accountType)
         // Students must never inherit a stale ll_for_student_id left by a counselor
         // who closed the tab without signing out. Clear it as soon as we confirm the
         // account type — the user-switch effect only fires when userId changes, not
@@ -1327,20 +1335,9 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                 </div>
               )}
 
-              {/* Schedule button — students only, when a scheduling link is available */}
-              {!isCounselor && !isParent && schedulingLink && (
-                <a
-                  href={schedulingLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 px-3 py-2 text-xs text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all w-full text-left"
-                >
-                  <span className="text-base leading-none">📅</span>
-                  <span>Schedule a session</span>
-                </a>
-              )}
+              {/* ── Controls: student selector, Add Family, schedule, invite ── */}
 
-              {/* Counselors + Parents: student picker dropdown */}
+              {/* Student picker dropdown — counselors + parents */}
               {(isCounselor || isParent) && myStudents.length > 0 && (
                 <div id="tour-student-selector" className="mb-2">
                   <p className="text-[10px] uppercase tracking-widest text-slate-600 px-3 mb-1">
@@ -1369,9 +1366,6 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                 <button
                   id="tour-add-family"
                   onClick={async () => {
-                    // Always try fetching counselors on first click — if the endpoint
-                    // returns a list the user is a tenant admin and gets the dropdown;
-                    // if it 403s or returns empty we fall back to the regular modal.
                     if (counselorOptions === undefined) {
                       try {
                         const token = await getToken()
@@ -1396,7 +1390,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                 </button>
               )}
 
-              {/* Invite link — parents and non-counselors */}
+              {/* Invite link — parents (non-counselors) */}
               {!isCounselor && inviteUrl && (
                 <button
                   onClick={() => {
@@ -1411,25 +1405,36 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                 </button>
               )}
 
-              <div className="border-t border-white/10 mt-1 mb-1" />
-
-              {/* Logged-in user */}
-              {clerkUser && (
-                <div className="text-[10px] text-slate-500 px-3 pb-0.5 truncate">
-                  {clerkUser.fullName || clerkUser.emailAddresses[0]?.emailAddress || ''}
-                </div>
+              {/* Schedule button — students only */}
+              {!isCounselor && !isParent && schedulingLink && (
+                <a
+                  href={schedulingLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 px-3 py-2 text-xs text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all w-full text-left"
+                >
+                  <span className="text-base leading-none">📅</span>
+                  <span>Schedule a session</span>
+                </a>
               )}
 
-              {/* My Info / Profile — always own profile */}
-              <Link
-                href="/profile"
-                className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
-              >
-                <span className="text-base leading-none">👤</span>
-                <span>{isCounselor || isParent ? 'My Info' : 'Profile'}</span>
-              </Link>
+              <div className="border-t border-white/10 mt-1 mb-1" />
 
-              {/* My Lists — students only, shown near the top for discoverability */}
+              {/* ── Main nav ── */}
+
+              {/* My Students — counselors */}
+              {isCounselor && (
+                <Link
+                  id="tour-nav-students"
+                  href="/dashboard"
+                  className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                >
+                  <span className="text-base leading-none">📋</span>
+                  <span>My Students</span>
+                </Link>
+              )}
+
+              {/* My Lists — students only */}
               {!isCounselor && !isParent && (
                 <Link
                   id="tour-nav-lists"
@@ -1444,24 +1449,6 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                 </Link>
               )}
 
-              {/* Counselor dashboard link */}
-              {isCounselor && (
-                <Link
-                  id="tour-nav-students"
-                  href="/dashboard"
-                  className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
-                >
-                  <span className="text-base leading-none">📋</span>
-                  <span>My Students</span>
-                </Link>
-              )}
-
-              {/* Session & Research Summaries link — all roles */}
-              <Link id="tour-nav-reports" href="/reports" className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all">
-                <span className="text-base leading-none">📝</span>
-                <span>Session &amp; Research Summaries</span>
-              </Link>
-
               {/* My Activities — students only */}
               {!isCounselor && !isParent && (
                 <Link
@@ -1474,7 +1461,13 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                 </Link>
               )}
 
-              {/* Writing link — Writing Hub modules only (not Editate/Essays) */}
+              {/* Session & Research Summaries — all roles */}
+              <Link id="tour-nav-reports" href="/reports" className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all">
+                <span className="text-base leading-none">📝</span>
+                <span>Session &amp; Research Summaries</span>
+              </Link>
+
+              {/* Writing — module-gated */}
               {(usageData?.writing_self_discovery_module || usageData?.writing_practice_module ||
                 usageData?.commonapp_module || usageData?.uc_piqs_module || usageData?.why_essays_module
               ) && (
@@ -1483,35 +1476,16 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                   href={isParent && forStudentId ? `/writing?for=${forStudentId}` : '/writing'}
                   className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
                 >
-                  <span className="text-base leading-none">📝</span>
+                  <span className="text-base leading-none">✍️</span>
                   <span>Writing</span>
                 </Link>
               )}
 
-              {/* Admin dashboard link — admins and tenant admins */}
-              {(isAdmin || (usageData?.is_tenant_admin)) && (
-                <Link
-                  href="/admin"
-                  className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
-                >
-                  <span className="text-base leading-none">⚙️</span>
-                  <span>Admin Dashboard</span>
-                </Link>
-              )}
-
-              {usageData?.is_tenant_admin && (
-                <Link
-                  href="/settings/billing"
-                  className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
-                >
-                  <span className="text-base leading-none">💳</span>
-                  <span>Billing & Plan</span>
-                </Link>
-              )}
-
-              {/* Student profile + lists — shown when a student is selected (counselor/parent) */}
+              {/* Student sub-nav — counselors/parents when a student is selected */}
               {(isCounselor || isParent) && forStudentId && (
                 <>
+                  <div className="border-t border-white/5 mt-1 mb-0.5 mx-3" />
+                  <p className="text-[10px] uppercase tracking-widest text-slate-600 px-3 mb-0.5">Student</p>
                   <Link
                     href={`/profile?for=${forStudentId}`}
                     className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
@@ -1537,12 +1511,62 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                     <span className="text-base leading-none">🏆</span>
                     <span>Activities</span>
                   </Link>
-                  {/* Essays link removed — essay prompts & Editate drafts are accessible
-                      through the Writing Hub (WritingCoachView has the Essay Prompts & Drafts card) */}
                 </>
               )}
 
-              {/* Student connections — informational, shown at bottom */}
+              {/* ── Tools / account section ── */}
+              <div className="border-t border-white/10 mt-1 mb-1" />
+
+              {/* Tutorials — all roles */}
+              <Link
+                href="/tutorials"
+                className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+              >
+                <span className="text-base leading-none">🎬</span>
+                <span>Tutorials</span>
+              </Link>
+
+              {/* Admin Dashboard — admins and tenant admins */}
+              {(isAdmin || usageData?.is_tenant_admin) && (
+                <Link
+                  href="/admin"
+                  className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                >
+                  <span className="text-base leading-none">⚙️</span>
+                  <span>Admin Dashboard</span>
+                </Link>
+              )}
+
+              {/* Billing & Plan — tenant admins */}
+              {usageData?.is_tenant_admin && (
+                <Link
+                  href="/settings/billing"
+                  className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                >
+                  <span className="text-base leading-none">💳</span>
+                  <span>Billing &amp; Plan</span>
+                </Link>
+              )}
+
+              <div className="border-t border-white/10 mt-1 mb-1" />
+
+              {/* Logged-in user */}
+              {clerkUser && (
+                <div className="text-[10px] text-slate-500 px-3 pb-0.5 truncate">
+                  {clerkUser.fullName || clerkUser.emailAddresses[0]?.emailAddress || ''}
+                </div>
+              )}
+
+              {/* My Info / Profile */}
+              <Link
+                href="/profile"
+                className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+              >
+                <span className="text-base leading-none">👤</span>
+                <span>{isCounselor || isParent ? 'My Info' : 'Profile'}</span>
+              </Link>
+
+              {/* Student connections — informational, at the very bottom */}
               {!isCounselor && !isParent && myConnections &&
                 (myConnections.counselors.length > 0 || myConnections.parents.length > 0) && (
                 <div className="mt-2 pt-2 border-t border-white/10">
