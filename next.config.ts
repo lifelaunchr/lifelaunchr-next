@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next'
+import { withSentryConfig } from '@sentry/nextjs'
 
 const nextConfig: NextConfig = {
   // Allow images from Clerk's CDN
@@ -48,4 +49,9 @@ const nextConfig: NextConfig = {
   },
 }
 
-export default nextConfig
+export default withSentryConfig(nextConfig, {
+  org: 'lifelaunchr',
+  project: 'javascript-nextjs',
+  silent: true,         // suppress build output noise
+  disableLogger: true,  // tree-shake Sentry logger in production bundle
+})
