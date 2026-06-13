@@ -712,7 +712,7 @@ export default function DashboardPage() {
                               >🚩</button>
                             )}
                             <span>{s.full_name}</span>
-                            {s.preferred_name && s.preferred_name !== s.full_name.split(' ')[0] && (
+                            {s.preferred_name && s.preferred_name !== (s.full_name || '').split(' ')[0] && (
                               <span className="text-gray-400 font-normal text-sm">({s.preferred_name})</span>
                             )}
                             {!s.clerk_user_id && (
@@ -816,7 +816,7 @@ export default function DashboardPage() {
                               >🚩</button>
                             )}
                             {s.full_name}
-                            {s.preferred_name && s.preferred_name !== s.full_name.split(' ')[0] && (
+                            {s.preferred_name && s.preferred_name !== (s.full_name || '').split(' ')[0] && (
                               <span className="text-gray-400 font-normal"> ({s.preferred_name})</span>
                             )}
                             {!s.clerk_user_id && (
