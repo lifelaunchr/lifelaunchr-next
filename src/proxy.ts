@@ -14,6 +14,7 @@ const isPublicRoute = createRouteMatcher([
   '/privacy',
   '/safety',            // public "How we keep teens safe" info page
   '/upgrade',           // public upsell page
+  '/tutorials',         // public video walkthrough library
   '/join(.*)',          // counselor invite acceptance landing
   '/accept-invite(.*)', // migration invite claim
   '/sign-in(.*)',
