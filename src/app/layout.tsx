@@ -95,7 +95,7 @@ export default async function RootLayout({
   const host = headersList.get('host') ?? ''
   const isWithSoar = host === 'withsoar.ai' || host === 'www.withsoar.ai'
   const satelliteProps = isWithSoar
-    ? { isSatellite: true, domain: 'lifelaunchr.com', signInUrl: 'https://soar.lifelaunchr.com/sign-in' }
+    ? { isSatellite: true, domain: 'withsoar.ai', signInUrl: 'https://soar.lifelaunchr.com/sign-in' }
     : {}
 
   return (

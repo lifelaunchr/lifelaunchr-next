@@ -83,7 +83,7 @@ const clerkOptions = async (req: Request) => {
   if (host === 'withsoar.ai' || host === 'www.withsoar.ai') {
     return {
       isSatellite: true,
-      domain: 'lifelaunchr.com',
+      domain: 'withsoar.ai',
       signInUrl: 'https://soar.lifelaunchr.com/sign-in',
     }
   }
