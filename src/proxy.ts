@@ -157,7 +157,7 @@ export default clerkMiddleware(async (auth, req) => {
   // component locally (which would show a blank page on a satellite).
   const host = (req.headers as Headers).get('host') ?? ''
   if (host === 'withsoar.ai' || host === 'www.withsoar.ai') {
-    if (pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up')) {
+    if (pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up') || pathname.startsWith('/accept-invite')) {
       return NextResponse.redirect(
         `https://soar.lifelaunchr.com${pathname}${url.search}`
       )
