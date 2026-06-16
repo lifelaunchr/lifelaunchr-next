@@ -621,6 +621,11 @@ export default function TranscriptDrawer({
                         {cat.courses && cat.courses.length > 0 && (
                           <CourseList courses={cat.courses} />
                         )}
+                        {key === 'g_elective' && (
+                          <div style={{ fontSize: '0.68rem', color: '#9ca3af', marginTop: 4, fontStyle: 'italic' }}>
+                            Extra years beyond the minimum in any a–f subject also satisfy this requirement.
+                          </div>
+                        )}
                       </div>
                     </div>
                   )
