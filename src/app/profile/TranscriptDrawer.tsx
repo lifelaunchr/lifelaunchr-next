@@ -54,6 +54,8 @@ export interface TranscriptAnalysis {
     unweighted?: number | null
     weighted_uncapped?: number | null
     weighted_capped?: number | null
+    overall_unweighted?: number | null
+    overall_weighted?: number | null
     data_quality?: string
     notes?: string
   }
@@ -449,48 +451,76 @@ export default function TranscriptDrawer({
                 <h3 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 700, color: '#0c1b33' }}>GPA</h3>
                 {qualityBadge(analysis.gpa.data_quality)}
               </div>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
-                <thead>
-                  <tr style={{ background: '#f1f5f9' }}>
-                    <th style={{ padding: '7px 10px', textAlign: 'left', fontWeight: 600, color: '#475569', borderRadius: '6px 0 0 6px' }}>Type</th>
-                    <th style={{ padding: '7px 10px', textAlign: 'center', fontWeight: 600, color: '#475569' }}>GPA</th>
-                    <th style={{ padding: '7px 10px', textAlign: 'left', fontWeight: 600, color: '#475569', borderRadius: '0 6px 6px 0', fontSize: '0.72rem' }}>Notes</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '8px 10px', color: '#374151' }}>Unweighted</td>
-                    <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 700, color: analysis.gpa.unweighted != null && analysis.gpa.unweighted >= 3.5 ? '#059669' : analysis.gpa.unweighted != null && analysis.gpa.unweighted < 3.0 ? '#dc2626' : '#374151' }}>
-                      {fmt(analysis.gpa.unweighted)}
-                    </td>
-                    <td style={{ padding: '8px 10px', color: '#9ca3af', fontSize: '0.72rem' }}>10th–12th, A-G only</td>
-                  </tr>
-                  <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '8px 10px', color: '#374151' }}>Weighted (uncapped)</td>
-                    <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 700, color: '#374151' }}>
-                      {fmt(analysis.gpa.weighted_uncapped)}
-                    </td>
-                    <td style={{ padding: '8px 10px', color: '#9ca3af', fontSize: '0.72rem' }}>+1 per Honors/AP/IB/CC</td>
-                  </tr>
-                  <tr>
-                    <td style={{ padding: '8px 10px', color: '#374151' }}>Weighted (capped, UC)</td>
-                    <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 700, color: '#374151' }}>
-                      {fmt(analysis.gpa.weighted_capped)}
-                    </td>
-                    <td style={{ padding: '8px 10px', color: '#9ca3af', fontSize: '0.72rem' }}>10th–11th, ≤8 bonus sems</td>
-                  </tr>
-                </tbody>
-              </table>
+
+              {/* Overall GPA */}
+              {(analysis.gpa.overall_unweighted != null || analysis.gpa.overall_weighted != null) && (
+                <div style={{ marginBottom: 10 }}>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 5 }}>
+                    Overall (All Courses)
+                  </div>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                    <tbody>
+                      <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '7px 10px', color: '#374151' }}>Unweighted</td>
+                        <td style={{ padding: '7px 10px', textAlign: 'center', fontWeight: 700, color: analysis.gpa.overall_unweighted != null && analysis.gpa.overall_unweighted >= 3.5 ? '#059669' : analysis.gpa.overall_unweighted != null && analysis.gpa.overall_unweighted < 3.0 ? '#dc2626' : '#374151' }}>
+                          {fmt(analysis.gpa.overall_unweighted)}
+                        </td>
+                        <td style={{ padding: '7px 10px', color: '#9ca3af', fontSize: '0.72rem' }}>Grades 9–12, excl. PE/health</td>
+                      </tr>
+                      <tr>
+                        <td style={{ padding: '7px 10px', color: '#374151' }}>Weighted</td>
+                        <td style={{ padding: '7px 10px', textAlign: 'center', fontWeight: 700, color: '#374151' }}>
+                          {fmt(analysis.gpa.overall_weighted)}
+                        </td>
+                        <td style={{ padding: '7px 10px', color: '#9ca3af', fontSize: '0.72rem' }}>+1 per Honors/AP/IB/CC</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* UC GPA */}
+              {(analysis.gpa.unweighted != null || analysis.gpa.weighted_uncapped != null || analysis.gpa.weighted_capped != null) && (
+                <div>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 5 }}>
+                    UC / CSU GPA
+                  </div>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                    <tbody>
+                      <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '7px 10px', color: '#374151' }}>Unweighted</td>
+                        <td style={{ padding: '7px 10px', textAlign: 'center', fontWeight: 700, color: analysis.gpa.unweighted != null && analysis.gpa.unweighted >= 3.5 ? '#059669' : analysis.gpa.unweighted != null && analysis.gpa.unweighted < 3.0 ? '#dc2626' : '#374151' }}>
+                          {fmt(analysis.gpa.unweighted)}
+                        </td>
+                        <td style={{ padding: '7px 10px', color: '#9ca3af', fontSize: '0.72rem' }}>10th–12th, A-G only</td>
+                      </tr>
+                      <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '7px 10px', color: '#374151' }}>Weighted (uncapped)</td>
+                        <td style={{ padding: '7px 10px', textAlign: 'center', fontWeight: 700, color: '#374151' }}>
+                          {fmt(analysis.gpa.weighted_uncapped)}
+                        </td>
+                        <td style={{ padding: '7px 10px', color: '#9ca3af', fontSize: '0.72rem' }}>+1 per Honors/AP/IB/CC</td>
+                      </tr>
+                      <tr>
+                        <td style={{ padding: '7px 10px', color: '#374151' }}>Weighted (capped)</td>
+                        <td style={{ padding: '7px 10px', textAlign: 'center', fontWeight: 700, color: '#374151' }}>
+                          {fmt(analysis.gpa.weighted_capped)}
+                        </td>
+                        <td style={{ padding: '7px 10px', color: '#9ca3af', fontSize: '0.72rem' }}>10th–11th, ≤8 bonus sems</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
               {analysis.gpa.notes && (
                 <div style={{ marginTop: 6, fontSize: '0.75rem', color: '#6b7280', fontStyle: 'italic' }}>{analysis.gpa.notes}</div>
               )}
               <div style={{ marginTop: 8, fontSize: '0.72rem', color: '#9ca3af', lineHeight: 1.4 }}>
-                ℹ️ These are estimates based on transcript data. UC and CSU calculate official GPAs using
-                honors designations from the{' '}
+                ℹ️ Calculated from extracted course data. UC and CSU verify using the{' '}
                 <a href="https://hs-articulation.ucop.edu/agcourselist" target="_blank" rel="noopener noreferrer"
                    style={{ color: '#6366f1', textDecoration: 'underline' }}>UCOP A-G course list</a>
-                {' '}(California students), or reported courses and grades (all other students).
-                Treat this as guidance, not an official calculation.
+                {' '}— treat this as guidance, not an official figure.
               </div>
             </div>
           )}
