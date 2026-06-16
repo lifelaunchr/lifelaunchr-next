@@ -670,6 +670,24 @@ export default function TranscriptDrawer({
             padding: '16px 24px', borderTop: '1px solid #e2e8f0',
             position: 'sticky', bottom: 0, background: '#fff',
           }}>
+            {showInstructions && (
+              <div style={{ marginBottom: 12 }}>
+                <textarea
+                  value={reanalyzeInstructions}
+                  onChange={e => setReanalyzeInstructions(e.target.value)}
+                  placeholder={'e.g. "Precalculus Honors (Apex Learn) is a full year — the school uses 10 credits per year." or "Geometry Jr High is on the HS transcript and should count."'}
+                  rows={3}
+                  style={{
+                    width: '100%', fontSize: '0.78rem', border: '1px solid #c7d2fe',
+                    borderRadius: 6, padding: '8px 10px', resize: 'vertical',
+                    fontFamily: 'inherit', color: '#374151', boxSizing: 'border-box',
+                  }}
+                />
+                <div style={{ fontSize: '0.7rem', color: '#9ca3af', marginTop: 4 }}>
+                  These instructions are passed to the AI for this re-analysis only — they are not saved.
+                </div>
+              </div>
+            )}
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
               <button
                 onClick={() => {
@@ -698,24 +716,6 @@ export default function TranscriptDrawer({
                 {showInstructions ? 'Hide instructions' : '+ Add instructions'}
               </button>
             </div>
-            {showInstructions && (
-              <div style={{ marginTop: 10 }}>
-                <textarea
-                  value={reanalyzeInstructions}
-                  onChange={e => setReanalyzeInstructions(e.target.value)}
-                  placeholder={'e.g. "Precalculus Honors (Apex Learn) is a full year — the school uses 10 credits per year." or "Geometry Jr High is on the HS transcript and should count."'}
-                  rows={3}
-                  style={{
-                    width: '100%', fontSize: '0.78rem', border: '1px solid #e2e8f0',
-                    borderRadius: 6, padding: '8px 10px', resize: 'vertical',
-                    fontFamily: 'inherit', color: '#374151', boxSizing: 'border-box',
-                  }}
-                />
-                <div style={{ fontSize: '0.7rem', color: '#9ca3af', marginTop: 4 }}>
-                  These instructions are passed to the AI for this re-analysis only — they are not saved.
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>
