@@ -360,15 +360,20 @@ function ProfileContent() {
     }
   }
 
-  const handleTranscriptReanalyze = async () => {
+  const handleTranscriptReanalyze = async (instructions?: string) => {
     if (!targetId) return
     setReanalyzingTranscript(true)
     setTranscriptError(null)
     try {
       const token = await getToken()
+      const body = instructions ? JSON.stringify({ counselor_instructions: instructions }) : undefined
       const res = await fetch(`${apiUrl}/profile/${targetId}/transcript/reanalyze`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...(body ? { 'Content-Type': 'application/json' } : {}),
+        },
+        body,
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))

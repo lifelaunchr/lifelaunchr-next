@@ -91,7 +91,7 @@ interface Props {
   sameInstitutionWarning?: { existing_id: number; institution_name: string } | null
   onClose: () => void
   onUpload: (file: File) => void
-  onReanalyze: () => void
+  onReanalyze: (instructions?: string) => void
   onDeleteTranscript: (id: number) => void
   onDismissSameInstitutionWarning: () => void
 }
@@ -264,6 +264,8 @@ export default function TranscriptDrawer({
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
+  const [showInstructions, setShowInstructions] = useState(false)
+  const [reanalyzeInstructions, setReanalyzeInstructions] = useState('')
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]
@@ -666,21 +668,54 @@ export default function TranscriptDrawer({
         {canWrite && (
           <div style={{
             padding: '16px 24px', borderTop: '1px solid #e2e8f0',
-            display: 'flex', gap: 10, flexWrap: 'wrap',
             position: 'sticky', bottom: 0, background: '#fff',
           }}>
-            <button
-              onClick={onReanalyze}
-              disabled={uploading || reanalyzing}
-              style={{
-                background: '#fff', color: '#4f46e5', border: '1px solid #c7d2fe', borderRadius: 7,
-                padding: '8px 16px', fontSize: '0.8rem', fontWeight: 600,
-                cursor: reanalyzing ? 'not-allowed' : 'pointer',
-                opacity: uploading || reanalyzing ? 0.6 : 1,
-              }}
-            >
-              {reanalyzing ? 'Re-analyzing…' : '↻ Re-analyze all'}
-            </button>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+              <button
+                onClick={() => {
+                  onReanalyze(reanalyzeInstructions.trim() || undefined)
+                  setShowInstructions(false)
+                  setReanalyzeInstructions('')
+                }}
+                disabled={uploading || reanalyzing}
+                style={{
+                  background: '#fff', color: '#4f46e5', border: '1px solid #c7d2fe', borderRadius: 7,
+                  padding: '8px 16px', fontSize: '0.8rem', fontWeight: 600,
+                  cursor: reanalyzing ? 'not-allowed' : 'pointer',
+                  opacity: uploading || reanalyzing ? 0.6 : 1,
+                }}
+              >
+                {reanalyzing ? 'Re-analyzing…' : '↻ Re-analyze all'}
+              </button>
+              <button
+                onClick={() => setShowInstructions(v => !v)}
+                disabled={uploading || reanalyzing}
+                style={{
+                  background: 'none', border: 'none', color: '#6b7280', fontSize: '0.75rem',
+                  cursor: 'pointer', padding: '4px 0', textDecoration: 'underline',
+                }}
+              >
+                {showInstructions ? 'Hide instructions' : '+ Add instructions'}
+              </button>
+            </div>
+            {showInstructions && (
+              <div style={{ marginTop: 10 }}>
+                <textarea
+                  value={reanalyzeInstructions}
+                  onChange={e => setReanalyzeInstructions(e.target.value)}
+                  placeholder={'e.g. "Precalculus Honors (Apex Learn) is a full year — the school uses 10 credits per year." or "Geometry Jr High is on the HS transcript and should count."'}
+                  rows={3}
+                  style={{
+                    width: '100%', fontSize: '0.78rem', border: '1px solid #e2e8f0',
+                    borderRadius: 6, padding: '8px 10px', resize: 'vertical',
+                    fontFamily: 'inherit', color: '#374151', boxSizing: 'border-box',
+                  }}
+                />
+                <div style={{ fontSize: '0.7rem', color: '#9ca3af', marginTop: 4 }}>
+                  These instructions are passed to the AI for this re-analysis only — they are not saved.
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
