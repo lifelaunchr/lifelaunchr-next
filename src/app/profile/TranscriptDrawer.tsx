@@ -9,6 +9,7 @@ interface AgCategory {
   completed: number
   in_progress: number
   satisfied: boolean
+  status?: 'on_track' | 'plan_needed' | 'concern'
   courses?: string[]
   highest_level?: string | null
   algebra2_met?: boolean
@@ -595,17 +596,20 @@ export default function TranscriptDrawer({
                 {AG_ROWS.map(({ key, label, required, detail }) => {
                   const cat = analysis.ag_requirements?.[key]
                   if (!cat) return null
-                  const total = (cat.completed ?? 0) + (cat.in_progress ?? 0)
+                  // Use backend-computed status (grade-level-aware) when available;
+                  // fall back to legacy satisfied/in-progress inference for old analyses.
+                  const agStatus: 'on_track' | 'plan_needed' | 'concern' =
+                    cat.status ?? (cat.satisfied ? 'on_track' : (cat.in_progress > 0 ? 'plan_needed' : 'concern'))
                   const detailText = detail?.(cat)
                   return (
                     <div key={key} style={{
                       display: 'flex', alignItems: 'flex-start', gap: 8, padding: '7px 10px',
                       borderRadius: 8,
-                      background: cat.satisfied ? '#f0fdf4' : total > 0 ? '#fffbeb' : '#fef2f2',
-                      border: `1px solid ${cat.satisfied ? '#bbf7d0' : total > 0 ? '#fde68a' : '#fecaca'}`,
+                      background: agStatus === 'on_track' ? '#f0fdf4' : agStatus === 'plan_needed' ? '#fffbeb' : '#fef2f2',
+                      border: `1px solid ${agStatus === 'on_track' ? '#bbf7d0' : agStatus === 'plan_needed' ? '#fde68a' : '#fecaca'}`,
                     }}>
                       <span style={{ fontSize: '0.9rem', marginTop: 1, flexShrink: 0 }}>
-                        {cat.satisfied ? '✅' : cat.in_progress > 0 ? '🔄' : '❌'}
+                        {agStatus === 'on_track' ? '✅' : agStatus === 'plan_needed' ? '⚠️' : '❌'}
                       </span>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#374151' }}>{label}</div>
