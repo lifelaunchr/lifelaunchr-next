@@ -201,6 +201,13 @@ export default function AdminPage() {
   const [saveMsg, setSaveMsg] = useState('')
   const [copiedInvite, setCopiedInvite] = useState(false)
 
+  // Add Parent modal
+  const [addParentStudent, setAddParentStudent] = useState<UserRow | null>(null)
+  const [addParentName, setAddParentName] = useState('')
+  const [addParentEmail, setAddParentEmail] = useState('')
+  const [addParentSaving, setAddParentSaving] = useState(false)
+  const [addParentResult, setAddParentResult] = useState<{status: string; invite_url: string | null} | null>(null)
+
   // Writing section enrollments for student edit modal
   const [adminWritingSections, setAdminWritingSections] = useState<{key: string; title: string; enrolled: boolean}[]>([])
   const [adminWritingLoading, setAdminWritingLoading] = useState(false)
@@ -517,6 +524,28 @@ export default function AdminPage() {
       if (editingUser?.id === userId) setEditingUser(prev => prev ? { ...prev, [bodyKey]: value } : prev)
     }
     setPendingFlag(null)
+  }
+
+  const submitAddParent = async () => {
+    if (!addParentStudent || !addParentName.trim() || !addParentEmail.trim()) return
+    setAddParentSaving(true)
+    try {
+      const token = await getToken()
+      const res = await fetch(`${apiUrl}/admin/students/${addParentStudent.id}/add-parent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ full_name: addParentName.trim(), email: addParentEmail.trim().toLowerCase() }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setAddParentResult(data)
+      } else {
+        setAddParentResult({ status: 'error: ' + (data.detail || 'unknown'), invite_url: null })
+      }
+    } catch {
+      setAddParentResult({ status: 'error: network failure', invite_url: null })
+    }
+    setAddParentSaving(false)
   }
 
   const saveTier = async () => {
@@ -924,16 +953,31 @@ export default function AdminPage() {
                         ].filter(Boolean).join(', ') || '—'}
                       </td>
                       <td className="px-2 py-2 sm:px-4 sm:py-3">
-                        {(isAdmin || isSuperAdmin || isTenantAdmin) ? (
-                          <button
-                            onClick={() => { setEditingUser({ ...u }); setCopiedInvite(false); }}
-                            className="text-xs text-indigo-500 hover:text-indigo-700 font-medium"
-                          >
-                            Edit
-                          </button>
-                        ) : (
-                          <span className="text-xs text-gray-300">—</span>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {(isAdmin || isSuperAdmin || isTenantAdmin) ? (
+                            <button
+                              onClick={() => { setEditingUser({ ...u }); setCopiedInvite(false); }}
+                              className="text-xs text-indigo-500 hover:text-indigo-700 font-medium"
+                            >
+                              Edit
+                            </button>
+                          ) : (
+                            <span className="text-xs text-gray-300">—</span>
+                          )}
+                          {(isAdmin || isSuperAdmin) && u.account_type === 'student' && (
+                            <button
+                              onClick={() => {
+                                setAddParentStudent(u)
+                                setAddParentName('')
+                                setAddParentEmail('')
+                                setAddParentResult(null)
+                              }}
+                              className="text-xs text-emerald-600 hover:text-emerald-800 font-medium"
+                            >
+                              + Parent
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -1863,6 +1907,98 @@ export default function AdminPage() {
                 </>
               )
             })()}
+          </div>
+        </div>
+      )}
+
+      {/* ── Add Parent modal ── */}
+      {addParentStudent && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
+            <h3 className="text-base font-semibold text-gray-800 mb-1">Add Parent</h3>
+            <p className="text-sm text-gray-500 mb-5">
+              For <span className="font-medium">{addParentStudent.full_name || addParentStudent.email}</span>
+            </p>
+
+            {addParentResult ? (
+              <div>
+                {addParentResult.status.startsWith('error') ? (
+                  <p className="text-sm text-red-600 mb-4">{addParentResult.status}</p>
+                ) : (
+                  <div className="mb-4">
+                    <p className="text-sm text-emerald-700 font-medium mb-1">
+                      {addParentResult.status === 'created' && 'Invite sent!'}
+                      {addParentResult.status === 'reinvited' && 'Invite resent!'}
+                      {addParentResult.status === 'reactivated' && 'Account reactivated — invite sent!'}
+                      {addParentResult.status === 'connected' && 'Already has an account — notification sent.'}
+                    </p>
+                    {addParentResult.invite_url && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <input
+                          readOnly
+                          value={addParentResult.invite_url}
+                          className="flex-1 text-xs border border-gray-200 rounded px-2 py-1 text-gray-600 bg-gray-50"
+                        />
+                        <button
+                          onClick={() => navigator.clipboard.writeText(addParentResult!.invite_url!)}
+                          className="text-xs text-indigo-500 hover:text-indigo-700 font-medium whitespace-nowrap"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+                <button
+                  onClick={() => { setAddParentStudent(null); setAddParentResult(null) }}
+                  className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-medium"
+                >
+                  Close
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-3 mb-5">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Full name</label>
+                    <input
+                      autoFocus
+                      type="text"
+                      value={addParentName}
+                      onChange={e => setAddParentName(e.target.value)}
+                      placeholder="Jane Smith"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Email address</label>
+                    <input
+                      type="email"
+                      value={addParentEmail}
+                      onChange={e => setAddParentEmail(e.target.value)}
+                      placeholder="jane@example.com"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                      onKeyDown={e => { if (e.key === 'Enter') submitAddParent() }}
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={submitAddParent}
+                    disabled={addParentSaving || !addParentName.trim() || !addParentEmail.trim()}
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white rounded-lg py-2 text-sm font-medium transition-colors"
+                  >
+                    {addParentSaving ? 'Adding…' : 'Add Parent'}
+                  </button>
+                  <button
+                    onClick={() => setAddParentStudent(null)}
+                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-medium transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
