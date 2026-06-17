@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, Suspense } from 'react'
+import { useEffect, useState, useRef, Suspense } from 'react'
 import { useAuth, useUser } from '@clerk/nextjs'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -53,6 +53,17 @@ interface FormState {
   earnings_use?: string
   intend_to_continue?: boolean | null
   is_common_app_award?: boolean
+}
+
+interface ProposedActivity {
+  role: string
+  organization: string
+  description?: string
+  uc_category: string
+  hours_per_week?: number | null
+  weeks_per_year?: number | null
+  timing?: string
+  is_current?: boolean
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -209,6 +220,14 @@ function ActivitiesContent() {
   const [dragSrcIndex, setDragSrcIndex] = useState<number | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
 
+  // Résumé import
+  const importInputRef = useRef<HTMLInputElement>(null)
+  const [importing, setImporting] = useState(false)
+  const [importError, setImportError] = useState<string | null>(null)
+  const [importSummary, setImportSummary] = useState<string | null>(null)
+  const [importProposals, setImportProposals] = useState<ProposedActivity[] | null>(null)
+  const [importConfirming, setImportConfirming] = useState(false)
+
   // ── Load ────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -361,6 +380,64 @@ function ActivitiesContent() {
     setActivities(prev => prev.filter(a => a.id !== id))
   }
 
+  // ── Résumé import ──────────────────────────────────────────────────────────
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !targetId) return
+    e.target.value = ''
+    setImporting(true)
+    setImportError(null)
+    setImportSummary(null)
+    setImportProposals(null)
+    try {
+      const token = await getToken()
+      const form = new FormData()
+      form.append('file', file)
+      const res = await fetch(`${apiUrl}/profile/${targetId}/activities/import-resume`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      })
+      const body = await res.json()
+      if (!res.ok) {
+        setImportError(body.detail || `Error ${res.status}`)
+        return
+      }
+      setImportSummary(body.summary || null)
+      setImportProposals(body.activities || [])
+    } catch {
+      setImportError('Network error — please try again.')
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  const handleConfirmImport = async () => {
+    if (!importProposals || !targetId) return
+    setImportConfirming(true)
+    try {
+      const token = await getToken()
+      const res = await fetch(`${apiUrl}/profile/${targetId}/activities/batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ activities: importProposals }),
+      })
+      const body = await res.json()
+      if (!res.ok) {
+        setImportError(body.detail || `Error ${res.status}`)
+        return
+      }
+      setActivities(prev => [...prev, ...(body.created || [])])
+      setImportProposals(null)
+      setImportSummary(null)
+    } catch {
+      setImportError('Network error — please try again.')
+    } finally {
+      setImportConfirming(false)
+    }
+  }
+
   // ── Drag-and-drop ───────────────────────────────────────────────────────────
 
   const reorder = async (next: Activity[]) => {
@@ -443,9 +520,25 @@ function ActivitiesContent() {
           </Link>
         </div>
         {canWrite && (
-          <button onClick={openAdd} style={btnPrimary}>
-            <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>+</span> Add Activity
-          </button>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".pdf,.docx,.txt"
+              style={{ display: 'none' }}
+              onChange={handleImportFile}
+            />
+            <button
+              onClick={() => importInputRef.current?.click()}
+              disabled={importing}
+              style={{ background: '#fff', color: '#4f46e5', border: '1px solid #c7d2fe', borderRadius: 8, padding: '8px 14px', fontSize: '0.875rem', fontWeight: 600, cursor: importing ? 'not-allowed' : 'pointer', opacity: importing ? 0.6 : 1 }}
+            >
+              {importing ? 'Reading résumé…' : '📄 Import Résumé'}
+            </button>
+            <button onClick={openAdd} style={btnPrimary}>
+              <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>+</span> Add Activity
+            </button>
+          </div>
         )}
       </header>
 
@@ -463,6 +556,72 @@ function ActivitiesContent() {
               : "Read-only view of this student's activities."}
           </p>
         </div>
+
+        {/* Import error */}
+        {importError && (
+          <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 10, padding: '12px 16px', marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+            <p style={{ fontSize: '0.875rem', color: '#dc2626', margin: 0 }}>{importError}</p>
+            <button onClick={() => setImportError(null)} style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '1rem', flexShrink: 0 }}>×</button>
+          </div>
+        )}
+
+        {/* Import proposal panel */}
+        {importProposals && (
+          <div style={{ background: '#f0f4ff', border: '1px solid #c7d2fe', borderRadius: 14, padding: '20px 24px', marginBottom: 28 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, marginBottom: 16 }}>
+              <div>
+                <p style={{ fontWeight: 700, fontSize: '0.95rem', color: '#1e1b4b', margin: '0 0 6px' }}>
+                  Résumé imported — {importProposals.length} {importProposals.length === 1 ? 'activity' : 'activities'} found
+                </p>
+                {importSummary && (
+                  <p style={{ fontSize: '0.85rem', color: '#4338ca', margin: 0, lineHeight: 1.5 }}>{importSummary}</p>
+                )}
+              </div>
+              <button
+                onClick={() => { setImportProposals(null); setImportSummary(null) }}
+                style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '1.1rem', flexShrink: 0 }}
+              >×</button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+              {importProposals.map((p, i) => (
+                <div key={i} style={{ background: '#fff', borderRadius: 10, padding: '12px 16px', border: '1px solid #e0e7ff' }}>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap', marginBottom: 4 }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.875rem', color: '#1e1b4b' }}>{p.role || p.organization}</span>
+                    {p.role && p.organization && (
+                      <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>· {p.organization}</span>
+                    )}
+                    <span style={{ fontSize: '0.75rem', color: '#4f46e5', background: '#ede9fe', borderRadius: 12, padding: '2px 8px', marginLeft: 'auto' }}>{p.uc_category}</span>
+                  </div>
+                  {p.description && (
+                    <p style={{ fontSize: '0.8rem', color: '#374151', margin: 0, lineHeight: 1.5 }}>{p.description}</p>
+                  )}
+                  <div style={{ display: 'flex', gap: 12, marginTop: 6, fontSize: '0.75rem', color: '#9ca3af' }}>
+                    {p.hours_per_week != null && <span>{p.hours_per_week} hrs/wk</span>}
+                    {p.weeks_per_year != null && <span>{p.weeks_per_year} wks/yr</span>}
+                    {p.timing && <span>{p.timing.replace('_', ' ')}</span>}
+                    {p.is_current && <span style={{ color: '#16a34a' }}>Current</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+              <button
+                onClick={handleConfirmImport}
+                disabled={importConfirming}
+                style={{ background: '#4f46e5', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: '0.875rem', fontWeight: 700, cursor: importConfirming ? 'not-allowed' : 'pointer', opacity: importConfirming ? 0.6 : 1 }}
+              >
+                {importConfirming ? 'Creating…' : `Create all ${importProposals.length} ${importProposals.length === 1 ? 'activity' : 'activities'}`}
+              </button>
+              <button
+                onClick={() => { setImportProposals(null); setImportSummary(null) }}
+                style={{ background: 'none', color: '#6b7280', border: '1px solid #d1d5db', borderRadius: 8, padding: '9px 16px', fontSize: '0.875rem', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <span style={{ fontSize: '0.8rem', color: '#9ca3af', marginLeft: 4 }}>You can edit any entry afterwards.</span>
+            </div>
+          </div>
+        )}
 
         {/* Legend */}
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 24 }}>
@@ -502,7 +661,12 @@ function ActivitiesContent() {
             <p style={{ color: '#9ca3af', fontSize: '0.875rem', marginBottom: 24, maxWidth: 380, margin: '0 auto 24px' }}>
               Add your extracurriculars, awards, jobs, programs, and coursework. Be as detailed as possible — Soar will handle the formatting for Common App and UC.
             </p>
-            {canWrite && <button onClick={openAdd} style={btnPrimary}>+ Add First Activity</button>}
+            {canWrite && (
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+                <button onClick={openAdd} style={btnPrimary}>+ Add First Activity</button>
+                <button onClick={() => importInputRef.current?.click()} style={{ background: '#fff', color: '#4f46e5', border: '1px solid #c7d2fe', borderRadius: 8, padding: '8px 18px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>📄 Import from Résumé</button>
+              </div>
+            )}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
