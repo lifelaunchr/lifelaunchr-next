@@ -618,7 +618,7 @@ function ActivitiesContent() {
               >
                 Cancel
               </button>
-              <span style={{ fontSize: '0.8rem', color: '#9ca3af', marginLeft: 4 }}>You can edit any entry afterwards.</span>
+              <span style={{ fontSize: '0.8rem', color: '#9ca3af', marginLeft: 4 }}>You can edit entries on the activities page after creating, or cancel and re-upload an edited file.</span>
             </div>
           </div>
         )}
