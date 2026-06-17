@@ -77,6 +77,10 @@ export interface TranscriptAnalysis {
     area: string
     message: string
   }>
+  notable_flags?: Array<{
+    type: 'honor' | 'class_rank' | 'disciplinary' | 'other'
+    description: string
+  }>
   name_mismatch?: boolean
 }
 
@@ -629,6 +633,32 @@ export default function TranscriptDrawer({
                           </div>
                         )}
                       </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Notable flags (class rank, honors, disciplinary) */}
+          {isParsed && analysis.notable_flags && analysis.notable_flags.length > 0 && (
+            <div style={{ marginBottom: 22 }}>
+              <h3 style={{ margin: '0 0 10px', fontSize: '0.875rem', fontWeight: 700, color: '#0c1b33' }}>Notable</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {analysis.notable_flags.map((flag, i) => {
+                  const isDisc = flag.type === 'class_rank'
+                  const isDisciplinary = flag.type === 'disciplinary'
+                  return (
+                    <div key={i} style={{
+                      display: 'flex', gap: 8, padding: '8px 12px', borderRadius: 8, fontSize: '0.8rem',
+                      background: isDisciplinary ? '#fef2f2' : isDisc ? '#f0f9ff' : '#faf5ff',
+                      border: `1px solid ${isDisciplinary ? '#fecaca' : isDisc ? '#bae6fd' : '#e9d5ff'}`,
+                      color: isDisciplinary ? '#991b1b' : isDisc ? '#0c4a6e' : '#6b21a8',
+                    }}>
+                      <span style={{ flexShrink: 0 }}>
+                        {flag.type === 'honor' ? '★' : flag.type === 'class_rank' ? '#' : flag.type === 'disciplinary' ? '⚠' : '•'}
+                      </span>
+                      <span>{flag.description}</span>
                     </div>
                   )
                 })}
