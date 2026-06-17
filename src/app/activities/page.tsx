@@ -528,13 +528,18 @@ function ActivitiesContent() {
               style={{ display: 'none' }}
               onChange={handleImportFile}
             />
-            <button
-              onClick={() => importInputRef.current?.click()}
-              disabled={importing}
-              style={{ background: '#fff', color: '#4f46e5', border: '1px solid #c7d2fe', borderRadius: 8, padding: '8px 14px', fontSize: '0.875rem', fontWeight: 600, cursor: importing ? 'not-allowed' : 'pointer', opacity: importing ? 0.6 : 1 }}
-            >
-              {importing ? 'Reading résumé…' : '📄 Import Résumé'}
-            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+              <button
+                onClick={() => importInputRef.current?.click()}
+                disabled={importing}
+                style={{ background: '#fff', color: '#4f46e5', border: '1px solid #c7d2fe', borderRadius: 8, padding: '8px 14px', fontSize: '0.875rem', fontWeight: 600, cursor: importing ? 'not-allowed' : 'pointer', opacity: importing ? 0.6 : 1 }}
+              >
+                {importing ? 'Reading résumé…' : '📄 Import Résumé'}
+              </button>
+              {activities.length > 0 && !importing && (
+                <span style={{ fontSize: '0.7rem', color: '#9ca3af' }}>Re-uploading adds duplicates</span>
+              )}
+            </div>
             <button onClick={openAdd} style={btnPrimary}>
               <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>+</span> Add Activity
             </button>
