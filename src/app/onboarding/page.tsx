@@ -147,6 +147,8 @@ export default function OnboardingPage() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [migrationLinking, setMigrationLinking] = useState(false)
+  const [isInvitedCounselor, setIsInvitedCounselor] = useState(false)
+  const [invitedPracticeName, setInvitedPracticeName] = useState('')
 
   // Invite family (step 5 — counselors only)
   const [invStudentName, setInvStudentName] = useState('')
@@ -241,7 +243,16 @@ export default function OnboardingPage() {
           setStep(4)
           return
         }
-        // Counselors and unrecognized types: fall through to show step 1 normally
+        if (resolvedType === 'counselor') {
+          // Invited counselor — account already linked, tenant already set on backend.
+          // Skip role picker and account save; go straight to the Soar intro.
+          setAccountType('iec')
+          setIsInvitedCounselor(true)
+          setInvitedPracticeName(syncData.tenant_name || '')
+          setStep(4)
+          return
+        }
+        // Unrecognized types: fall through to show step 1 normally
       } catch {
         // Non-fatal — email-match in /auth/sync is what actually links the account
       } finally {
@@ -1059,6 +1070,14 @@ export default function OnboardingPage() {
         {/* ── STEP 4: Make the most of Soar ───────────────────────────────── */}
         {step === 4 && (
           <div className="bg-white rounded-2xl p-6 shadow-xl">
+            {isInvitedCounselor && invitedPracticeName && (
+              <div className="mb-5 rounded-xl bg-teal-50 border border-teal-200 px-4 py-3 flex items-center gap-3">
+                <span className="text-teal-600 text-xl">🎉</span>
+                <p className="text-sm text-teal-800 font-medium">
+                  You&apos;ve joined <strong>{invitedPracticeName}</strong>. Your account is all set!
+                </p>
+              </div>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {soarContent.cards.map((card, i) => (
                 <div

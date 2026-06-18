@@ -208,6 +208,13 @@ export default function AdminPage() {
   const [addParentSaving, setAddParentSaving] = useState(false)
   const [addParentResult, setAddParentResult] = useState<{status: string; invite_url: string | null} | null>(null)
 
+  // Invite Counselor modal (tenant admin only)
+  const [showInviteCounselor, setShowInviteCounselor] = useState(false)
+  const [inviteCounselorName, setInviteCounselorName] = useState('')
+  const [inviteCounselorEmail, setInviteCounselorEmail] = useState('')
+  const [inviteCounselorSaving, setInviteCounselorSaving] = useState(false)
+  const [inviteCounselorResult, setInviteCounselorResult] = useState<{status: string; invite_url: string | null} | null>(null)
+
   // Writing section enrollments for student edit modal
   const [adminWritingSections, setAdminWritingSections] = useState<{key: string; title: string; enrolled: boolean}[]>([])
   const [adminWritingLoading, setAdminWritingLoading] = useState(false)
@@ -524,6 +531,35 @@ export default function AdminPage() {
       if (editingUser?.id === userId) setEditingUser(prev => prev ? { ...prev, [bodyKey]: value } : prev)
     }
     setPendingFlag(null)
+  }
+
+  const submitInviteCounselor = async () => {
+    if (!inviteCounselorName.trim() || !inviteCounselorEmail.trim()) return
+    setInviteCounselorSaving(true)
+    try {
+      const token = await getToken()
+      const res = await fetch(`${apiUrl}/tenant-admin/counselors/invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ full_name: inviteCounselorName.trim(), email: inviteCounselorEmail.trim().toLowerCase() }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setInviteCounselorResult(data)
+        setUsers(prev => prev.some(u => u.email === data.email) ? prev : [...prev, {
+          id: data.counselor_id, full_name: data.full_name, email: data.email,
+          account_type: 'counselor', tier: 'counselor_starter', clerk_user_id: null,
+          invite_url: data.invite_url, is_admin: false, is_super_admin: false, is_tenant_admin: false,
+          sessions_used: 0, monthly_session_limit: 0, max_students_override: null, organization: null,
+          tenant_name: null, sub_tenant_name: null,
+        }])
+      } else {
+        setInviteCounselorResult({ status: 'error: ' + (data.detail || 'unknown'), invite_url: null })
+      }
+    } catch {
+      setInviteCounselorResult({ status: 'error: network failure', invite_url: null })
+    }
+    setInviteCounselorSaving(false)
   }
 
   const submitAddParent = async () => {
@@ -885,6 +921,14 @@ export default function AdminPage() {
                 <option value="pending">Pending invites</option>
               </select>
               <span className="text-sm text-gray-400">{filteredUsers.length} users</span>
+              {isTenantAdmin && !isAdmin && !isSuperAdmin && (
+                <button
+                  onClick={() => { setInviteCounselorName(''); setInviteCounselorEmail(''); setInviteCounselorResult(null); setShowInviteCounselor(true) }}
+                  className="ml-auto px-3 py-2 text-sm font-medium bg-teal-600 hover:bg-teal-500 text-white rounded-lg transition-colors whitespace-nowrap"
+                >
+                  + Invite Counselor
+                </button>
+              )}
             </div>
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
               <table className="w-full text-sm">
@@ -1992,6 +2036,96 @@ export default function AdminPage() {
                   </button>
                   <button
                     onClick={() => setAddParentStudent(null)}
+                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-medium transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Invite Counselor modal ── */}
+      {showInviteCounselor && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
+            <h3 className="text-base font-semibold text-gray-800 mb-1">Invite Counselor</h3>
+            <p className="text-sm text-gray-500 mb-5">They&apos;ll receive an email to join your practice on Soar.</p>
+
+            {inviteCounselorResult ? (
+              <div>
+                {inviteCounselorResult.status.startsWith('error') ? (
+                  <p className="text-sm text-red-600 mb-4">{inviteCounselorResult.status}</p>
+                ) : (
+                  <div className="mb-4">
+                    <p className="text-sm text-emerald-700 font-medium mb-1">
+                      {inviteCounselorResult.status === 'created' && 'Invite sent!'}
+                      {inviteCounselorResult.status === 'reinvited' && 'Invite resent!'}
+                      {inviteCounselorResult.status === 'reactivated' && 'Account reactivated — invite sent!'}
+                      {inviteCounselorResult.status === 'connected' && 'Already has an account — added to your practice.'}
+                    </p>
+                    {inviteCounselorResult.invite_url && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <input
+                          readOnly
+                          value={inviteCounselorResult.invite_url}
+                          className="flex-1 text-xs border border-gray-200 rounded px-2 py-1 text-gray-600 bg-gray-50"
+                        />
+                        <button
+                          onClick={() => navigator.clipboard.writeText(inviteCounselorResult!.invite_url!)}
+                          className="text-xs text-indigo-500 hover:text-indigo-700 font-medium whitespace-nowrap"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+                <button
+                  onClick={() => { setShowInviteCounselor(false); setInviteCounselorResult(null) }}
+                  className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-medium"
+                >
+                  Close
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-3 mb-5">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Full name</label>
+                    <input
+                      autoFocus
+                      type="text"
+                      value={inviteCounselorName}
+                      onChange={e => setInviteCounselorName(e.target.value)}
+                      placeholder="Jordan Smith"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Email address</label>
+                    <input
+                      type="email"
+                      value={inviteCounselorEmail}
+                      onChange={e => setInviteCounselorEmail(e.target.value)}
+                      placeholder="jordan@example.com"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                      onKeyDown={e => { if (e.key === 'Enter') submitInviteCounselor() }}
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={submitInviteCounselor}
+                    disabled={inviteCounselorSaving || !inviteCounselorName.trim() || !inviteCounselorEmail.trim()}
+                    className="flex-1 bg-teal-600 hover:bg-teal-500 disabled:opacity-40 text-white rounded-lg py-2 text-sm font-medium transition-colors"
+                  >
+                    {inviteCounselorSaving ? 'Sending…' : 'Send Invite'}
+                  </button>
+                  <button
+                    onClick={() => setShowInviteCounselor(false)}
                     className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-medium transition-colors"
                   >
                     Cancel
