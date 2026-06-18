@@ -933,7 +933,7 @@ export default function AdminPage() {
               {isTenantAdmin && (
                 <button
                   onClick={() => { setInviteCounselorName(''); setInviteCounselorEmail(''); setInviteCounselorResult(null); setShowInviteCounselor(true) }}
-                  className="ml-auto px-3 py-2 text-sm font-medium bg-teal-600 hover:bg-teal-500 text-white rounded-lg transition-colors whitespace-nowrap"
+                  className="ml-auto px-3 py-2 text-sm font-medium bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors whitespace-nowrap"
                 >
                   + Invite Counselor
                 </button>
@@ -2129,7 +2129,7 @@ export default function AdminPage() {
                   <button
                     onClick={submitInviteCounselor}
                     disabled={inviteCounselorSaving || !inviteCounselorName.trim() || !inviteCounselorEmail.trim()}
-                    className="flex-1 bg-teal-600 hover:bg-teal-500 disabled:opacity-40 text-white rounded-lg py-2 text-sm font-medium transition-colors"
+                    className="flex-1 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white rounded-lg py-2 text-sm font-medium transition-colors"
                   >
                     {inviteCounselorSaving ? 'Sending…' : 'Send Invite'}
                   </button>
