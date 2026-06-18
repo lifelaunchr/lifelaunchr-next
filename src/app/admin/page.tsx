@@ -550,9 +550,18 @@ export default function AdminPage() {
           id: data.counselor_id, full_name: data.full_name, email: data.email,
           account_type: 'counselor', tier: 'counselor_starter', clerk_user_id: null,
           invite_url: data.invite_url, is_admin: false, is_super_admin: false, is_tenant_admin: false,
-          sessions_used: 0, monthly_session_limit: 0, max_students_override: null, organization: null,
-          tenant_name: null, sub_tenant_name: null,
-        }])
+          tenant_id: null, tenant_name: null, organization: null, created_at: new Date().toISOString(),
+          monthly_message_limit: null, messages_used: 0, messages_reset_date: null,
+          history_retention_days_override: null, essays_enabled_override: null,
+          plans_enabled_override: null, max_students_override: null,
+          editate_enabled: null, editate_student_id: null, editate_review_limit: null,
+          editate_school_selectivity: null, editate_feedback_preferences: null,
+          consultation_link: null, scheduling_link_comprehensive: null, scheduling_link_hourly: null,
+          tier_display_name: null, essay_list_enabled: null, commonapp_enabled: null,
+          uc_piqs_enabled: null, why_essays_enabled: null,
+          engagement_type: null, coaching_package_name: null, start_date: null,
+          expected_end_date: null, actual_end_date: null, billing_status: null,
+        } as UserRow])
       } else {
         setInviteCounselorResult({ status: 'error: ' + (data.detail || 'unknown'), invite_url: null })
       }
