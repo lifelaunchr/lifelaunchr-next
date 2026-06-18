@@ -930,7 +930,7 @@ export default function AdminPage() {
                 <option value="pending">Pending invites</option>
               </select>
               <span className="text-sm text-gray-400">{filteredUsers.length} users</span>
-              {isTenantAdmin && !isAdmin && !isSuperAdmin && (
+              {isTenantAdmin && (
                 <button
                   onClick={() => { setInviteCounselorName(''); setInviteCounselorEmail(''); setInviteCounselorResult(null); setShowInviteCounselor(true) }}
                   className="ml-auto px-3 py-2 text-sm font-medium bg-teal-600 hover:bg-teal-500 text-white rounded-lg transition-colors whitespace-nowrap"
