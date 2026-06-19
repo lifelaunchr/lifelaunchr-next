@@ -17,6 +17,51 @@ const VIDEOS: { id: string; title: string; description?: string }[] = [
     title: 'Invite Your First Family',
     description: "The single most important first step: invite a student and their parents. Once you do, you can start researching on the student's behalf immediately. Takes about two minutes.",
   },
+  {
+    id: '1202638568',
+    title: 'Updating a Student Profile',
+    description: 'Once you invite a student to join Soar, you - or the student - can update the student\'s profile: enter GPA and test scores, intended majors and financial details, even upload transcripts. This information is used to power the student\'s college and career research.',
+  },
+  {
+    id: '1202689764',
+    title: 'Entering Student Activities Lists',
+    description: "Once you invite students and add them, counselors or students can enter details of a student's activities into Soar, so it can be used to generate CommonApp and UC activities lists, and also to power their research.",
+  },
+  {
+    id: '1202638152',
+    title: 'Using Soar to Explore Majors and Careers',
+    description: 'Soar helps students explore majors and their connection to careers. It can help students make more nuanced, better informed decisions about career paths and the majors that lead to them.',
+  },
+  {
+    id: '1202638545',
+    title: 'Generating Personalized Soar Summaries for Each College',
+    description: 'After a student researches a college, Soar generates Soar summaries that provide an organized summary of the work you did, the student did, and their parent did, and connects the college to the student in a way that helps students choose colleges, and also helps to prepare "Why Us?" essays.',
+  },
+  {
+    id: '1202638285',
+    title: 'Generating Meeting Briefs Before Meetings',
+    description: 'Before you meet with a student, Soar can generate a meeting brief to prepare you. It will review all the work the student, parent, and counselor did since the last meeting, and generate a detailed brief to prepare you for the meeting.',
+  },
+  {
+    id: '1202638154',
+    title: 'Generating Session Summaries',
+    description: 'Soar automates the generation of session summaries - using meeting briefs and automated transcripts of sessions, so you can send detailed, high-quality session reports to parents and children after each session.',
+  },
+  {
+    id: '1202638153',
+    title: 'How Soar Calculates College Admission Likelihoods',
+    description: "Soar calculates admission likelihoods using a proprietary algorithm developed over many years of working with students. ChatGPT and other AI chatbots overestimate likelihoods, and Soar's algorithms - based on GPA, rigor, SAT/ACT scores, extracurriculars, and athletics - are designed to be accurate and representative.",
+  },
+  {
+    id: '1202689765',
+    title: 'Generating Activities Lists for Applications',
+    description: 'Soar can generate draft versions of the UC or CommonApp activities lists, or create resumés you can use for internships, job applications, or college applications.',
+  },
+  {
+    id: '1202638155',
+    title: 'How Soar Avoids Hallucinations',
+    description: "AI tools are prone to hallucinations: making up facts. To avoid this, we've built many features into Soar: authoritative databases, tens of thousands of words of context about college and career planning, and search and web retrieval. These allow us to provide better information to parents and students.",
+  },
 ]
 // ─────────────────────────────────────────────────────────────────────────────
 
