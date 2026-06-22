@@ -395,6 +395,72 @@ function EditPanel({
             />
           </section>
 
+          {/* Invite — only show for pending (not yet signed-up) students */}
+          {!student.clerk_user_id && (
+          <section>
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Invite Link</h3>
+            {inviteUrl ? (
+              <div className="space-y-2">
+                <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600 break-all font-mono">
+                  {inviteUrl}
+                </div>
+                {inviteExpiry && (
+                <p className="text-xs text-gray-400">
+                  Expires {new Date(inviteExpiry).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </p>
+                )}
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    onClick={copyInvite}
+                    className="px-3 py-2 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    {copied ? 'Copied!' : 'Copy Link'}
+                  </button>
+                  <button
+                    onClick={() => generateInvite(true)}
+                    disabled={inviteLoading}
+                    className="px-3 py-2 text-xs border border-gray-200 rounded-lg hover:bg-gray-50"
+                  >
+                    Regenerate
+                  </button>
+                  <button
+                    disabled={resendingStudent}
+                    onClick={async () => {
+                      setResendingStudent(true)
+                      try {
+                        const token = await getToken()
+                        const res = await fetch(`${apiUrl}/admin/users/${student.id}/resend-invite`, {
+                          method: 'POST',
+                          headers: { Authorization: `Bearer ${token}` },
+                        })
+                        if (res.ok) {
+                          const data = await res.json()
+                          setInviteUrl(data.invite_url)
+                          setResentStudent(true)
+                          setTimeout(() => setResentStudent(false), 4000)
+                        }
+                      } finally {
+                        setResendingStudent(false)
+                      }
+                    }}
+                    className="px-3 py-2 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    {resendingStudent ? 'Sending…' : resentStudent ? '✓ Email sent!' : 'Resend email'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => generateInvite(false)}
+                disabled={inviteLoading}
+                className="w-full px-4 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50"
+              >
+                {inviteLoading ? 'Generating…' : 'Generate Invite Link'}
+              </button>
+            )}
+          </section>
+          )}
+
           {/* Parents */}
           {(parentsLoading || parents.length > 0) && (
           <section>
@@ -455,72 +521,6 @@ function EditPanel({
                   </div>
                 ))}
               </div>
-            )}
-          </section>
-          )}
-
-          {/* Invite — only show for pending (not yet signed-up) students */}
-          {!student.clerk_user_id && (
-          <section>
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Invite Link</h3>
-            {inviteUrl ? (
-              <div className="space-y-2">
-                <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600 break-all font-mono">
-                  {inviteUrl}
-                </div>
-                {inviteExpiry && (
-                <p className="text-xs text-gray-400">
-                  Expires {fmtDate(inviteExpiry)}
-                </p>
-                )}
-                <div className="flex gap-2 flex-wrap">
-                  <button
-                    onClick={copyInvite}
-                    className="px-3 py-2 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                  >
-                    {copied ? 'Copied!' : 'Copy Link'}
-                  </button>
-                  <button
-                    onClick={() => generateInvite(true)}
-                    disabled={inviteLoading}
-                    className="px-3 py-2 text-xs border border-gray-200 rounded-lg hover:bg-gray-50"
-                  >
-                    Regenerate
-                  </button>
-                  <button
-                    disabled={resendingStudent}
-                    onClick={async () => {
-                      setResendingStudent(true)
-                      try {
-                        const token = await getToken()
-                        const res = await fetch(`${apiUrl}/admin/users/${student.id}/resend-invite`, {
-                          method: 'POST',
-                          headers: { Authorization: `Bearer ${token}` },
-                        })
-                        if (res.ok) {
-                          const data = await res.json()
-                          setInviteUrl(data.invite_url)
-                          setResentStudent(true)
-                          setTimeout(() => setResentStudent(false), 4000)
-                        }
-                      } finally {
-                        setResendingStudent(false)
-                      }
-                    }}
-                    className="px-3 py-2 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
-                  >
-                    {resendingStudent ? 'Sending…' : resentStudent ? '✓ Email sent!' : 'Resend email'}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button
-                onClick={() => generateInvite(false)}
-                disabled={inviteLoading}
-                className="w-full px-4 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50"
-              >
-                {inviteLoading ? 'Generating…' : 'Generate Invite Link'}
-              </button>
             )}
           </section>
           )}
