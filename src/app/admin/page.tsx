@@ -200,6 +200,8 @@ export default function AdminPage() {
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState('')
   const [copiedInvite, setCopiedInvite] = useState(false)
+  const [resendingInvite, setResendingInvite] = useState(false)
+  const [resentInvite, setResentInvite] = useState(false)
 
   // Add Parent modal
   const [addParentStudent, setAddParentStudent] = useState<UserRow | null>(null)
@@ -1009,7 +1011,7 @@ export default function AdminPage() {
                         <div className="flex items-center gap-2">
                           {(isAdmin || isSuperAdmin || isTenantAdmin) ? (
                             <button
-                              onClick={() => { setEditingUser({ ...u }); setCopiedInvite(false); }}
+                              onClick={() => { setEditingUser({ ...u }); setCopiedInvite(false); setResentInvite(false); setResendingInvite(false); }}
                               className="text-xs text-indigo-500 hover:text-indigo-700 font-medium"
                             >
                               Edit
@@ -1388,7 +1390,7 @@ export default function AdminPage() {
                         </div>
                         {(isAdmin || isSuperAdmin) && (
                           <button
-                            onClick={() => { setEditingUser({ ...u }); setCopiedInvite(false); }}
+                            onClick={() => { setEditingUser({ ...u }); setCopiedInvite(false); setResentInvite(false); setResendingInvite(false); }}
                             className="text-xs text-indigo-500 hover:text-indigo-700 font-medium"
                           >
                             Edit
@@ -1795,12 +1797,38 @@ export default function AdminPage() {
                   <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600 break-all font-mono mb-2">
                     {editingUser.invite_url}
                   </div>
-                  <button
-                    onClick={() => { navigator.clipboard.writeText(editingUser.invite_url!); setCopiedInvite(true); setTimeout(() => setCopiedInvite(false), 2000); }}
-                    className="px-4 py-2 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
-                  >
-                    {copiedInvite ? 'Copied!' : 'Copy Invite Link'}
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => { navigator.clipboard.writeText(editingUser.invite_url!); setCopiedInvite(true); setTimeout(() => setCopiedInvite(false), 2000); }}
+                      className="px-4 py-2 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
+                    >
+                      {copiedInvite ? 'Copied!' : 'Copy Link'}
+                    </button>
+                    <button
+                      disabled={resendingInvite}
+                      onClick={async () => {
+                        setResendingInvite(true)
+                        try {
+                          const token = await getToken()
+                          const res = await fetch(`${apiUrl}/admin/users/${editingUser.id}/resend-invite`, {
+                            method: 'POST',
+                            headers: { Authorization: `Bearer ${token}` },
+                          })
+                          if (res.ok) {
+                            const data = await res.json()
+                            setEditingUser(prev => prev ? { ...prev, invite_url: data.invite_url } : prev)
+                            setResentInvite(true)
+                            setTimeout(() => setResentInvite(false), 4000)
+                          }
+                        } finally {
+                          setResendingInvite(false)
+                        }
+                      }}
+                      className="px-4 py-2 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      {resendingInvite ? 'Sending…' : resentInvite ? '✓ Sent!' : 'Resend invite email'}
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

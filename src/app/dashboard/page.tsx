@@ -176,9 +176,38 @@ function EditPanel({
   const [inviteExpiry, setInviteExpiry] = useState<string | null>(null)
   const [inviteLoading, setInviteLoading] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [resendingStudent, setResendingStudent] = useState(false)
+  const [resentStudent, setResentStudent] = useState(false)
+  const [parents, setParents] = useState<{ id: number; full_name: string; email: string; clerk_user_id: string | null; invite_url: string | null }[]>([])
+  const [parentsLoading, setParentsLoading] = useState(false)
+  const [resendingParent, setResendingParent] = useState<number | null>(null)
+  const [resentParent, setResentParent] = useState<number | null>(null)
 
   const set = (k: keyof DashboardStudent, v: unknown) =>
     setForm(p => ({ ...p, [k]: v }))
+
+  // Load linked parents when drawer opens
+  useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      setParentsLoading(true)
+      try {
+        const token = await getToken()
+        const res = await fetch(`${apiUrl}/counselor/dashboard/students/${student.id}/parents`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (res.ok && !cancelled) {
+          const data = await res.json()
+          setParents(data.parents || [])
+        }
+      } finally {
+        if (!cancelled) setParentsLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [student.id])
 
   const save = async () => {
     setSaving(true)
@@ -366,6 +395,70 @@ function EditPanel({
             />
           </section>
 
+          {/* Parents */}
+          {(parentsLoading || parents.length > 0) && (
+          <section>
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Parents</h3>
+            {parentsLoading ? (
+              <p className="text-xs text-gray-400">Loading…</p>
+            ) : (
+              <div className="space-y-3">
+                {parents.map(p => (
+                  <div key={p.id} className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm text-gray-800 font-medium truncate">{p.full_name}</p>
+                      <p className="text-xs text-gray-500 truncate">{p.email}</p>
+                    </div>
+                    {p.clerk_user_id ? (
+                      <span className="flex-shrink-0 text-[10px] px-2 py-0.5 rounded bg-green-100 text-green-700 font-medium">Active</span>
+                    ) : (
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-amber-100 text-amber-700 font-medium border border-amber-200">Invited</span>
+                        <button
+                          disabled={resendingParent === p.id}
+                          onClick={async () => {
+                            setResendingParent(p.id)
+                            try {
+                              const token = await getToken()
+                              const res = await fetch(`${apiUrl}/admin/users/${p.id}/resend-invite`, {
+                                method: 'POST',
+                                headers: { Authorization: `Bearer ${token}` },
+                              })
+                              if (res.ok) {
+                                const data = await res.json()
+                                setParents(prev => prev.map(x => x.id === p.id ? { ...x, invite_url: data.invite_url } : x))
+                                setResentParent(p.id)
+                                setTimeout(() => setResentParent(null), 4000)
+                              }
+                            } finally {
+                              setResendingParent(null)
+                            }
+                          }}
+                          className="text-[10px] px-2 py-0.5 rounded border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                        >
+                          {resendingParent === p.id ? '…' : resentParent === p.id ? '✓ Sent' : 'Resend'}
+                        </button>
+                        {p.invite_url && (
+                          <button
+                            onClick={() => navigator.clipboard.writeText(p.invite_url!)}
+                            title="Copy invite link"
+                            className="text-gray-400 hover:text-gray-600"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+                              <path d="M7 3.5A1.5 1.5 0 0 1 8.5 2h3.879a1.5 1.5 0 0 1 1.06.44l3.122 3.12A1.5 1.5 0 0 1 17 6.622V12.5a1.5 1.5 0 0 1-1.5 1.5h-1v-3.379a3 3 0 0 0-.879-2.121L10.5 5.379A3 3 0 0 0 8.379 4.5H7v-1Z" />
+                              <path d="M4.5 6A1.5 1.5 0 0 0 3 7.5v9A1.5 1.5 0 0 0 4.5 18h7a1.5 1.5 0 0 0 1.5-1.5v-5.879a1.5 1.5 0 0 0-.44-1.06L9.44 6.439A1.5 1.5 0 0 0 8.378 6H4.5Z" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+          )}
+
           {/* Invite — only show for pending (not yet signed-up) students */}
           {!student.clerk_user_id && (
           <section>
@@ -380,10 +473,10 @@ function EditPanel({
                   Expires {fmtDate(inviteExpiry)}
                 </p>
                 )}
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <button
                     onClick={copyInvite}
-                    className="flex-1 px-3 py-2 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    className="px-3 py-2 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                   >
                     {copied ? 'Copied!' : 'Copy Link'}
                   </button>
@@ -393,6 +486,30 @@ function EditPanel({
                     className="px-3 py-2 text-xs border border-gray-200 rounded-lg hover:bg-gray-50"
                   >
                     Regenerate
+                  </button>
+                  <button
+                    disabled={resendingStudent}
+                    onClick={async () => {
+                      setResendingStudent(true)
+                      try {
+                        const token = await getToken()
+                        const res = await fetch(`${apiUrl}/admin/users/${student.id}/resend-invite`, {
+                          method: 'POST',
+                          headers: { Authorization: `Bearer ${token}` },
+                        })
+                        if (res.ok) {
+                          const data = await res.json()
+                          setInviteUrl(data.invite_url)
+                          setResentStudent(true)
+                          setTimeout(() => setResentStudent(false), 4000)
+                        }
+                      } finally {
+                        setResendingStudent(false)
+                      }
+                    }}
+                    className="px-3 py-2 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    {resendingStudent ? 'Sending…' : resentStudent ? '✓ Email sent!' : 'Resend email'}
                   </button>
                 </div>
               </div>
