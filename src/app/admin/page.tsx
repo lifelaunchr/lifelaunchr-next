@@ -1791,19 +1791,25 @@ export default function AdminPage() {
               )}
 
               {/* Invite link — only for pending users */}
-              {!editingUser.clerk_user_id && editingUser.invite_url && (
+              {!editingUser.clerk_user_id && (
                 <div className="border-t border-gray-100 pt-4">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Invite Link</p>
-                  <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600 break-all font-mono mb-2">
-                    {editingUser.invite_url}
-                  </div>
+                  {editingUser.invite_url ? (
+                    <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600 break-all font-mono mb-2">
+                      {editingUser.invite_url}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-amber-600 mb-2">Invite link expired or not yet generated.</p>
+                  )}
                   <div className="flex gap-2">
-                    <button
-                      onClick={() => { navigator.clipboard.writeText(editingUser.invite_url!); setCopiedInvite(true); setTimeout(() => setCopiedInvite(false), 2000); }}
-                      className="px-4 py-2 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
-                    >
-                      {copiedInvite ? 'Copied!' : 'Copy Link'}
-                    </button>
+                    {editingUser.invite_url && (
+                      <button
+                        onClick={() => { navigator.clipboard.writeText(editingUser.invite_url!); setCopiedInvite(true); setTimeout(() => setCopiedInvite(false), 2000); }}
+                        className="px-4 py-2 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
+                      >
+                        {copiedInvite ? 'Copied!' : 'Copy Link'}
+                      </button>
+                    )}
                     <button
                       disabled={resendingInvite}
                       onClick={async () => {
@@ -1826,7 +1832,7 @@ export default function AdminPage() {
                       }}
                       className="px-4 py-2 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
                     >
-                      {resendingInvite ? 'Sending…' : resentInvite ? '✓ Sent!' : 'Resend invite email'}
+                      {resendingInvite ? 'Sending…' : resentInvite ? '✓ Sent!' : editingUser.invite_url ? 'Resend invite email' : 'Generate & send invite'}
                     </button>
                   </div>
                 </div>
