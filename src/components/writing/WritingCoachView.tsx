@@ -48,6 +48,101 @@ interface WritingAssignment {
   response_schema: { type: string; fields: Array<{ id: string; label: string; prompt: string; type: string }> } | null
 }
 
+// ── Essay Plan types ───────────────────────────────────────────────────────────
+
+interface EssayPlanTop10Item {
+  rank: number
+  label: string
+  evidence: string
+  is_essay_anchor: boolean
+  source: string
+  tension: string
+  _caveat?: string
+}
+
+interface EssayPlanTop10 {
+  student_name: string
+  item_count: number
+  items: EssayPlanTop10Item[]
+  assignments_to_redo: Array<{
+    exercise_name: string
+    why_promising: string
+    coaching_asks: string[]
+    priority: string
+  }>
+  opening_question: string
+  data_quality_note?: string
+}
+
+interface EssayPlanConcept {
+  rank: number
+  label: string
+  readiness: string
+  theme: string
+  category: string
+  overcrowded?: boolean
+  escape_ingredient?: string | null
+  story_structure?: {
+    has_natural_arc: boolean
+    structure_note: string
+  }
+  core_claim: string
+  risk_factors?: string[]
+  viability_note?: string
+}
+
+interface EssayPlanCommonApp {
+  student_name: string
+  data_integrity_note?: string | null
+  concepts: EssayPlanConcept[]
+  triage_note: string
+  student_facing_summary: string
+}
+
+interface EssayPlanPiq {
+  piq_number: number
+  piq_keyword: string
+  topic_label: string
+  why_this_student: string
+  concrete_example: string
+  reflection: string
+  forward_connection: string
+  drift_risk: string
+  readiness: string
+}
+
+interface EssayPlanUcPiqs {
+  student_name: string
+  data_integrity_flag?: string | null
+  recommended_piqs: EssayPlanPiq[]
+  diversity_check: string
+  triage_note: string
+  student_facing_summary: string | string[]
+}
+
+interface EssayPlanWhyMajor {
+  student_name: string
+  intended_major: string
+  major_confidence: string
+  major_mismatch_flag?: string
+  origin_moment?: { description: string; quality: string }
+  development_arc?: string[]
+  intellectual_hook?: { description: string; quality: string }
+  goals_connection?: string
+  drift_risk?: string
+  uc_flag?: string
+  readiness: string
+  triage_note: string
+  student_facing_summary: string
+}
+
+interface EssayPlanSections {
+  top10?: EssayPlanTop10
+  commonapp?: EssayPlanCommonApp
+  uc_piqs?: EssayPlanUcPiqs
+  why_major?: EssayPlanWhyMajor
+}
+
 interface AssignmentResponse {
   id: number
   content: string | null
@@ -705,6 +800,463 @@ function ReviewPanel({
   )
 }
 
+// ── EssayPlanPanel ────────────────────────────────────────────────────────────
+
+type EssayPlanTab = 'top10' | 'commonapp' | 'uc_piqs' | 'why_major'
+
+function readinessBadge(r: string) {
+  const norm = r.toLowerCase().replace(/[\s_-]+/g, '_')
+  if (norm.includes('ready')) return <span className="px-2 py-0.5 text-[10px] rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Ready</span>
+  if (norm.includes('close') || norm.includes('medium')) return <span className="px-2 py-0.5 text-[10px] rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">Close</span>
+  return <span className="px-2 py-0.5 text-[10px] rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30">Needs digging</span>
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <button
+      onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
+      className="text-[10px] px-2 py-0.5 rounded bg-teal-600/20 text-teal-400 border border-teal-600/30 hover:bg-teal-600/30 transition-all"
+    >
+      {copied ? 'Copied ✓' : 'Copy'}
+    </button>
+  )
+}
+
+function EssayPlanPanel({
+  studentName,
+  sections,
+  generatedAt,
+  generating,
+  statusMsg,
+  onGenerate,
+  onClose,
+}: {
+  studentName: string
+  sections: EssayPlanSections
+  generatedAt: string | null
+  generating: boolean
+  statusMsg: string
+  onGenerate: () => void
+  onClose: () => void
+}) {
+  const ALL_TABS: { key: EssayPlanTab; label: string }[] = [
+    { key: 'top10', label: 'Top 10' },
+    { key: 'commonapp', label: 'CommonApp' },
+    { key: 'uc_piqs', label: 'UC PIQs' },
+    { key: 'why_major', label: 'Why Major' },
+  ]
+  const tabs = ALL_TABS.filter(t => !!sections[t.key])
+
+  const [activeTab, setActiveTab] = useState<EssayPlanTab>(tabs[0]?.key ?? 'top10')
+
+  const top10 = sections.top10
+  const ca = sections.commonapp
+  const piqs = sections.uc_piqs
+  const wm = sections.why_major
+
+  const summaryText = (s: string | string[] | undefined): string => {
+    if (!s) return ''
+    if (Array.isArray(s)) return s.join('\n\n')
+    return s
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative w-full max-w-3xl bg-slate-800 rounded-t-2xl sm:rounded-2xl border border-slate-700 max-h-[92vh] flex flex-col overflow-hidden shadow-2xl">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700 flex-shrink-0">
+          <div>
+            <h3 className="text-sm font-semibold text-white">Essay Plan — {studentName}</h3>
+            {generatedAt && (
+              <p className="text-xs text-slate-500 mt-0.5">
+                Generated {new Date(generatedAt).toLocaleDateString()}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onGenerate}
+              disabled={generating}
+              className="text-xs px-3 py-1.5 bg-violet-600/20 hover:bg-violet-600/30 text-violet-400 rounded-lg border border-violet-600/30 transition-all disabled:opacity-50"
+            >
+              {generating ? 'Generating…' : generatedAt ? '↺ Regenerate' : '✦ Generate'}
+            </button>
+            <button onClick={onClose} className="text-slate-400 hover:text-white text-xl leading-none ml-1">×</button>
+          </div>
+        </div>
+
+        {/* Status during generation */}
+        {generating && statusMsg && (
+          <div className="px-5 py-2.5 bg-violet-500/10 border-b border-violet-500/20 flex items-center gap-2 flex-shrink-0">
+            <div className="w-3 h-3 border-2 border-violet-400 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+            <p className="text-xs text-violet-300 truncate">{statusMsg}</p>
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!generating && tabs.length === 0 && (
+          <div className="flex-1 flex flex-col items-center justify-center p-10 text-center">
+            <p className="text-slate-400 text-sm mb-1">No essay plan generated yet.</p>
+            <p className="text-xs text-slate-500">Click Generate to run the analysis for this student.</p>
+          </div>
+        )}
+
+        {/* Tab bar */}
+        {tabs.length > 0 && (
+          <div className="flex border-b border-slate-700 flex-shrink-0 overflow-x-auto">
+            {tabs.map(t => (
+              <button
+                key={t.key}
+                onClick={() => setActiveTab(t.key)}
+                className={`px-4 py-2.5 text-xs font-medium whitespace-nowrap transition-colors ${
+                  activeTab === t.key
+                    ? 'text-violet-400 border-b-2 border-violet-400'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Tab content */}
+        {tabs.length > 0 && (
+          <div className="flex-1 overflow-y-auto p-5 space-y-5">
+
+            {/* ── TOP 10 ── */}
+            {activeTab === 'top10' && top10 && (
+              <>
+                {/* Opening question */}
+                {top10.opening_question && (
+                  <div className="bg-blue-500/10 border border-blue-500/25 rounded-xl px-4 py-3">
+                    <p className="text-[10px] text-blue-400 uppercase tracking-wider font-medium mb-1">Opening Question</p>
+                    <p className="text-sm text-blue-100 leading-relaxed italic">{top10.opening_question}</p>
+                  </div>
+                )}
+
+                {/* Data quality note */}
+                {top10.data_quality_note && (
+                  <div className="bg-amber-500/10 border border-amber-500/25 rounded-xl px-4 py-3">
+                    <p className="text-[10px] text-amber-400 uppercase tracking-wider font-medium mb-1">Data Quality Note</p>
+                    <p className="text-xs text-amber-200 leading-relaxed">{top10.data_quality_note}</p>
+                  </div>
+                )}
+
+                {/* Items */}
+                <div>
+                  <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">
+                    {top10.item_count} Key Items ({top10.items.filter(i => i.is_essay_anchor).length} essay anchors)
+                  </p>
+                  <div className="space-y-3">
+                    {top10.items.map(item => (
+                      <div
+                        key={item.rank}
+                        className={`rounded-xl border px-4 py-3 space-y-2 ${
+                          item.is_essay_anchor
+                            ? 'bg-violet-500/5 border-violet-500/25'
+                            : 'bg-slate-700/20 border-slate-700/40'
+                        }`}
+                      >
+                        <div className="flex items-start gap-2">
+                          <span className="text-[10px] text-slate-500 font-mono mt-0.5 flex-shrink-0">#{item.rank}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-sm font-semibold text-white">{item.label}</span>
+                              {item.is_essay_anchor && (
+                                <span className="px-2 py-0.5 text-[10px] rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/30">Essay anchor</span>
+                              )}
+                              <span className="px-2 py-0.5 text-[10px] rounded-full bg-slate-700 text-slate-400 border border-slate-600">
+                                {item.source}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <p className="text-xs text-slate-300 italic leading-relaxed pl-5">{item.evidence}</p>
+                        <p className="text-xs text-slate-400 leading-relaxed pl-5">
+                          <span className="text-slate-500 font-medium">Tension: </span>{item.tension}
+                        </p>
+                        {item._caveat && (
+                          <p className="text-xs text-amber-400/80 leading-relaxed pl-5">⚠ {item._caveat}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Assignments to redo */}
+                {top10.assignments_to_redo?.length > 0 && (
+                  <div>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Exercises to Revisit</p>
+                    <div className="space-y-3">
+                      {top10.assignments_to_redo.map((a, i) => (
+                        <div key={i} className="bg-slate-700/20 border border-slate-700/40 rounded-xl px-4 py-3 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-white">{a.exercise_name}</span>
+                            <span className={`px-2 py-0.5 text-[10px] rounded-full border ${
+                              a.priority === 'high'
+                                ? 'bg-rose-500/20 text-rose-400 border-rose-500/30'
+                                : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                            }`}>{a.priority}</span>
+                          </div>
+                          <p className="text-xs text-slate-400 leading-relaxed">{a.why_promising}</p>
+                          {a.coaching_asks?.length > 0 && (
+                            <ul className="space-y-1 pl-3">
+                              {a.coaching_asks.map((ask, j) => (
+                                <li key={j} className="text-xs text-slate-300 leading-relaxed before:content-['→'] before:text-violet-400 before:mr-1.5">{ask}</li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* ── COMMONAPP ── */}
+            {activeTab === 'commonapp' && ca && (
+              <>
+                {ca.data_integrity_note && (
+                  <div className="bg-amber-500/10 border border-amber-500/25 rounded-xl px-4 py-3">
+                    <p className="text-[10px] text-amber-400 uppercase tracking-wider font-medium mb-1">Data Integrity Note</p>
+                    <p className="text-xs text-amber-200 leading-relaxed">{ca.data_integrity_note}</p>
+                  </div>
+                )}
+
+                {ca.concepts?.length > 0 && (
+                  <div>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Essay Concepts</p>
+                    <div className="space-y-3">
+                      {ca.concepts.map(c => (
+                        <div key={c.rank} className="bg-slate-700/20 border border-slate-700/40 rounded-xl px-4 py-3 space-y-2">
+                          <div className="flex items-start gap-2 flex-wrap">
+                            <span className="text-sm font-semibold text-white flex-1">{c.label}</span>
+                            {readinessBadge(c.readiness)}
+                          </div>
+                          <p className="text-xs text-slate-400 italic leading-relaxed">{c.theme}</p>
+                          {c.core_claim && (
+                            <p className="text-xs text-violet-300 leading-relaxed">
+                              <span className="text-slate-500 not-italic font-medium">Core claim: </span>
+                              &ldquo;{c.core_claim}&rdquo;
+                            </p>
+                          )}
+                          {c.story_structure?.structure_note && (
+                            <p className="text-xs text-slate-400 leading-relaxed">
+                              <span className="text-slate-500 font-medium">Story: </span>
+                              {c.story_structure.structure_note}
+                            </p>
+                          )}
+                          {c.viability_note && (
+                            <p className="text-xs text-slate-300 leading-relaxed border-t border-slate-700/40 pt-2 mt-2">{c.viability_note}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {ca.triage_note && (
+                  <div className="bg-slate-700/30 border border-slate-600/40 rounded-xl px-4 py-3">
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wider font-medium mb-1">Triage Note</p>
+                    <p className="text-xs text-slate-300 leading-relaxed">{ca.triage_note}</p>
+                  </div>
+                )}
+
+                {ca.student_facing_summary && (
+                  <div className="bg-teal-500/10 border border-teal-500/25 rounded-xl px-4 py-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] text-teal-400 uppercase tracking-wider font-medium">Student-Facing Summary</p>
+                      <CopyButton text={summaryText(ca.student_facing_summary)} />
+                    </div>
+                    <p className="text-xs text-teal-100 leading-relaxed whitespace-pre-wrap">{ca.student_facing_summary}</p>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* ── UC PIQs ── */}
+            {activeTab === 'uc_piqs' && piqs && (
+              <>
+                {piqs.data_integrity_flag && (
+                  <div className="bg-amber-500/10 border border-amber-500/25 rounded-xl px-4 py-3">
+                    <p className="text-[10px] text-amber-400 uppercase tracking-wider font-medium mb-1">Data Integrity Note</p>
+                    <p className="text-xs text-amber-200 leading-relaxed">{piqs.data_integrity_flag}</p>
+                  </div>
+                )}
+
+                {piqs.recommended_piqs?.length > 0 && (
+                  <div>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Recommended PIQs</p>
+                    <div className="space-y-3">
+                      {piqs.recommended_piqs.map(piq => (
+                        <div key={piq.piq_number} className="bg-slate-700/20 border border-slate-700/40 rounded-xl px-4 py-3 space-y-2">
+                          <div className="flex items-start gap-2 flex-wrap">
+                            <span className="px-2 py-0.5 text-[10px] rounded bg-slate-700 text-slate-300 font-mono border border-slate-600 flex-shrink-0">PIQ {piq.piq_number}</span>
+                            <span className="text-sm font-semibold text-white flex-1">{piq.topic_label}</span>
+                            {readinessBadge(piq.readiness)}
+                          </div>
+                          <p className="text-[10px] text-violet-300/80 italic">{piq.piq_keyword}</p>
+                          <p className="text-xs text-slate-300 leading-relaxed">{piq.why_this_student}</p>
+                          {piq.concrete_example && (
+                            <p className="text-xs text-slate-400 leading-relaxed">
+                              <span className="text-slate-500 font-medium">Example needed: </span>{piq.concrete_example}
+                            </p>
+                          )}
+                          {piq.drift_risk && (
+                            <p className="text-xs text-rose-400/80 leading-relaxed">
+                              <span className="font-medium">Drift risk: </span>{piq.drift_risk}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {piqs.diversity_check && (
+                  <div className="bg-slate-700/30 border border-slate-600/40 rounded-xl px-4 py-3">
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wider font-medium mb-1">Diversity Check</p>
+                    <p className="text-xs text-slate-300 leading-relaxed">{piqs.diversity_check}</p>
+                  </div>
+                )}
+
+                {piqs.triage_note && (
+                  <div className="bg-slate-700/30 border border-slate-600/40 rounded-xl px-4 py-3">
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wider font-medium mb-1">Triage Note</p>
+                    <p className="text-xs text-slate-300 leading-relaxed">{piqs.triage_note}</p>
+                  </div>
+                )}
+
+                {piqs.student_facing_summary && (
+                  <div className="bg-teal-500/10 border border-teal-500/25 rounded-xl px-4 py-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] text-teal-400 uppercase tracking-wider font-medium">Student-Facing Summary</p>
+                      <CopyButton text={summaryText(piqs.student_facing_summary)} />
+                    </div>
+                    <p className="text-xs text-teal-100 leading-relaxed whitespace-pre-wrap">{summaryText(piqs.student_facing_summary)}</p>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* ── WHY MAJOR ── */}
+            {activeTab === 'why_major' && wm && (
+              <>
+                {wm.major_mismatch_flag && (
+                  <div className="bg-orange-500/10 border border-orange-500/25 rounded-xl px-4 py-3">
+                    <p className="text-[10px] text-orange-400 uppercase tracking-wider font-medium mb-1">Major Alignment Note</p>
+                    <p className="text-xs text-orange-200 leading-relaxed">{wm.major_mismatch_flag}</p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-slate-700/20 border border-slate-700/40 rounded-xl px-4 py-3">
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Intended Major</p>
+                    <p className="text-sm text-white">{wm.intended_major || '—'}</p>
+                  </div>
+                  <div className="bg-slate-700/20 border border-slate-700/40 rounded-xl px-4 py-3">
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Readiness</p>
+                    <div className="mt-1">{readinessBadge(wm.readiness)}</div>
+                  </div>
+                </div>
+
+                {wm.origin_moment && (
+                  <div className="bg-slate-700/20 border border-slate-700/40 rounded-xl px-4 py-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="text-[10px] text-slate-500 uppercase tracking-wider">Origin Moment</p>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                        wm.origin_moment.quality === 'missing'
+                          ? 'bg-rose-500/20 text-rose-400'
+                          : wm.origin_moment.quality === 'partial'
+                          ? 'bg-amber-500/20 text-amber-400'
+                          : 'bg-emerald-500/20 text-emerald-400'
+                      }`}>{wm.origin_moment.quality}</span>
+                    </div>
+                    <p className="text-xs text-slate-300 leading-relaxed">{wm.origin_moment.description}</p>
+                  </div>
+                )}
+
+                {wm.intellectual_hook && (
+                  <div className="bg-slate-700/20 border border-slate-700/40 rounded-xl px-4 py-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="text-[10px] text-slate-500 uppercase tracking-wider">Intellectual Hook</p>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                        wm.intellectual_hook.quality === 'missing'
+                          ? 'bg-rose-500/20 text-rose-400'
+                          : wm.intellectual_hook.quality === 'partial'
+                          ? 'bg-amber-500/20 text-amber-400'
+                          : 'bg-emerald-500/20 text-emerald-400'
+                      }`}>{wm.intellectual_hook.quality}</span>
+                    </div>
+                    <p className="text-xs text-slate-300 leading-relaxed">{wm.intellectual_hook.description}</p>
+                  </div>
+                )}
+
+                {wm.development_arc && wm.development_arc.length > 0 && (
+                  <div className="bg-slate-700/20 border border-slate-700/40 rounded-xl px-4 py-3">
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Development Arc</p>
+                    <ul className="space-y-1.5">
+                      {wm.development_arc.map((item, i) => (
+                        <li key={i} className="text-xs text-slate-300 leading-relaxed before:content-['·'] before:text-slate-500 before:mr-2">{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {(wm.goals_connection || wm.drift_risk || wm.uc_flag) && (
+                  <div className="space-y-2">
+                    {wm.goals_connection && (
+                      <div className="bg-slate-700/20 border border-slate-700/40 rounded-xl px-4 py-3">
+                        <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Goals Connection</p>
+                        <p className="text-xs text-slate-300 leading-relaxed">{wm.goals_connection}</p>
+                      </div>
+                    )}
+                    {wm.drift_risk && (
+                      <div className="bg-slate-700/20 border border-slate-700/40 rounded-xl px-4 py-3">
+                        <p className="text-[10px] text-rose-400/70 uppercase tracking-wider mb-1">Drift Risk</p>
+                        <p className="text-xs text-slate-300 leading-relaxed">{wm.drift_risk}</p>
+                      </div>
+                    )}
+                    {wm.uc_flag && (
+                      <div className="bg-amber-500/10 border border-amber-500/25 rounded-xl px-4 py-3">
+                        <p className="text-[10px] text-amber-400 uppercase tracking-wider mb-1">UC Flag</p>
+                        <p className="text-xs text-amber-200 leading-relaxed">{wm.uc_flag}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {wm.triage_note && (
+                  <div className="bg-slate-700/30 border border-slate-600/40 rounded-xl px-4 py-3">
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wider font-medium mb-1">Triage Note</p>
+                    <p className="text-xs text-slate-300 leading-relaxed">{wm.triage_note}</p>
+                  </div>
+                )}
+
+                {wm.student_facing_summary && (
+                  <div className="bg-teal-500/10 border border-teal-500/25 rounded-xl px-4 py-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] text-teal-400 uppercase tracking-wider font-medium">Student-Facing Summary</p>
+                      <CopyButton text={wm.student_facing_summary} />
+                    </div>
+                    <p className="text-xs text-teal-100 leading-relaxed whitespace-pre-wrap">{wm.student_facing_summary}</p>
+                  </div>
+                )}
+              </>
+            )}
+
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── Section options — filtered by track + enabled modules ─────────────────────
 // Always in canonical order: SD → WP → CommonApp → UC PIQs → Why Major → Why College
 // 'foundation' track = long-form SD + WP only
@@ -761,6 +1313,13 @@ function StudentAssignmentPanel({
   const [allowedSectionKeys, setAllowedSectionKeys] = useState<Set<string> | null>(null)
   const [unassigningRowId, setUnassigningRowId] = useState<number | null>(null)
   const [unassignRowWarning, setUnassignRowWarning] = useState<number | null>(null)
+
+  // Essay Plan state
+  const [essayPlan, setEssayPlan] = useState<EssayPlanSections>({})
+  const [essayPlanGeneratedAt, setEssayPlanGeneratedAt] = useState<string | null>(null)
+  const [essayPlanGenerating, setEssayPlanGenerating] = useState(false)
+  const [essayPlanStatus, setEssayPlanStatus] = useState('')
+  const [showEssayPlan, setShowEssayPlan] = useState(false)
 
   // Derive per-student enabledModules by intersecting counselor modules with student's allowed sections
   const studentModules: EnabledModules = allowedSectionKeys === null ? enabledModules : {
@@ -851,6 +1410,63 @@ function StudentAssignmentPanel({
       setUnassigningRowId(null)
     }
   }
+
+  // Fetch existing essay plan for this student
+  useEffect(() => {
+    if (readOnly || !enabledModules.selfDiscovery) return
+    getToken().then(tok => {
+      if (!tok) return
+      fetch(`${API}/writing/students/${student.id}/essay-plan`, {
+        headers: { Authorization: `Bearer ${tok}` },
+      }).then(async r => {
+        if (r.status === 200) {
+          const data = await r.json()
+          setEssayPlan(data.sections || {})
+          setEssayPlanGeneratedAt(data.generated_at || null)
+        }
+      }).catch(() => {/* 404 = no plan yet, ignore */})
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [student.id, readOnly, enabledModules.selfDiscovery])
+
+  const generateEssayPlan = useCallback(async () => {
+    setEssayPlanGenerating(true)
+    setEssayPlanStatus('Starting analysis…')
+    setShowEssayPlan(true)
+    try {
+      const tok = await getToken()
+      if (!tok) return
+      const res = await fetch(`${API}/writing/students/${student.id}/essay-plan/generate`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${tok}` },
+      })
+      if (!res.ok || !res.body) { setEssayPlanGenerating(false); return }
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() ?? ''
+        for (const line of lines) {
+          if (!line.startsWith('data:')) continue
+          try {
+            const evt = JSON.parse(line.slice(5).trim())
+            if (evt.type === 'status') setEssayPlanStatus(evt.msg)
+            if (evt.type === 'done') {
+              setEssayPlan(evt.sections || {})
+              setEssayPlanGeneratedAt(new Date().toISOString())
+            }
+          } catch { /* ignore parse errors */ }
+        }
+      }
+    } finally {
+      setEssayPlanGenerating(false)
+      setEssayPlanStatus('')
+    }
+  }, [student.id, getToken])
 
   // Fetch personality assessment status for this student
   useEffect(() => {
@@ -1097,6 +1713,50 @@ function StudentAssignmentPanel({
               </div>
             )}
 
+            {/* Essay Plan — counselor only, when self-discovery is enabled */}
+            {!readOnly && enabledModules.selfDiscovery && (
+              <div>
+                <h3 className="text-xs font-medium uppercase tracking-wider text-slate-500 mb-2">
+                  Essay Plan
+                </h3>
+                <div className="bg-slate-800/50 border border-slate-700/40 rounded-xl px-4 py-3 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-white font-medium">AI Essay Analysis</p>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {essayPlanGeneratedAt
+                          ? `Generated ${new Date(essayPlanGeneratedAt).toLocaleDateString()}`
+                          : 'Analyzes writing responses, personality, and activities to surface essay anchors and coaching priorities.'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {essayPlanGeneratedAt && (
+                        <button
+                          onClick={() => setShowEssayPlan(true)}
+                          className="text-xs px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-all"
+                        >
+                          View Plan
+                        </button>
+                      )}
+                      <button
+                        onClick={generateEssayPlan}
+                        disabled={essayPlanGenerating}
+                        className="text-xs px-3 py-1.5 bg-violet-600/20 hover:bg-violet-600/30 text-violet-400 rounded-lg border border-violet-600/30 transition-all disabled:opacity-50"
+                      >
+                        {essayPlanGenerating ? 'Generating…' : essayPlanGeneratedAt ? '↺ Regenerate' : '✦ Generate'}
+                      </button>
+                    </div>
+                  </div>
+                  {essayPlanGenerating && essayPlanStatus && (
+                    <div className="flex items-center gap-2 pt-1">
+                      <div className="w-3 h-3 border-2 border-violet-400 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                      <p className="text-xs text-violet-300 truncate">{essayPlanStatus}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Essay Prompts & Drafts — all roles.
                 Always show for readOnly (parents) since they have no other path to essay status.
                 For counselors/others, gate on essayHub module flag. */}
@@ -1141,6 +1801,19 @@ function StudentAssignmentPanel({
           assignment={reviewAssignment}
           onClose={() => setReviewAssignment(null)}
           onReviewed={loadData}
+        />
+      )}
+
+      {/* Essay Plan overlay */}
+      {showEssayPlan && (
+        <EssayPlanPanel
+          studentName={studentName}
+          sections={essayPlan}
+          generatedAt={essayPlanGeneratedAt}
+          generating={essayPlanGenerating}
+          statusMsg={essayPlanStatus}
+          onGenerate={generateEssayPlan}
+          onClose={() => setShowEssayPlan(false)}
         />
       )}
     </div>
