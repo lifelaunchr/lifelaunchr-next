@@ -1437,40 +1437,33 @@ function StudentAssignmentPanel({
     setEssayPlan({})
     setEssayPlanGeneratedAt(null)
     setEssayPlanGenerating(true)
-    setEssayPlanStatus('Starting analysis…')
-    setShowEssayPlan(true)
+    setEssayPlanStatus('')
     try {
       const tok = await getToken()
-      if (!tok) return
+      if (!tok) { setEssayPlanGenerating(false); return }
       const res = await fetch(`${API}/writing/students/${student.id}/essay-plan/generate`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${tok}` },
       })
-      if (!res.ok || !res.body) { setEssayPlanGenerating(false); return }
-      const reader = res.body.getReader()
-      const decoder = new TextDecoder()
-      let buffer = ''
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() ?? ''
-        for (const line of lines) {
-          if (!line.startsWith('data:')) continue
-          try {
-            const evt = JSON.parse(line.slice(5).trim())
-            if (evt.type === 'status') setEssayPlanStatus(evt.msg)
-            if (evt.type === 'done') {
-              setEssayPlan(evt.sections || {})
-              setEssayPlanGeneratedAt(new Date().toISOString())
-            }
-          } catch { /* ignore parse errors */ }
-        }
-      }
-    } finally {
+      if (!res.ok) { setEssayPlanGenerating(false); return }
+      // Backend returns 202 immediately — generation runs in background.
+      // The plan will be available via GET when ready. Counselor can navigate away.
+    } catch {
       setEssayPlanGenerating(false)
-      setEssayPlanStatus('')
+    }
+  }, [student.id, getToken])
+
+  const checkEssayPlanReady = useCallback(async () => {
+    const tok = await getToken()
+    if (!tok) return
+    const res = await fetch(`${API}/writing/students/${student.id}/essay-plan`, {
+      headers: { Authorization: `Bearer ${tok}` },
+    })
+    if (res.status === 200) {
+      const data = await res.json()
+      setEssayPlan(data.sections || {})
+      setEssayPlanGeneratedAt(data.generated_at || null)
+      setEssayPlanGenerating(false)
     }
   }, [student.id, getToken])
 
@@ -1744,19 +1737,28 @@ function StudentAssignmentPanel({
                           View Plan
                         </button>
                       )}
-                      <button
-                        onClick={generateEssayPlan}
-                        disabled={essayPlanGenerating}
-                        className="text-xs px-3 py-1.5 bg-violet-600/20 hover:bg-violet-600/30 text-violet-400 rounded-lg border border-violet-600/30 transition-all disabled:opacity-50"
-                      >
-                        {essayPlanGenerating ? 'Generating…' : essayPlanGeneratedAt ? '↺ Regenerate' : '✦ Generate'}
-                      </button>
+                      {!essayPlanGenerating && (
+                        <button
+                          onClick={generateEssayPlan}
+                          className="text-xs px-3 py-1.5 bg-violet-600/20 hover:bg-violet-600/30 text-violet-400 rounded-lg border border-violet-600/30 transition-all"
+                        >
+                          {essayPlanGeneratedAt ? '↺ Regenerate' : '✦ Generate'}
+                        </button>
+                      )}
                     </div>
                   </div>
-                  {essayPlanGenerating && essayPlanStatus && (
-                    <div className="flex items-center gap-2 pt-1">
-                      <div className="w-3 h-3 border-2 border-violet-400 border-t-transparent rounded-full animate-spin flex-shrink-0" />
-                      <p className="text-xs text-violet-300 truncate">{essayPlanStatus}</p>
+                  {essayPlanGenerating && (
+                    <div className="flex items-center justify-between gap-2 pt-1">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 border-2 border-violet-400 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                        <p className="text-xs text-violet-300">Generating in background — this takes a few minutes. Feel free to do something else.</p>
+                      </div>
+                      <button
+                        onClick={checkEssayPlanReady}
+                        className="text-xs px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition-all flex-shrink-0"
+                      >
+                        Check if ready
+                      </button>
                     </div>
                   )}
                 </div>
