@@ -1418,9 +1418,12 @@ function StudentAssignmentPanel({
     if (readOnly || !enabledModules.selfDiscovery) return
     getToken().then(tok => {
       if (!tok) return
-      // Clear stale plan immediately before fetching for the new student
+      // Clear all essay plan state immediately when switching students
       setEssayPlan({})
       setEssayPlanGeneratedAt(null)
+      setEssayPlanGenerating(false)
+      setEssayPlanStartedAt(null)
+      setEssayPlanNotReady(false)
       fetch(`${API}/writing/students/${student.id}/essay-plan`, {
         headers: { Authorization: `Bearer ${tok}` },
       }).then(async r => {
