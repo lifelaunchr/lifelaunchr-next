@@ -1419,7 +1419,6 @@ function StudentAssignmentPanel({
     setEssayPlan({})
     setEssayPlanGeneratedAt(null)
     setEssayPlanGenerating(false)
-    setEssayPlanStartedAt(null)
     setEssayPlanNotReady(false)
     getToken().then(tok => {
       if (!tok) return
@@ -1444,7 +1443,6 @@ function StudentAssignmentPanel({
   const generateEssayPlan = useCallback(async () => {
     setEssayPlan({})
     setEssayPlanGeneratedAt(null)
-    setEssayPlanStartedAt(null)
     setEssayPlanGenerating(true)
     setEssayPlanStatus('')
     try {
