@@ -1320,6 +1320,7 @@ function StudentAssignmentPanel({
   const [essayPlanGenerating, setEssayPlanGenerating] = useState(false)
   const [essayPlanStatus, setEssayPlanStatus] = useState('')
   const [essayPlanStartedAt, setEssayPlanStartedAt] = useState<string | null>(null)
+  const [essayPlanNotReady, setEssayPlanNotReady] = useState(false)
   const [showEssayPlan, setShowEssayPlan] = useState(false)
 
   // Derive per-student enabledModules by intersecting counselor modules with student's allowed sections
@@ -1472,13 +1473,17 @@ function StudentAssignmentPanel({
         setEssayPlanGeneratedAt(generatedAt)
         setEssayPlanGenerating(false)
         setEssayPlanStartedAt(null)
+        setEssayPlanNotReady(false)
       } else if (!essayPlanStartedAt) {
         // No started_at means we're loading an existing plan (page load), not polling
         setEssayPlan(data.sections || {})
         setEssayPlanGeneratedAt(generatedAt)
         setEssayPlanGenerating(false)
+      } else {
+        // Plan exists but predates this run — still generating
+        setEssayPlanNotReady(true)
+        setTimeout(() => setEssayPlanNotReady(false), 4000)
       }
-      // else: plan exists but predates this run — still generating, do nothing
     }
   }, [student.id, getToken, essayPlanStartedAt])
 
@@ -1775,6 +1780,9 @@ function StudentAssignmentPanel({
                         Check if ready
                       </button>
                     </div>
+                  )}
+                  {essayPlanNotReady && (
+                    <p className="text-xs text-slate-400 pt-1">Not ready yet — try again in a few minutes.</p>
                   )}
                 </div>
               </div>
