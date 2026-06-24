@@ -1484,6 +1484,10 @@ function StudentAssignmentPanel({
         setEssayPlanNotReady(true)
         setTimeout(() => setEssayPlanNotReady(false), 4000)
       }
+    } else {
+      // 404 or other error — plan not ready yet
+      setEssayPlanNotReady(true)
+      setTimeout(() => setEssayPlanNotReady(false), 4000)
     }
   }, [student.id, getToken, essayPlanStartedAt])
 
