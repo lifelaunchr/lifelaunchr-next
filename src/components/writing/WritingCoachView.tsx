@@ -1319,7 +1319,6 @@ function StudentAssignmentPanel({
   const [essayPlanGeneratedAt, setEssayPlanGeneratedAt] = useState<string | null>(null)
   const [essayPlanGenerating, setEssayPlanGenerating] = useState(false)
   const [essayPlanStatus, setEssayPlanStatus] = useState('')
-  const [essayPlanStartedAt, setEssayPlanStartedAt] = useState<string | null>(null)
   const [essayPlanNotReady, setEssayPlanNotReady] = useState(false)
   const [showEssayPlan, setShowEssayPlan] = useState(false)
 
@@ -1413,24 +1412,28 @@ function StudentAssignmentPanel({
     }
   }
 
-  // Fetch existing essay plan for this student
+  // Fetch existing essay plan on student switch — backend is authoritative on generating state
   useEffect(() => {
     if (readOnly || !enabledModules.selfDiscovery) return
+    // Reset all essay plan state immediately when switching students
+    setEssayPlan({})
+    setEssayPlanGeneratedAt(null)
+    setEssayPlanGenerating(false)
+    setEssayPlanStartedAt(null)
+    setEssayPlanNotReady(false)
     getToken().then(tok => {
       if (!tok) return
-      // Clear all essay plan state immediately when switching students
-      setEssayPlan({})
-      setEssayPlanGeneratedAt(null)
-      setEssayPlanGenerating(false)
-      setEssayPlanStartedAt(null)
-      setEssayPlanNotReady(false)
       fetch(`${API}/writing/students/${student.id}/essay-plan`, {
         headers: { Authorization: `Bearer ${tok}` },
       }).then(async r => {
         if (r.status === 200) {
           const data = await r.json()
-          setEssayPlan(data.sections || {})
-          setEssayPlanGeneratedAt(data.generated_at || null)
+          if (data.generating) {
+            setEssayPlanGenerating(true)
+          } else {
+            setEssayPlan(data.sections || {})
+            setEssayPlanGeneratedAt(data.generated_at || null)
+          }
         }
         // 404 = no plan yet; state already cleared above
       }).catch(() => {})
@@ -1452,14 +1455,14 @@ function StudentAssignmentPanel({
         headers: { Authorization: `Bearer ${tok}` },
       })
       if (!res.ok) { setEssayPlanGenerating(false); return }
-      const data = await res.json()
-      setEssayPlanStartedAt(data.started_at || new Date().toISOString())
-      // Backend returns immediately — generation runs in background.
+      // Backend upserted generating=TRUE before responding; generation runs in background.
     } catch {
       setEssayPlanGenerating(false)
     }
   }, [student.id, getToken])
 
+  // Poll GET to check if background generation has completed. Backend is authoritative:
+  // generating=true → still running; generating=false with sections → done.
   const checkEssayPlanReady = useCallback(async () => {
     const tok = await getToken()
     if (!tok) return
@@ -1468,31 +1471,20 @@ function StudentAssignmentPanel({
     })
     if (res.status === 200) {
       const data = await res.json()
-      const generatedAt = data.generated_at || null
-      // Only accept the plan if it was generated after we started this generation run.
-      // This prevents showing a stale cached plan from a previous run.
-      if (essayPlanStartedAt && generatedAt && new Date(generatedAt) > new Date(essayPlanStartedAt)) {
+      if (!data.generating && data.generated_at) {
         setEssayPlan(data.sections || {})
-        setEssayPlanGeneratedAt(generatedAt)
+        setEssayPlanGeneratedAt(data.generated_at)
         setEssayPlanGenerating(false)
-        setEssayPlanStartedAt(null)
         setEssayPlanNotReady(false)
-      } else if (!essayPlanStartedAt) {
-        // No started_at means we're loading an existing plan (page load), not polling
-        setEssayPlan(data.sections || {})
-        setEssayPlanGeneratedAt(generatedAt)
-        setEssayPlanGenerating(false)
       } else {
-        // Plan exists but predates this run — still generating
         setEssayPlanNotReady(true)
         setTimeout(() => setEssayPlanNotReady(false), 4000)
       }
     } else {
-      // 404 or other error — plan not ready yet
       setEssayPlanNotReady(true)
       setTimeout(() => setEssayPlanNotReady(false), 4000)
     }
-  }, [student.id, getToken, essayPlanStartedAt])
+  }, [student.id, getToken])
 
   // Fetch personality assessment status for this student
   useEffect(() => {
