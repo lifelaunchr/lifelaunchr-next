@@ -1319,6 +1319,7 @@ function StudentAssignmentPanel({
   const [essayPlanGeneratedAt, setEssayPlanGeneratedAt] = useState<string | null>(null)
   const [essayPlanGenerating, setEssayPlanGenerating] = useState(false)
   const [essayPlanStatus, setEssayPlanStatus] = useState('')
+  const [essayPlanStartedAt, setEssayPlanStartedAt] = useState<string | null>(null)
   const [showEssayPlan, setShowEssayPlan] = useState(false)
 
   // Derive per-student enabledModules by intersecting counselor modules with student's allowed sections
@@ -1436,6 +1437,7 @@ function StudentAssignmentPanel({
   const generateEssayPlan = useCallback(async () => {
     setEssayPlan({})
     setEssayPlanGeneratedAt(null)
+    setEssayPlanStartedAt(null)
     setEssayPlanGenerating(true)
     setEssayPlanStatus('')
     try {
@@ -1446,8 +1448,9 @@ function StudentAssignmentPanel({
         headers: { Authorization: `Bearer ${tok}` },
       })
       if (!res.ok) { setEssayPlanGenerating(false); return }
-      // Backend returns 202 immediately — generation runs in background.
-      // The plan will be available via GET when ready. Counselor can navigate away.
+      const data = await res.json()
+      setEssayPlanStartedAt(data.started_at || new Date().toISOString())
+      // Backend returns immediately — generation runs in background.
     } catch {
       setEssayPlanGenerating(false)
     }
@@ -1461,11 +1464,23 @@ function StudentAssignmentPanel({
     })
     if (res.status === 200) {
       const data = await res.json()
-      setEssayPlan(data.sections || {})
-      setEssayPlanGeneratedAt(data.generated_at || null)
-      setEssayPlanGenerating(false)
+      const generatedAt = data.generated_at || null
+      // Only accept the plan if it was generated after we started this generation run.
+      // This prevents showing a stale cached plan from a previous run.
+      if (essayPlanStartedAt && generatedAt && new Date(generatedAt) > new Date(essayPlanStartedAt)) {
+        setEssayPlan(data.sections || {})
+        setEssayPlanGeneratedAt(generatedAt)
+        setEssayPlanGenerating(false)
+        setEssayPlanStartedAt(null)
+      } else if (!essayPlanStartedAt) {
+        // No started_at means we're loading an existing plan (page load), not polling
+        setEssayPlan(data.sections || {})
+        setEssayPlanGeneratedAt(generatedAt)
+        setEssayPlanGenerating(false)
+      }
+      // else: plan exists but predates this run — still generating, do nothing
     }
-  }, [student.id, getToken])
+  }, [student.id, getToken, essayPlanStartedAt])
 
   // Fetch personality assessment status for this student
   useEffect(() => {
