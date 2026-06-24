@@ -1416,6 +1416,9 @@ function StudentAssignmentPanel({
     if (readOnly || !enabledModules.selfDiscovery) return
     getToken().then(tok => {
       if (!tok) return
+      // Clear stale plan immediately before fetching for the new student
+      setEssayPlan({})
+      setEssayPlanGeneratedAt(null)
       fetch(`${API}/writing/students/${student.id}/essay-plan`, {
         headers: { Authorization: `Bearer ${tok}` },
       }).then(async r => {
@@ -1424,12 +1427,15 @@ function StudentAssignmentPanel({
           setEssayPlan(data.sections || {})
           setEssayPlanGeneratedAt(data.generated_at || null)
         }
-      }).catch(() => {/* 404 = no plan yet, ignore */})
+        // 404 = no plan yet; state already cleared above
+      }).catch(() => {})
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [student.id, readOnly, enabledModules.selfDiscovery])
 
   const generateEssayPlan = useCallback(async () => {
+    setEssayPlan({})
+    setEssayPlanGeneratedAt(null)
     setEssayPlanGenerating(true)
     setEssayPlanStatus('Starting analysis…')
     setShowEssayPlan(true)
