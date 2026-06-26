@@ -289,23 +289,15 @@ export default function BillingPage() {
         {showConfirm && (
           <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8, padding: '12px 16px', marginBottom: 14, fontSize: '0.85rem', color: '#0c4a6e', lineHeight: 1.6 }}>
             {isAnnual ? (
-              <>
-                {prorationPreview !== null && prorationPreview > 0 && (
-                  <p style={{ margin: '0 0 6px 0' }}>
-                    You&apos;ll be charged <strong>${prorationPreview.toFixed(2)}</strong> today as a prorated adjustment.
-                  </p>
-                )}
-                {prorationPreview !== null && prorationPreview < 0 && (
-                  <p style={{ margin: '0 0 6px 0' }}>
-                    A credit of <strong>${Math.abs(prorationPreview).toFixed(2)}</strong> will be applied to your next invoice.
-                  </p>
-                )}
-                <p style={{ margin: 0 }}>
-                  Then{' '}
-                  {newPeriodTotal != null ? <><strong>${newPeriodTotal.toFixed(2)}</strong>/year</> : 'your new annual total'}
-                  {previewRenewalDate ? <> on <strong>{formatDate(previewRenewalDate)}</strong></> : ''} and annually thereafter.
-                </p>
-              </>
+              <p style={{ margin: 0 }}>
+                {prorationPreview !== null && prorationPreview > 0 ? (
+                  <><strong>${prorationPreview.toFixed(2)}</strong> charged now, then </>
+                ) : prorationPreview !== null && prorationPreview < 0 ? (
+                  <><strong>${Math.abs(prorationPreview).toFixed(2)}</strong> credit applied, then </>
+                ) : null}
+                {newPeriodTotal != null ? <><strong>${newPeriodTotal.toFixed(2)}</strong>/year</> : 'your new annual total'}
+                {previewRenewalDate ? <> starting <strong>{formatDate(previewRenewalDate)}</strong></> : ''} and annually thereafter.
+              </p>
             ) : (
               <p style={{ margin: 0 }}>
                 No charge today. Your new monthly total of{' '}
