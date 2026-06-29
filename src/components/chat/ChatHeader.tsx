@@ -105,9 +105,11 @@ export function ChatHeader({
               <span className="text-sky-300">{botName}</span>
             </h1>
           )}
-          <span className="text-xs text-white/45 truncate">
-            {tagline}
-          </span>
+          {!logoUrl && (
+            <span className="text-xs text-white/45 truncate">
+              {tagline}
+            </span>
+          )}
         </div>
       </div>
 
