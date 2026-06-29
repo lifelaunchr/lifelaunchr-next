@@ -58,7 +58,7 @@ export function ChatHeader({
   messagesUsed,
   effectiveLimit,
   botName = 'Soar',
-  tagline = 'Your AI-powered college advisor',
+  tagline = 'College and Career Planning, Built for the Whole Team.',
   logoUrl,
 }: ChatHeaderProps) {
   // Prefer session counter (new model); fall back to messages if unavailable.

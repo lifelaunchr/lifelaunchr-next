@@ -167,7 +167,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
   const [safetyStudent, setSafetyStudent] = useState<SafetyStudent | null>(null)
   const [tenantBranding, setTenantBranding] = useState<{ botName: string; tagline: string; logoUrl: string | null; supportEmail: string }>({
     botName: 'Soar',
-    tagline: 'Your AI-powered college advisor',
+    tagline: 'College and Career Planning, Built for the Whole Team.',
     logoUrl: null,
     supportEmail: 'help@lifelaunchr.com',
   })
