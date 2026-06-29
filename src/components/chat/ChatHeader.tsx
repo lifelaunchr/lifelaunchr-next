@@ -96,7 +96,7 @@ export function ChatHeader({
             <img
               src={logoUrl}
               alt={botName}
-              className="h-7 w-auto object-contain object-left"
+              className="h-10 w-auto object-contain object-left"
             />
           ) : botName === 'Soar' ? (
             <SoarLogo />
