@@ -45,6 +45,7 @@ interface ChatHeaderProps {
   botName?: string
   tagline?: string
   logoUrl?: string | null
+  brandingLoaded?: boolean
 }
 
 export function ChatHeader({
@@ -60,6 +61,7 @@ export function ChatHeader({
   botName = 'Soar',
   tagline = 'College and Career Planning, Built for the Whole Team.',
   logoUrl,
+  brandingLoaded = false,
 }: ChatHeaderProps) {
   // Prefer session counter (new model); fall back to messages if unavailable.
   const useSessions = sessionLimit != null
@@ -92,7 +94,7 @@ export function ChatHeader({
 
         {/* Brand */}
         <div className="flex flex-col leading-tight min-w-0">
-          {logoUrl ? (
+          {!brandingLoaded ? null : logoUrl ? (
             <img
               src={logoUrl}
               alt={botName}
@@ -105,7 +107,7 @@ export function ChatHeader({
               <span className="text-sky-300">{botName}</span>
             </h1>
           )}
-          {!logoUrl && (
+          {brandingLoaded && !logoUrl && (
             <span className="text-xs text-white/45 truncate">
               {tagline}
             </span>

@@ -171,6 +171,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
     logoUrl: null,
     supportEmail: 'help@lifelaunchr.com',
   })
+  const [brandingLoaded, setBrandingLoaded] = useState(false)
   const [inviteUrl, setInviteUrl] = useState<string | null>(null)
   const [inviteCopied, setInviteCopied] = useState(false)
   const [showAddFamily, setShowAddFamily] = useState(false)
@@ -269,11 +270,12 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
         if (data) {
           setTenantBranding({
             botName: data.bot_name || 'Soar',
-            tagline: data.tagline || 'Your AI-powered college advisor',
+            tagline: data.tagline || 'College and Career Planning, Built for the Whole Team.',
             logoUrl: data.header_logo_url || null,
             supportEmail: data.support_email || 'help@lifelaunchr.com',
           })
         }
+        setBrandingLoaded(true)
       })
       .catch(() => {/* keep defaults */})
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1129,6 +1131,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
         botName={tenantBranding.botName}
         tagline={tenantBranding.tagline}
         logoUrl={tenantBranding.logoUrl}
+        brandingLoaded={brandingLoaded}
       />
 
       <div className="flex flex-1 overflow-hidden">
