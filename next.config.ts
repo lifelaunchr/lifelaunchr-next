@@ -16,16 +16,23 @@ const nextConfig: NextConfig = {
   // Preview deployment URLs (lifelaunchr-next-git-*-lifelaunchrs-projects.vercel.app)
   // are intentionally NOT matched so staging previews continue to work.
   //
-  // NOTE: soar.lifelaunchr.com → withsoar.ai redirect is intentionally omitted here.
-  // Add it back once withsoar.ai sign-in is verified working in production:
-  //   { source: '/:path*', has: [{ type: 'host', value: 'soar.lifelaunchr.com' }],
-  //     destination: 'https://withsoar.ai/:path*', permanent: false }
+  // soar.lifelaunchr.com → withsoar.ai: auth paths (/sign-in, /sign-up, /sso-callback,
+  // /accept-invite) are excluded so Clerk auth and invite flows continue to work on
+  // soar.lifelaunchr.com. All other paths redirect to withsoar.ai (307 temporary —
+  // switch to permanent: true once stable for a few weeks to transfer SEO credit).
   async redirects() {
     return [
       // Old Vercel default URL
       {
         source: '/:path*',
         has: [{ type: 'host', value: 'lifelaunchr-next.vercel.app' }],
+        destination: 'https://withsoar.ai/:path*',
+        permanent: false,
+      },
+      // soar.lifelaunchr.com → withsoar.ai (excluding auth paths)
+      {
+        source: '/:path((?!sign-in|sign-up|sso-callback|accept-invite).*)',
+        has: [{ type: 'host', value: 'soar.lifelaunchr.com' }],
         destination: 'https://withsoar.ai/:path*',
         permanent: false,
       },
