@@ -1320,6 +1320,7 @@ function StudentAssignmentPanel({
   const [essayPlanGenerating, setEssayPlanGenerating] = useState(false)
   const [essayPlanStatus, setEssayPlanStatus] = useState('')
   const [essayPlanNotReady, setEssayPlanNotReady] = useState(false)
+  const [essayPlanError, setEssayPlanError] = useState<string | null>(null)
   const [showEssayPlan, setShowEssayPlan] = useState(false)
 
   // Derive per-student enabledModules by intersecting counselor modules with student's allowed sections
@@ -1420,6 +1421,7 @@ function StudentAssignmentPanel({
     setEssayPlanGeneratedAt(null)
     setEssayPlanGenerating(false)
     setEssayPlanNotReady(false)
+    setEssayPlanError(null)
     getToken().then(tok => {
       if (!tok) return
       fetch(`${API}/writing/students/${student.id}/essay-plan`, {
@@ -1445,6 +1447,7 @@ function StudentAssignmentPanel({
     setEssayPlanGeneratedAt(null)
     setEssayPlanGenerating(true)
     setEssayPlanStatus('')
+    setEssayPlanError(null)
     try {
       const tok = await getToken()
       if (!tok) { setEssayPlanGenerating(false); return }
@@ -1452,7 +1455,12 @@ function StudentAssignmentPanel({
         method: 'POST',
         headers: { Authorization: `Bearer ${tok}` },
       })
-      if (!res.ok) { setEssayPlanGenerating(false); return }
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        setEssayPlanError(body.detail || 'Failed to generate essay plan — please try again.')
+        setEssayPlanGenerating(false)
+        return
+      }
       // Backend upserted generating=TRUE before responding; generation runs in background.
     } catch {
       setEssayPlanGenerating(false)
@@ -1780,6 +1788,9 @@ function StudentAssignmentPanel({
                   )}
                   {essayPlanNotReady && (
                     <p className="text-xs text-slate-400 pt-1">Not ready yet — try again in a few minutes.</p>
+                  )}
+                  {essayPlanError && (
+                    <p className="text-sm text-red-600 mt-2">{essayPlanError}</p>
                   )}
                 </div>
               </div>

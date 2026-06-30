@@ -220,6 +220,7 @@ function ReportsContent() {
 
   // UI state
   const [drafting, setDrafting] = useState(false)
+  const [draftError, setDraftError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [sending, setSending] = useState(false)
   const [sentBanner, setSentBanner] = useState<string | null>(null)   // top green banner after send
@@ -474,6 +475,7 @@ function ReportsContent() {
   const handleDraft = async () => {
     if (!rawNotes && !otterTranscript) return
     setDrafting(true)
+    setDraftError(null)
     try {
       const token = await getToken()
       const student = students.find((s) => s.id === formStudentId)
@@ -501,6 +503,9 @@ function ReportsContent() {
         const data = await res.json()
         if (data.shared_notes) setSharedNotes(data.shared_notes)
         if (data.internal_notes) setInternalNotes(data.internal_notes)
+      } else {
+        const body = await res.json().catch(() => ({}))
+        setDraftError(body.detail || 'Failed to generate draft — please try again.')
       }
     } catch { /* ignore */ } finally {
       setDrafting(false)
@@ -1675,6 +1680,9 @@ function ReportsContent() {
                     </>
                   ) : '✨ Draft with AI'}
                 </button>
+              )}
+              {draftError && (
+                <p style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: 8, marginBottom: 8 }}>{draftError}</p>
               )}
 
               {/* Shared notes */}
