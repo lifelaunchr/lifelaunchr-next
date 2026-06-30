@@ -1431,6 +1431,8 @@ function StudentAssignmentPanel({
           const data = await r.json()
           if (data.generating) {
             setEssayPlanGenerating(true)
+          } else if (data.last_error) {
+            setEssayPlanError(data.last_error)
           } else {
             setEssayPlan(data.sections || {})
             setEssayPlanGeneratedAt(data.generated_at || null)
@@ -1477,7 +1479,11 @@ function StudentAssignmentPanel({
     })
     if (res.status === 200) {
       const data = await res.json()
-      if (!data.generating && data.generated_at) {
+      if (!data.generating && data.last_error) {
+        setEssayPlanError(data.last_error)
+        setEssayPlanGenerating(false)
+        setEssayPlanNotReady(false)
+      } else if (!data.generating && data.generated_at) {
         setEssayPlan(data.sections || {})
         setEssayPlanGeneratedAt(data.generated_at)
         setEssayPlanGenerating(false)
