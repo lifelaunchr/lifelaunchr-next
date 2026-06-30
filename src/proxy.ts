@@ -134,7 +134,20 @@ export default clerkMiddleware(async (auth, req) => {
   const url = new URL(req.url)
 
   // ── MAINTENANCE MODE ──────────────────────────────────────────────────────
-  if (MAINTENANCE_MODE) return maintenancePage()
+  if (MAINTENANCE_MODE) {
+    const bypassSecret = process.env.ACCESS_PASSWORD
+    // ?bypass=SECRET sets a cookie so the requester can browse normally
+    if (bypassSecret && url.searchParams.get('bypass') === bypassSecret) {
+      const res = NextResponse.redirect(new URL(url.pathname, req.url))
+      res.cookies.set('maintenance_bypass', bypassSecret, {
+        httpOnly: true, sameSite: 'lax', path: '/', maxAge: 60 * 60 * 4, // 4 hours
+      })
+      return res
+    }
+    // Allow through if bypass cookie is present and valid
+    const bypassCookie = req.cookies.get('maintenance_bypass')?.value
+    if (!bypassSecret || bypassCookie !== bypassSecret) return maintenancePage()
+  }
   // ─────────────────────────────────────────────────────────────────────────
 
   // ── ACCESS_PASSWORD gate ──────────────────────────────────────────────────
