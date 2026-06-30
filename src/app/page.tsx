@@ -53,7 +53,7 @@ export default function Home() {
       if (!res.ok) throw new Error('Request failed')
       setSubmitted(true)
     } catch {
-      setError('Something went wrong. Please try again or email help@lifelaunchr.com.')
+      setError('Something went wrong. Please try again or email help@withsoar.ai.')
     } finally {
       setSubmitting(false)
     }
@@ -161,11 +161,12 @@ export default function Home() {
         {/* Request access form */}
         <section className="mx-auto max-w-xl px-6 py-16">
           <h2 className="text-2xl font-bold text-gray-900 text-center mb-2">
-            Request access
+            Request access for your practice
           </h2>
           <p className="text-gray-500 text-center mb-8 text-sm">
-            Soar is currently available by invitation. Tell us about yourself and we&apos;ll be
-            in touch.
+            Soar is for IECs and school counselors. Students and families join by invitation
+            from their counselor — not through this form. Tell us about your practice and
+            we&apos;ll be in touch.
           </p>
 
           {submitted ? (
@@ -174,8 +175,8 @@ export default function Home() {
               <p className="text-green-700 text-sm">
                 We&apos;ll be in touch at the email you provided. In the meantime, feel free to
                 reach out at{' '}
-                <a href="mailto:help@lifelaunchr.com" className="underline">
-                  help@lifelaunchr.com
+                <a href="mailto:help@withsoar.ai" className="underline">
+                  help@withsoar.ai
                 </a>
                 .
               </p>
@@ -229,8 +230,6 @@ export default function Home() {
                   <option value="">Select one (optional)</option>
                   <option value="independent_counselor">Independent educational consultant</option>
                   <option value="school_counselor">School counselor</option>
-                  <option value="student">Student</option>
-                  <option value="parent">Parent</option>
                   <option value="other">Other</option>
                 </select>
               </div>
