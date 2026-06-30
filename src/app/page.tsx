@@ -161,7 +161,7 @@ export default function Home() {
         {/* Request access form */}
         <section className="mx-auto max-w-xl px-6 py-16">
           <h2 className="text-2xl font-bold text-gray-900 text-center mb-2">
-            Request access for your practice
+            Request access for your practice or school
           </h2>
           <p className="text-gray-500 text-center mb-8 text-sm">
             Soar is for IECs and school counselors. Students and families join by invitation
