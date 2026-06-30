@@ -21,6 +21,45 @@ const isPublicRoute = createRouteMatcher([
   '/sign-up(.*)',
 ])
 
+const MAINTENANCE_MODE = process.env.MAINTENANCE_MODE === 'true'
+
+function maintenancePage(): NextResponse {
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Soar — Back Shortly</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+           background: #0c1b33; min-height: 100dvh; display: flex;
+           align-items: center; justify-content: center; }
+    .card { background: #fff; border-radius: 12px; padding: 48px 40px;
+            width: 100%; max-width: 420px; text-align: center; }
+    h1 { font-size: 1.5rem; font-weight: 700; color: #0c1b33; margin-bottom: 12px; }
+    p { font-size: 0.95rem; color: #6b7280; line-height: 1.6; margin-bottom: 8px; }
+    .sub { font-size: 0.85rem; color: #9ca3af; margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Soar</h1>
+    <p>We're making a quick update and will be back in a few minutes.</p>
+    <p>Thank you for your patience!</p>
+    <p class="sub">Questions? Email us at <a href="mailto:help@withsoar.ai" style="color:#0c1b33;">help@withsoar.ai</a></p>
+  </div>
+</body>
+</html>`
+  return new NextResponse(html, {
+    status: 503,
+    headers: {
+      'Content-Type': 'text/html',
+      'Retry-After': '120',
+    },
+  })
+}
+
 const ACCESS_PASSWORD = process.env.ACCESS_PASSWORD
 const COOKIE_NAME = 'soar_access'
 const LOGIN_PATH = '/__soar_login'
@@ -93,6 +132,10 @@ const clerkOptions = async (req: Request) => {
 
 export default clerkMiddleware(async (auth, req) => {
   const url = new URL(req.url)
+
+  // ── MAINTENANCE MODE ──────────────────────────────────────────────────────
+  if (MAINTENANCE_MODE) return maintenancePage()
+  // ─────────────────────────────────────────────────────────────────────────
 
   // ── ACCESS_PASSWORD gate ──────────────────────────────────────────────────
   // If ACCESS_PASSWORD is set, require a valid cookie before allowing access.
