@@ -151,10 +151,10 @@ export default clerkMiddleware(async (auth, req) => {
   // ─────────────────────────────────────────────────────────────────────────
 
   // ── ACCESS_PASSWORD gate ──────────────────────────────────────────────────
-  // If ACCESS_PASSWORD is set, require a valid cookie before allowing access.
-  // Uses a dedicated login route (/__soar_login) with POST-Redirect-GET so
-  // wrong-password errors never cause redirect loops.
-  if (ACCESS_PASSWORD) {
+  // Only active when SITE_GATE_ENABLED=true is also set. This decouples the
+  // staging password wall from ACCESS_PASSWORD being set in production (where
+  // it serves only as the maintenance-mode bypass secret).
+  if (ACCESS_PASSWORD && process.env.SITE_GATE_ENABLED === 'true') {
     if (url.pathname === LOGIN_PATH) {
       if (req.method === 'POST') {
         // Process password submission
