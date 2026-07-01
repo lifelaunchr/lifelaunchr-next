@@ -39,11 +39,30 @@ const nextConfig: NextConfig = {
       // On the withsoar.ai satellite domain, /accept-invite cannot run Clerk's
       // auth initialization (satellite Clerk.js rejects the lifelaunchr.com key).
       // Redirect to soar.lifelaunchr.com before middleware ever runs.
-      // This runs at the CDN layer, before clerkMiddleware, preserving ?token= param.
+      // Explicitly capture and forward ?token= — Next.js CDN redirects do not
+      // automatically append query params to external (cross-domain) destinations.
+      {
+        source: '/accept-invite',
+        has: [
+          { type: 'host', value: 'withsoar.ai' },
+          { type: 'query', key: 'token', value: '(?<token>.+)' },
+        ],
+        destination: 'https://soar.lifelaunchr.com/accept-invite?token=:token',
+        permanent: false,
+      },
       {
         source: '/accept-invite',
         has: [{ type: 'host', value: 'withsoar.ai' }],
         destination: 'https://soar.lifelaunchr.com/accept-invite',
+        permanent: false,
+      },
+      {
+        source: '/accept-invite',
+        has: [
+          { type: 'host', value: 'www.withsoar.ai' },
+          { type: 'query', key: 'token', value: '(?<token>.+)' },
+        ],
+        destination: 'https://soar.lifelaunchr.com/accept-invite?token=:token',
         permanent: false,
       },
       {
