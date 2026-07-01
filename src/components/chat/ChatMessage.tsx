@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { Message, MessageDownload } from './ChatInterface'
@@ -37,7 +38,7 @@ function extractEnrichmentListOffers(content: string): string[] {
     .map(m => m[1].trim())
 }
 
-export function ChatMessage({ message, isStreaming, onAddToList, addingToList, onAddToScholarshipList, addingToScholarshipList, onAddToEnrichmentList, addingToEnrichmentList }: ChatMessageProps) {
+export const ChatMessage = memo(function ChatMessage({ message, isStreaming, onAddToList, addingToList, onAddToScholarshipList, addingToScholarshipList, onAddToEnrichmentList, addingToEnrichmentList }: ChatMessageProps) {
   const isUser = message.role === 'user'
 
   if (isUser) {
@@ -303,4 +304,4 @@ export function ChatMessage({ message, isStreaming, onAddToList, addingToList, o
       </div>
     </div>
   )
-}
+})
