@@ -171,8 +171,8 @@ export default function OnboardingPage() {
 
   // ── Migration / family invite: skip role picker if account type is known ─────
   useEffect(() => {
+    if (!clerkUser) return
     const token = localStorage.getItem('migration_invite_token')
-    if (!token || !clerkUser) return
 
     setMigrationLinking(true)
     ;(async () => {
@@ -181,6 +181,9 @@ export default function OnboardingPage() {
         const email = clerkUser.emailAddresses[0]?.emailAddress || ''
         const fullName = clerkUser.fullName || clerkUser.firstName || ''
 
+        // Always call /auth/sync: its email match claims the pre-created invite row
+        // (regardless of origin, or whether the localStorage token survived the
+        // auth↔app domain hop) and returns is_invited + the real account_type. (next#76)
         const syncRes = await fetch(`${apiUrl}/auth/sync`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
@@ -191,28 +194,34 @@ export default function OnboardingPage() {
             account_type: 'student',
           }),
         })
-
-        // accept-invite returns the pre-created user record including the real account_type
-        const acceptRes = await fetch(`${apiUrl}/accept-invite`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token, clerk_user_id: clerkUser.id, email }),
-        })
-
-        // Parse both responses upfront — each body stream can only be consumed once.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let syncData: any = {}
+        if (syncRes.ok) syncData = await syncRes.json().catch(() => ({}))
+
+        // If the invite token is present on this origin (same-domain flow), redeem it
+        // too so the invite is marked accepted. No longer required to *detect* invited
+        // status — is_invited from /auth/sync is the source of truth.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let acceptData: any = {}
-        if (syncRes.ok) syncData = await syncRes.json().catch(() => ({}))
-        if (acceptRes.ok) acceptData = await acceptRes.json().catch(() => ({}))
+        if (token) {
+          const acceptRes = await fetch(`${apiUrl}/accept-invite`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token, clerk_user_id: clerkUser.id, email }),
+          })
+          if (acceptRes.ok) acceptData = await acceptRes.json().catch(() => ({}))
+        }
 
-        // Prefer account_type from accept-invite (reads directly from pre-created user row).
-        // Fall back to auth/sync result if accept-invite fails (e.g. token already used).
+        // Invited = the backend claimed a pre-created row (is_invited), or the token
+        // redemption returned the pre-created user. Self-signups are NOT invited and
+        // must fall through to the role picker.
+        const invited = syncData.is_invited === true || !!acceptData.user?.account_type
+        if (!invited) return
+
+        // Prefer account_type from accept-invite (reads directly from the pre-created
+        // user row); fall back to the /auth/sync result.
         const resolvedType: string | null =
           acceptData.user?.account_type || syncData.account_type || null
-        // userId from accept-invite if the endpoint returns it, otherwise from auth/sync
-        // (auth/sync always returns user_id for claimed users)
         const acceptedUserId: number | null =
           acceptData.user?.id || syncData.user_id || null
 
@@ -256,7 +265,7 @@ export default function OnboardingPage() {
       } catch {
         // Non-fatal — email-match in /auth/sync is what actually links the account
       } finally {
-        localStorage.removeItem('migration_invite_token')
+        if (token) localStorage.removeItem('migration_invite_token')
         setMigrationLinking(false)
       }
     })()
