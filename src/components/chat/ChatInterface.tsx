@@ -14,6 +14,7 @@ import SafetyEventModal, { SafetyStudent } from '@/components/safety/SafetyEvent
 import AddFamilyModal from '@/components/counselor/AddFamilyModal'
 import dynamic from 'next/dynamic'
 import { tourMeta, type TourRole } from '@/lib/tourContent'
+import * as Sentry from '@sentry/nextjs'
 
 // Dynamic import prevents SSR and ensures joyride portal can mount cleanly
 const ProductTour = dynamic(() => import('@/components/tour/ProductTour'), { ssr: false })
@@ -756,6 +757,11 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
       if (textareaRef.current) textareaRef.current.style.height = 'auto'
       setIsStreaming(true)
 
+      // Tracks whether any answer content actually streamed in. Distinguishes a
+      // failed/undelivered request (nothing saved → retry) from a mid-stream drop
+      // (backend finishes and saves independently → tell the user to reopen).
+      let receivedContent = false
+
       try {
         const token = userId ? await getToken() : null
         abortControllerRef.current = new AbortController()
@@ -819,6 +825,7 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
                   )
                 )
               } else if (data.type === 'text') {
+                receivedContent = true
                 setMessages((prev) =>
                   prev.map((m) =>
                     m.id === assistantMsgId
@@ -946,12 +953,29 @@ export function ChatInterface({ userId: serverUserId }: ChatInterfaceProps) {
           // User aborted — leave partial message as-is
         } else {
           console.error('[chat stream error]', err)
+          Sentry.captureException(err, { tags: { area: 'chat_stream' } })
           setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantMsgId
-                ? { ...m, content: 'Sorry, something went wrong. Please try again.' }
-                : m
-            )
+            prev.map((m) => {
+              if (m.id !== assistantMsgId) return m
+              if (receivedContent) {
+                // The answer had started streaming. The backend worker finishes
+                // and persists it independently of this connection, so the answer
+                // is likely saved — keep the partial content and tell the user.
+                const partial = m.content ? m.content + '\n\n' : ''
+                return {
+                  ...m,
+                  content:
+                    partial +
+                    '_The connection was interrupted. Your answer may have finished and been saved — reopen this session to check._',
+                }
+              }
+              // Nothing streamed in — the request never reached Soar (e.g. offline),
+              // so nothing was saved. Safe to simply retry.
+              return {
+                ...m,
+                content: "Couldn't reach Soar — please check your connection and try again.",
+              }
+            })
           )
         }
       } finally {
