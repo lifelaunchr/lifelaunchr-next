@@ -253,11 +253,29 @@ export default function OnboardingPage() {
           return
         }
         if (resolvedType === 'counselor') {
-          // Invited counselor — account already linked, tenant already set on backend.
-          // Skip role picker and account save; go straight to the Soar intro.
-          setAccountType('iec')
-          setIsInvitedCounselor(true)
+          // Map the backend counselor sub-type to the onboarding role so the right
+          // fields render (IEC → practice; school counselor → state + school). (next#76)
+          const ct = syncData.counselor_type
+          const counselorRole = ct === 'school_counselor' ? 'school_counselor'
+            : ct === 'admissions_coach' ? 'admissions_coach'
+            : 'iec'
+          setAccountType(counselorRole)
           setInvitedPracticeName(syncData.tenant_name || '')
+
+          if (syncData.is_tenant_admin) {
+            // Owns their practice (requested access / created a new practice). They
+            // still need to confirm their practice or enter their school, and they'll
+            // be the tenant admin — so show step 1 with the role pre-selected rather
+            // than skipping. Pre-fill the existing practice for IEC/coach roles.
+            if (counselorRole !== 'school_counselor' && syncData.tenant_id) {
+              setSelectedTenant({ id: syncData.tenant_id, display_name: syncData.tenant_name || '' })
+            }
+            setStep(1)
+            return
+          }
+
+          // Invited into an existing practice (member, not admin) — nothing to set up.
+          setIsInvitedCounselor(true)
           setStep(4)
           return
         }
