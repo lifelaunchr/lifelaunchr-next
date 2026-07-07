@@ -1076,6 +1076,20 @@ function EssayPlanPanel({
                     <p className="text-xs text-teal-100 leading-relaxed whitespace-pre-wrap">{ca.student_facing_summary}</p>
                   </div>
                 )}
+
+                {/* next#80: Wow Writing Workshop attribution — Common App module only, used with permission */}
+                <p className="text-[10px] text-slate-500 italic leading-relaxed border-t border-slate-700/40 pt-3 mt-1">
+                  Some concepts in our Common App module are based on elements of the Wow Method, developed by{' '}
+                  <a
+                    href="https://wowwritingworkshop.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-slate-400 underline hover:text-slate-300 not-italic"
+                  >
+                    Wow Writing Workshop
+                  </a>
+                  , and are used with permission.
+                </p>
               </>
             )}
 
