@@ -1710,6 +1710,21 @@ function StudentAssignmentPanel({
                       </div>
                     ))}
                   </div>
+                  {/* next#80: Wow Writing Workshop attribution — Common App section only, used with permission */}
+                  {sKey === 'commonapp' && (
+                    <p className="text-[10px] text-slate-500 italic leading-relaxed border-t border-slate-700/40 pt-3 mt-3">
+                      Some concepts in our Common App module are based on elements of the Wow Method, developed by{' '}
+                      <a
+                        href="https://wowwritingworkshop.com/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-slate-400 underline hover:text-slate-300 not-italic"
+                      >
+                        Wow Writing Workshop
+                      </a>
+                      , and are used with permission.
+                    </p>
+                  )}
                 </div>
               )
             })}
