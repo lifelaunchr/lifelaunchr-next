@@ -591,6 +591,13 @@ export default function DashboardPage() {
   const [addFamilyOpen, setAddFamilyOpen] = useState(false)
   const [tenantCounselors, setTenantCounselors] = useState<{id: number; full_name: string}[] | null>(null)
 
+  // Hydration guard (next#79): render the interactive dashboard only after mount, so the
+  // roster is drawn by a client render rather than by hydration. An extension that mutates
+  // the DOM before hydration then can't tear the student list down — the pre-mount view
+  // rendered below is trivial and deterministic, so hydration can't mismatch on it.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
+
   // Try to load counselors for tenant-admin mode. 403 = regular counselor, ignore.
   useEffect(() => {
     async function fetchCounselors() {
@@ -710,6 +717,27 @@ export default function DashboardPage() {
       )}
     </th>
   )
+
+  // Pre-mount placeholder — identical on server and first client render, so hydration is
+  // a no-op here. The real dashboard (below) is drawn only after mount. See next#79.
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <header style={{ background: '#0c1b33', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} className="px-4 sm:px-6 py-3">
+          <span style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff' }}>
+            <span style={{ color: '#7dd3fc' }}>Soar</span>
+          </span>
+        </header>
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold text-gray-900">My Students</h1>
+            <p className="text-gray-500 text-sm mt-1">Manage your students, track progress, and generate invite links.</p>
+          </div>
+          <div className="py-16 text-center text-gray-400 text-sm">Loading…</div>
+        </div>
+      </div>
+    )
+  }
 
   if (accessDenied) {
     return (
