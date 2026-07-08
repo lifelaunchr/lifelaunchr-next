@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, Suspense } from 'react'
+import { useState, useEffect, useCallback, Suspense, type ReactNode } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useAuth, useUser } from '@clerk/nextjs'
@@ -160,6 +160,25 @@ function EssayGroupCard({ group }: { group: EssayGroup }) {
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+// Collapsible group for optional / program-specific essays (app#165 Part B).
+// Renders nothing when empty; collapsed by default so required essays stay front-and-center.
+function CollapsibleSection({ label, count, children }: { label: string; count: number; children: ReactNode }) {
+  const [open, setOpen] = useState(false)
+  if (count === 0) return null
+  return (
+    <div className="mt-3">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors mb-2 select-none"
+      >
+        <span className="text-[10px]">{open ? '▲' : '▼'}</span>
+        <span>{label} <span className="text-slate-600">({count})</span></span>
+      </button>
+      {open && <div>{children}</div>}
     </div>
   )
 }
@@ -638,37 +657,74 @@ function EssaysPageInner() {
             </div>
           )}
 
-          {prompts && !promptsLoading && (
-            <div className="space-y-8">
-              {/* Platform essays (Common App, Coalition, etc.) */}
-              {prompts.platform_essays.length > 0 && (
-                <div>
-                  <p className="text-xs uppercase tracking-widest text-slate-500 font-medium mb-3">
-                    Application platform essays
-                  </p>
-                  {prompts.platform_essays.map(g => (
-                    <EssayGroupCard key={g.slug} group={g} />
-                  ))}
-                </div>
-              )}
+          {prompts && !promptsLoading && (() => {
+            // app#165 Part B — required-first layout. Split platform essays and per-school
+            // supplements into required (shown) vs optional (collapsed); program-specific
+            // essays are always collapsed (situational).
+            const platformRequired = prompts.platform_essays.filter(g => !g.optional)
+            const platformOptional = prompts.platform_essays.filter(g => g.optional)
+            const schoolsWithEssays = prompts.schools.filter(
+              s => s.supplements.length > 0 || s.program_supplements.length > 0
+            )
+            const requiredCount =
+              platformRequired.length +
+              schoolsWithEssays.reduce((n, s) => n + s.supplements.filter(g => !g.optional).length, 0)
 
-              {/* Per-school supplements */}
-              {prompts.schools.map(school => (
-                (school.supplements.length > 0 || school.program_supplements.length > 0) && (
-                  <div key={school.iped}>
-                    <p className="text-xs uppercase tracking-widest text-slate-500 font-medium mb-3">
-                      {school.name}
+            return (
+              <div className="space-y-8">
+                {/* Summary */}
+                {requiredCount > 0 && (
+                  <div className="bg-slate-800/40 border border-slate-700/50 rounded-xl px-4 py-3">
+                    <p className="text-sm text-slate-300">
+                      <span className="text-white font-semibold">{requiredCount}</span> required essay
+                      {requiredCount !== 1 ? 's' : ''} to write
+                      {schoolsWithEssays.length > 0 && (
+                        <> across <span className="text-white font-semibold">{schoolsWithEssays.length}</span> school
+                        {schoolsWithEssays.length !== 1 ? 's' : ''}</>
+                      )}
+                      . Optional and program-specific essays are tucked below each section.
                     </p>
+                  </div>
+                )}
 
-                    {school.supplements.map(g => (
+                {/* Platform essays (Common App, UC, etc.) — required shown, optionals collapsed */}
+                {prompts.platform_essays.length > 0 && (
+                  <div>
+                    <p className="text-xs uppercase tracking-widest text-slate-500 font-medium mb-3">
+                      Application platform essays
+                    </p>
+                    {platformRequired.map(g => (
                       <EssayGroupCard key={g.slug} group={g} />
                     ))}
+                    <CollapsibleSection label="Optional platform essays" count={platformOptional.length}>
+                      {platformOptional.map(g => (
+                        <EssayGroupCard key={g.slug} group={g} />
+                      ))}
+                    </CollapsibleSection>
+                  </div>
+                )}
 
-                    {school.program_supplements.length > 0 && (
-                      <div className="mt-4">
-                        <p className="text-[10px] uppercase tracking-widest text-slate-600 font-semibold mb-2">
-                          Program-specific
-                        </p>
+                {/* Per-school — required supplements shown, optional + program-specific collapsed */}
+                {schoolsWithEssays.map(school => {
+                  const required = school.supplements.filter(g => !g.optional)
+                  const optional = school.supplements.filter(g => g.optional)
+                  return (
+                    <div key={school.iped}>
+                      <p className="text-xs uppercase tracking-widest text-slate-500 font-medium mb-3">
+                        {school.name}
+                      </p>
+
+                      {required.map(g => (
+                        <EssayGroupCard key={g.slug} group={g} />
+                      ))}
+
+                      <CollapsibleSection label="Optional" count={optional.length}>
+                        {optional.map(g => (
+                          <EssayGroupCard key={g.slug} group={g} />
+                        ))}
+                      </CollapsibleSection>
+
+                      <CollapsibleSection label="Program-specific" count={school.program_supplements.length}>
                         {school.program_supplements.map(g => (
                           <div key={g.slug}>
                             {g.program_name && (
@@ -681,13 +737,13 @@ function EssaysPageInner() {
                             <EssayGroupCard group={g} />
                           </div>
                         ))}
-                      </div>
-                    )}
-                  </div>
-                )
-              ))}
-            </div>
-          )}
+                      </CollapsibleSection>
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })()}
 
         </div>
       </main>
