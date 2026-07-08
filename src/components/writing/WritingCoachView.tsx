@@ -870,10 +870,26 @@ function EssayPlanPanel({
   const piqs = sections.uc_piqs
   const wm = sections.why_major
 
-  const summaryText = (s: string | string[] | undefined): string => {
-    if (!s) return ''
-    if (Array.isArray(s)) return s.join('\n\n')
-    return s
+  // Normalize the model's student_facing_summary into a string. Claude returns this field
+  // inconsistently across students/modules — sometimes a string, sometimes a string[], and
+  // sometimes a per-PIQ object like { piq_3: "...", piq_4: "..." }. Rendering the object shape
+  // directly throws React #31 (next#84), so we defensively stringify ANY shape here.
+  const summaryText = (s: unknown): string => {
+    if (s == null) return ''
+    if (typeof s === 'string') return s
+    if (Array.isArray(s)) return s.map(summaryText).filter(Boolean).join('\n\n')
+    if (typeof s === 'object') {
+      return Object.entries(s as Record<string, unknown>)
+        .map(([k, v]) => {
+          const val = summaryText(v)
+          if (!val) return ''
+          const m = /^piq[_\s-]?(\d+)$/i.exec(k)
+          return m ? `PIQ ${m[1]}: ${val}` : val
+        })
+        .filter(Boolean)
+        .join('\n\n')
+    }
+    return String(s)
   }
 
   return (
@@ -1088,7 +1104,7 @@ function EssayPlanPanel({
                       <p className="text-[10px] text-teal-400 uppercase tracking-wider font-medium">Student-Facing Summary</p>
                       <CopyButton text={summaryText(ca.student_facing_summary)} />
                     </div>
-                    <p className="text-xs text-teal-100 leading-relaxed whitespace-pre-wrap">{ca.student_facing_summary}</p>
+                    <p className="text-xs text-teal-100 leading-relaxed whitespace-pre-wrap">{summaryText(ca.student_facing_summary)}</p>
                   </div>
                 )}
 
@@ -1271,9 +1287,9 @@ function EssayPlanPanel({
                   <div className="bg-teal-500/10 border border-teal-500/25 rounded-xl px-4 py-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <p className="text-[10px] text-teal-400 uppercase tracking-wider font-medium">Student-Facing Summary</p>
-                      <CopyButton text={wm.student_facing_summary} />
+                      <CopyButton text={summaryText(wm.student_facing_summary)} />
                     </div>
-                    <p className="text-xs text-teal-100 leading-relaxed whitespace-pre-wrap">{wm.student_facing_summary}</p>
+                    <p className="text-xs text-teal-100 leading-relaxed whitespace-pre-wrap">{summaryText(wm.student_facing_summary)}</p>
                   </div>
                 )}
               </>
