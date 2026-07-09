@@ -1,20 +1,16 @@
 import { MetadataRoute } from 'next'
 
-const base = process.env.NEXT_PUBLIC_APP_URL ?? 'https://lifelaunchr-next.vercel.app'
+const base = process.env.NEXT_PUBLIC_APP_URL ?? 'https://withsoar.ai'
+
+// Public marketing pages only — authed app routes are excluded (and disallowed in robots.ts).
+const PATHS = ['', '/families', '/faq', '/upgrade', '/safety', '/tutorials', '/terms', '/privacy']
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  return [
-    {
-      url: base,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 1,
-    },
-    {
-      url: `${base}/join`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.8,
-    },
-  ]
+  const now = new Date()
+  return PATHS.map((path) => ({
+    url: `${base}${path}`,
+    lastModified: now,
+    changeFrequency: 'monthly' as const,
+    priority: path === '' ? 1 : 0.7,
+  }))
 }
