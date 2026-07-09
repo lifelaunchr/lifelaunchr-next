@@ -27,9 +27,6 @@ export default function VersionBanner({ buildId }: { buildId: string }) {
   const dismissedRef = useRef<string | null>(null)
 
   useEffect(() => {
-    // TEMP diagnostic (next#85 staging verification) — remove before/at prod push.
-    console.log('[version-check] this tab was built from', buildId)
-
     // No build signal (local dev, or env var absent) — don't poll or nag.
     if (!buildId || buildId === 'dev') return
 
@@ -41,8 +38,6 @@ export default function VersionBanner({ buildId }: { buildId: string }) {
         if (!res.ok) return
         const data = await res.json()
         const server = typeof data?.version === 'string' ? data.version : ''
-        // TEMP diagnostic — remove before/at prod push.
-        console.log('[version-check] server is on', server, '| this tab', buildId)
         if (cancelled) return
         // Only prompt when the server is on a real, different build than ours, and the
         // user hasn't already dismissed this exact version.
