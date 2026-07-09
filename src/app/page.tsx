@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import Link from 'next/link'
+import Image from 'next/image'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://lifelaunchr.onrender.com'
 
@@ -14,8 +15,8 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://lifelaunchr.onrende
 const ALLOWLIST_ENABLED = process.env.NEXT_PUBLIC_CLERK_ALLOWLIST_ENABLED === 'true'
 const ACCESS_PUBLIC = !ALLOWLIST_ENABLED
 
-const TRUST_MARKERS = [
-  { label: 'HECA Business Partner', note: 'a recognized resource for the independent consulting community' },
+const TRUST_MARKERS: { label: string; note: string; logo?: string }[] = [
+  { label: 'HECA Business Partner', logo: '/heca-business-partner.png', note: 'a recognized resource for the independent consulting community' },
   { label: 'Built on the Anthropic Claude API', note: 'student data is never used to train AI models' },
   { label: 'Won’t write essays', note: 'by design, so the work stays the student’s own' },
 ]
@@ -192,10 +193,16 @@ export default function Home() {
         <section className="border-b border-gray-100" style={{ background: '#f8fafc' }}>
           <div className="mx-auto max-w-5xl px-6 py-6">
             <div className="grid gap-4 sm:grid-cols-3">
-              {TRUST_MARKERS.map(({ label, note }) => (
+              {TRUST_MARKERS.map(({ label, note, logo }) => (
                 <div key={label} className="text-center sm:text-left">
-                  <p className="text-sm font-semibold text-gray-900">{label}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{note}</p>
+                  {logo ? (
+                    <div className="flex justify-center sm:justify-start">
+                      <Image src={logo} alt={label} width={147} height={50} />
+                    </div>
+                  ) : (
+                    <p className="text-sm font-semibold text-gray-900">{label}</p>
+                  )}
+                  <p className="text-xs text-gray-500 mt-1.5">{note}</p>
                 </div>
               ))}
             </div>
