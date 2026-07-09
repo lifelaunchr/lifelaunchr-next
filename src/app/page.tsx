@@ -7,9 +7,12 @@ import Link from 'next/link'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://lifelaunchr.onrender.com'
 
-// When access opens to the public, set NEXT_PUBLIC_ACCESS_PUBLIC=true (Vercel env) to swap
-// the request-access form for the "Start free today" sign-up CTA. Default (unset) = private beta.
-const ACCESS_PUBLIC = process.env.NEXT_PUBLIC_ACCESS_PUBLIC === 'true'
+// The home page mirrors the app-wide access gate — the same NEXT_PUBLIC_CLERK_ALLOWLIST_ENABLED
+// flag CounselorCheckout uses. Allowlist ON = invite-only private beta → request-access form;
+// allowlist OFF = open sign-up → "Start free today" CTA. Going public is then one env change
+// that flips the messaging AND real signup access together, and the two can never drift apart.
+const ALLOWLIST_ENABLED = process.env.NEXT_PUBLIC_CLERK_ALLOWLIST_ENABLED === 'true'
+const ACCESS_PUBLIC = !ALLOWLIST_ENABLED
 
 const TRUST_MARKERS = [
   { label: 'HECA Business Partner', note: 'a recognized resource for the independent consulting community' },
