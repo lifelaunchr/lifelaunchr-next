@@ -7,6 +7,44 @@ import Link from 'next/link'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://lifelaunchr.onrender.com'
 
+// When access opens to the public, set NEXT_PUBLIC_ACCESS_PUBLIC=true (Vercel env) to swap
+// the request-access form for the "Start free today" sign-up CTA. Default (unset) = private beta.
+const ACCESS_PUBLIC = process.env.NEXT_PUBLIC_ACCESS_PUBLIC === 'true'
+
+const TRUST_MARKERS = [
+  { label: 'HECA Business Partner', note: 'a recognized resource for the independent consulting community' },
+  { label: 'Built on the Anthropic Claude API', note: 'student data is never used to train AI models' },
+  { label: 'Won’t write essays', note: 'by design, so the work stays the student’s own' },
+]
+
+const STEPS = [
+  {
+    step: '1',
+    title: 'Invite your families',
+    body: "Connect with your students and their families. Soar uses each student's information — GPA, test scores, college list, activities — to personalize every conversation from day one.",
+  },
+  {
+    step: '2',
+    title: 'Research with AI',
+    body: "Research anything for a student: fit, cost, deadlines, scholarships, majors, careers. Soar pulls real data, remembers what you've discussed, and guides the conversation with thoughtful follow-up questions. When you research on behalf of a student, it goes into their shared record automatically.",
+  },
+  {
+    step: '3',
+    title: 'Stay organized',
+    body: "Track each student's colleges, scholarships, summer plans, and activities in one place. Parents, students, and you see the same record and arrive at every session ready to do real work.",
+  },
+]
+
+const FEATURES = [
+  'Research colleges by major, size, location, cost, culture, and fit, using real data on 1,800+ schools',
+  'Estimate admissions likelihood from a student’s actual profile, with a plain-English explanation',
+  'Search 6,700+ scholarships scored against each student',
+  'Explore majors, careers, and 250+ enrichment programs',
+  'Analyze transcripts, including international transcripts and dual enrollment',
+  'Draft session reports and meeting briefs so you walk into every meeting prepared',
+  'Coach essays in the Writing Hub, where humans do the coaching and Soar never writes the essay',
+]
+
 export default function Home() {
   const { isSignedIn, isLoaded } = useAuth()
   const router = useRouter()
@@ -19,6 +57,7 @@ export default function Home() {
       router.replace('/chat')
     }
   }, [isLoaded, isSignedIn, router])
+
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -65,7 +104,7 @@ export default function Home() {
       <header style={{ background: '#0c1b33' }}>
         <div className="mx-auto max-w-5xl px-6 py-4 flex items-center justify-between">
           <span className="text-lg font-semibold tracking-tight" style={{ color: '#fff' }}>
-            <span style={{ color: '#7dd3fc' }}>Soar</span>{' '}
+            <span style={{ color: '#7dd3fc' }}>Soar</span>
           </span>
           <nav className="flex items-center gap-5">
             <Link href="/upgrade" className="text-sm transition-colors" style={{ color: '#a0aec0' }}>
@@ -76,9 +115,20 @@ export default function Home() {
                 Open Soar →
               </Link>
             ) : (
-              <Link href="/sign-in" className="text-sm font-medium transition-colors" style={{ color: '#fff' }}>
-                Sign in
-              </Link>
+              <>
+                <Link href="/sign-in" className="text-sm font-medium transition-colors" style={{ color: '#fff' }}>
+                  Sign in
+                </Link>
+                {ACCESS_PUBLIC && (
+                  <Link
+                    href="/sign-up"
+                    className="text-sm font-semibold rounded-md px-3 py-1.5 transition-opacity hover:opacity-90"
+                    style={{ background: '#7dd3fc', color: '#0c1b33' }}
+                  >
+                    Sign up
+                  </Link>
+                )}
+              </>
             )}
           </nav>
         </div>
@@ -89,60 +139,72 @@ export default function Home() {
         <section style={{ background: '#0c1b33' }}>
           <div className="mx-auto max-w-3xl px-6 pt-16 pb-14 text-center">
             <h1 className="text-3xl sm:text-4xl font-bold leading-tight mb-8" style={{ color: '#fff' }}>
-              The AI College and Career Counseling Assistant That Transforms Your Practice
+              The AI college and career counseling assistant that keeps you in the room.
             </h1>
             <p className="text-lg leading-relaxed mb-5 max-w-2xl mx-auto" style={{ color: '#cbd5e1' }}>
-              Your students are already using AI. Soar helps you guide them. Where most AI tools
-              give students a smarter search engine, Soar&trade; provides a college and career
-              research assistant, armed with authoritative data on thousands of colleges and
-              scholarships, hundreds of majors and enrichment programs, and the process knowledge
-              to guide students, parents, and counselors toward the right decisions.
+              Your students are already using AI for college planning. They&rsquo;re doing it late at
+              night, without you in the room. Soar&trade; gives them a better place to do it, and gives
+              you a shared record of everything they explore.
             </p>
             <p className="text-lg leading-relaxed mb-5 max-w-2xl mx-auto" style={{ color: '#cbd5e1' }}>
-              For IECs and school counselors, that means more than efficiency. Soar keeps you
-              connected with your students between sessions, helps them make real progress on their
-              own, and prepares you for every meeting. So you&apos;re not just faster, you&apos;re
-              more effective. It&apos;s free to get started, and you can do meaningful research
-              from day one.
+              Where most AI tools hand students a smarter search engine, Soar is a college and career
+              research assistant with authoritative data on thousands of colleges and scholarships,
+              hundreds of enrichment programs, and the process knowledge to guide students, parents,
+              and counselors toward the right decisions on majors, careers, fit, and cost.
+            </p>
+            <p className="text-lg leading-relaxed mb-5 max-w-2xl mx-auto" style={{ color: '#cbd5e1' }}>
+              For IECs and school counselors, that means Soar keeps you connected with your students
+              between sessions, helps them make real progress on their own, and prepares you for every
+              meeting. You&rsquo;re not just faster. You&rsquo;re more effective. It&rsquo;s free to
+              get started, and you can do meaningful research from day one.
             </p>
             <p className="text-base leading-relaxed mb-10 max-w-2xl mx-auto italic" style={{ color: '#7dd3fc' }}>
               Built by a counselor who has been working with AI since before it was cool.
             </p>
+
+            {ACCESS_PUBLIC && (
+              <div className="mb-10">
+                <Link
+                  href="/sign-up"
+                  className="inline-block rounded-md px-6 py-3 text-sm font-semibold transition-opacity hover:opacity-90"
+                  style={{ background: '#7dd3fc', color: '#0c1b33' }}
+                >
+                  Sign up now — free for up to 3 students
+                </Link>
+              </div>
+            )}
+
             {/* Privacy callout */}
             <div
               className="inline-block rounded-lg px-5 py-3 text-sm max-w-xl text-left"
               style={{ background: 'rgba(125,211,252,0.08)', border: '1px solid rgba(125,211,252,0.2)', color: '#93c5fd' }}
             >
-              Soar won&apos;t write essays for students, and won&apos;t sell your data or use your
+              Soar won&rsquo;t write essays for students, and won&rsquo;t sell your data or use your
               conversations to train AI models. What you share stays private.
             </div>
           </div>
         </section>
 
+        {/* Trust strip */}
+        <section className="border-b border-gray-100" style={{ background: '#f8fafc' }}>
+          <div className="mx-auto max-w-5xl px-6 py-6">
+            <div className="grid gap-4 sm:grid-cols-3">
+              {TRUST_MARKERS.map(({ label, note }) => (
+                <div key={label} className="text-center sm:text-left">
+                  <p className="text-sm font-semibold text-gray-900">{label}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{note}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* How it works */}
-        <section className="bg-gray-50 border-b border-gray-100">
+        <section className="bg-white border-b border-gray-100">
           <div className="mx-auto max-w-3xl px-6 py-14">
-            <h2 className="text-2xl font-bold text-gray-900 text-center mb-10">
-              How it works
-            </h2>
+            <h2 className="text-2xl font-bold text-gray-900 text-center mb-10">How it works</h2>
             <div className="grid sm:grid-cols-3 gap-8">
-              {[
-                {
-                  step: '1',
-                  title: 'Invite your families',
-                  body: "Connect with your students and their families. Soar uses each student's information — GPA, test scores, college lists, activities — to personalize every conversation.",
-                },
-                {
-                  step: '2',
-                  title: 'Research with AI',
-                  body: "Research anything for a student — fit, cost, deadlines, scholarships. Soar pulls real data, remembers what you've discussed, and guides the conversation with thoughtful follow-up questions.",
-                },
-                {
-                  step: '3',
-                  title: 'Stay organized',
-                  body: "Track each student's colleges, scholarships, summer plans, and activities in one place. Parents, students, and you collaborate and share — everyone on one team.",
-                },
-              ].map(({ step, title, body }) => (
+              {STEPS.map(({ step, title, body }) => (
                 <div key={step} className="flex flex-col items-center text-center">
                   <div
                     className="w-10 h-10 rounded-full text-white flex items-center justify-center text-lg font-bold mb-4"
@@ -158,136 +220,222 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Request access form */}
-        <section className="mx-auto max-w-xl px-6 py-16">
-          <h2 className="text-2xl font-bold text-gray-900 text-center mb-2">
-            Request access for your practice or school
-          </h2>
-          <p className="text-gray-500 text-center mb-8 text-sm">
-            Soar is for IECs and school counselors. Students and families join by invitation
-            from their counselor — not through this form. Tell us about your practice and
-            we&apos;ll be in touch.
-          </p>
+        {/* Why Soar and not ChatGPT */}
+        <section className="bg-gray-50 border-b border-gray-100">
+          <div className="mx-auto max-w-3xl px-6 py-14">
+            <h2 className="text-2xl font-bold text-gray-900 text-center mb-6">
+              Why Soar, and not ChatGPT?
+            </h2>
+            <p className="text-gray-700 leading-relaxed mb-4 max-w-2xl mx-auto text-center">
+              <strong>Keep using ChatGPT and Claude for your newsletter, client emails, and general
+              research.</strong> Soar is what those tools would be if they had spent a decade in a
+              college counseling office.
+            </p>
+            <p className="text-gray-600 leading-relaxed max-w-2xl mx-auto text-center">
+              General AI doesn&rsquo;t know your student, can hallucinate acceptance rates and aid
+              figures, and forgets everything when the session ends. Soar knows each student&rsquo;s
+              profile, works from authoritative data on 1,800+ colleges and 6,700+ scholarships,
+              applies real counseling methodology, and keeps a permanent shared record for the whole
+              team.
+            </p>
+          </div>
+        </section>
 
-          {submitted ? (
-            <div className="rounded-lg bg-green-50 border border-green-200 px-6 py-8 text-center">
-              <p className="text-green-800 font-medium text-lg mb-1">You&apos;re on the list!</p>
-              <p className="text-green-700 text-sm">
-                We&apos;ll be in touch at the email you provided. In the meantime, feel free to
-                reach out at{' '}
-                <a href="mailto:help@withsoar.ai" className="underline">
-                  help@withsoar.ai
-                </a>
-                .
+        {/* What Soar does */}
+        <section className="bg-white border-b border-gray-100">
+          <div className="mx-auto max-w-3xl px-6 py-14">
+            <h2 className="text-2xl font-bold text-gray-900 text-center mb-8">What Soar does</h2>
+            <ul className="grid gap-3 sm:grid-cols-2 max-w-2xl mx-auto">
+              {FEATURES.map((f) => (
+                <li key={f} className="flex items-start gap-2 text-sm text-gray-700 leading-relaxed">
+                  <span aria-hidden="true" style={{ color: '#0c1b33' }} className="mt-0.5 font-bold">
+                    →
+                  </span>
+                  <span>{f}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        {/* From counselors using Soar */}
+        <section className="bg-gray-50 border-b border-gray-100">
+          <div className="mx-auto max-w-2xl px-6 py-14">
+            <h2 className="text-2xl font-bold text-gray-900 text-center mb-8">
+              From counselors using Soar
+            </h2>
+            <figure className="rounded-xl bg-white border border-gray-200 px-6 py-6 shadow-sm">
+              <blockquote className="text-gray-800 leading-relaxed">
+                &ldquo;It&rsquo;s helped me go deeper. The surface-level first hour is gone, my
+                students have already answered those questions, so now we start where the real
+                conversation begins.&rdquo;
+              </blockquote>
+              <figcaption className="mt-4 text-sm text-gray-600">
+                <span className="font-semibold text-gray-900">Ranna Patel</span>, College Admissions
+                Consultant
+              </figcaption>
+            </figure>
+          </div>
+        </section>
+
+        {/* CTA — request access (private beta) OR sign up (public) */}
+        <section className="mx-auto max-w-xl px-6 py-16">
+          {ACCESS_PUBLIC ? (
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Start free today</h2>
+              <p className="text-gray-500 mb-6 text-sm">
+                Free for up to three students, no credit card required. Add more students any time.
+              </p>
+              <Link
+                href="/sign-up"
+                className="inline-block rounded-md px-6 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                style={{ background: '#0c1b33' }}
+              >
+                Sign up now — free for up to 3 students
+              </Link>
+              <p className="text-xs text-gray-400 mt-4">
+                For IECs and school counselors. Students and families join by invitation from their
+                counselor.
+              </p>
+              <p className="text-center text-xs text-gray-400 mt-6">
+                Already have access?{' '}
+                <Link href="/sign-in" className="underline hover:text-gray-600">
+                  Sign in
+                </Link>
               </p>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="name">
-                    Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    id="name"
-                    name="name"
-                    type="text"
-                    value={form.name}
-                    onChange={handleChange}
-                    required
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"
-                    placeholder="Your name"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="email">
-                    Email <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={form.email}
-                    onChange={handleChange}
-                    required
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"
-                    placeholder="you@example.com"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="user_type">
-                  I am a…
-                </label>
-                <select
-                  id="user_type"
-                  name="user_type"
-                  value={form.user_type}
-                  onChange={handleChange}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white"
-                >
-                  <option value="">Select one (optional)</option>
-                  <option value="independent_counselor">Independent educational consultant</option>
-                  <option value="school_counselor">School counselor</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="practice_name">
-                  Company, practice, or school name
-                </label>
-                <input
-                  id="practice_name"
-                  name="practice_name"
-                  type="text"
-                  value={form.practice_name}
-                  onChange={handleChange}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"
-                  placeholder="Optional"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="message">
-                  Anything else you&apos;d like us to know?
-                </label>
-                <textarea
-                  id="message"
-                  name="message"
-                  value={form.message}
-                  onChange={handleChange}
-                  rows={3}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 resize-none"
-                  placeholder="Optional"
-                />
-              </div>
-
-              {error && <p className="text-red-600 text-sm">{error}</p>}
-
-              <button
-                type="submit"
-                disabled={submitting}
-                className="w-full rounded-md text-white py-2.5 text-sm font-medium transition-opacity disabled:opacity-60"
-                style={{ background: '#0c1b33' }}
-              >
-                {submitting ? 'Submitting…' : 'Request access'}
-              </button>
-
-              <p className="text-center text-xs text-gray-400">
-                Already have access?{' '}
-                {isSignedIn ? (
-                  <Link href="/chat" className="underline hover:text-gray-600">
-                    Open Soar →
-                  </Link>
-                ) : (
-                  <Link href="/sign-in" className="underline hover:text-gray-600">
-                    Sign in
-                  </Link>
-                )}
+            <>
+              <h2 className="text-2xl font-bold text-gray-900 text-center mb-2">
+                Request access for your practice or school
+              </h2>
+              <p className="text-gray-500 text-center mb-8 text-sm">
+                Soar is for IECs and school counselors. Students and families join by invitation from
+                their counselor, not through this form. Tell us about your practice and we&rsquo;ll be
+                in touch.
               </p>
-            </form>
+
+              {submitted ? (
+                <div className="rounded-lg bg-green-50 border border-green-200 px-6 py-8 text-center">
+                  <p className="text-green-800 font-medium text-lg mb-1">You&rsquo;re on the list!</p>
+                  <p className="text-green-700 text-sm">
+                    We&rsquo;ll be in touch at the email you provided. In the meantime, feel free to
+                    reach out at{' '}
+                    <a href="mailto:help@withsoar.ai" className="underline">
+                      help@withsoar.ai
+                    </a>
+                    .
+                  </p>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="name">
+                        Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        id="name"
+                        name="name"
+                        type="text"
+                        value={form.name}
+                        onChange={handleChange}
+                        required
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"
+                        placeholder="Your name"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="email">
+                        Email <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        id="email"
+                        name="email"
+                        type="email"
+                        value={form.email}
+                        onChange={handleChange}
+                        required
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"
+                        placeholder="you@example.com"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="user_type">
+                      I am a…
+                    </label>
+                    <select
+                      id="user_type"
+                      name="user_type"
+                      value={form.user_type}
+                      onChange={handleChange}
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white"
+                    >
+                      <option value="">Select one (optional)</option>
+                      <option value="independent_counselor">Independent educational consultant</option>
+                      <option value="school_counselor">School counselor</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="practice_name">
+                      Company, practice, or school name
+                    </label>
+                    <input
+                      id="practice_name"
+                      name="practice_name"
+                      type="text"
+                      value={form.practice_name}
+                      onChange={handleChange}
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"
+                      placeholder="Optional"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="message">
+                      Anything else you&rsquo;d like us to know?
+                    </label>
+                    <textarea
+                      id="message"
+                      name="message"
+                      value={form.message}
+                      onChange={handleChange}
+                      rows={3}
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 resize-none"
+                      placeholder="Optional"
+                    />
+                  </div>
+
+                  {error && <p className="text-red-600 text-sm">{error}</p>}
+
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="w-full rounded-md text-white py-2.5 text-sm font-medium transition-opacity disabled:opacity-60"
+                    style={{ background: '#0c1b33' }}
+                  >
+                    {submitting ? 'Submitting…' : 'Request access'}
+                  </button>
+
+                  <p className="text-center text-xs text-gray-400">
+                    Already have access?{' '}
+                    {isSignedIn ? (
+                      <Link href="/chat" className="underline hover:text-gray-600">
+                        Open Soar →
+                      </Link>
+                    ) : (
+                      <Link href="/sign-in" className="underline hover:text-gray-600">
+                        Sign in
+                      </Link>
+                    )}
+                  </p>
+                </form>
+              )}
+            </>
           )}
         </section>
       </main>
