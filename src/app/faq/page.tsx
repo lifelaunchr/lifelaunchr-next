@@ -86,6 +86,21 @@ const faqs: { q: string; a: React.ReactNode; id?: string }[] = [
     ),
   },
   {
+    q: 'Families can use AI on their own now. How does Soar help me show my value?',
+    a: (
+      <>
+        By putting you where the value has moved. General AI can answer a question, but it does not
+        know your student the way you do, and it will not have the honest conversation about a reach
+        school or a change of direction. Soar makes you the guide for how students use AI: you see
+        what they research, you correct course, and you teach them to use these tools well, which is
+        a skill they carry into college and their career. It also takes the research and prep off
+        your plate, so your meetings go to strategy, judgment, and mentorship. Most tools for
+        counselors are built to make you more efficient. Soar is built to make you more effective,
+        which is what families still come to a professional for.
+      </>
+    ),
+  },
+  {
     q: 'Do I need to replace the tools I already use?',
     a: (
       <>

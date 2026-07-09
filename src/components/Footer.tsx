@@ -10,11 +10,14 @@ export default function Footer() {
         </div>
         <div className="flex items-center gap-4">
           <a
-            href="mailto:help@lifelaunchr.com"
+            href="mailto:help@withsoar.ai"
             className="hover:text-gray-700 transition-colors"
           >
             Give feedback
           </a>
+          <Link href="/families" className="hover:text-gray-700 transition-colors">
+            For families
+          </Link>
           <Link href="/faq" className="hover:text-gray-700 transition-colors">
             FAQ
           </Link>

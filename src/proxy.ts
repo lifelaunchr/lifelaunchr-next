@@ -13,6 +13,7 @@ const isPublicRoute = createRouteMatcher([
   '/terms',
   '/privacy',
   '/safety',            // public "How we keep teens safe" info page
+  '/families',          // public "For families" page (referral, no direct sign-up)
   '/upgrade',           // public upsell page
   '/tutorials',         // public video walkthrough library
   '/join(.*)',          // counselor invite acceptance landing

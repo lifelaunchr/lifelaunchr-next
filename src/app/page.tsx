@@ -255,6 +255,24 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Be the counselor families choose */}
+        <section className="bg-white border-b border-gray-100">
+          <div className="mx-auto max-w-3xl px-6 py-14">
+            <h2 className="text-2xl font-bold text-gray-900 text-center mb-6">
+              Be the counselor families choose
+            </h2>
+            <p className="text-gray-600 leading-relaxed max-w-2xl mx-auto text-center">
+              Most tools for counselors promise to save you time. Soar is built to make you the
+              counselor families want to work with. AI is becoming part of how every student
+              researches, and the counselors who get ahead are the ones who guide it. With Soar you
+              see everything your students explore, you teach them to use these tools well, and you
+              bring the judgment, mentorship, and honest conversations a chatbot never will. Soar
+              takes the research and prep off your plate, so your time goes to the human work
+              families come to a professional for.
+            </p>
+          </div>
+        </section>
+
         {/* What Soar does */}
         <section className="bg-white border-b border-gray-100">
           <div className="mx-auto max-w-3xl px-6 py-14">
@@ -451,6 +469,25 @@ export default function Home() {
               )}
             </>
           )}
+        </section>
+
+        {/* Parent / student callout */}
+        <section className="border-t border-gray-100" style={{ background: '#f8fafc' }}>
+          <div className="mx-auto max-w-2xl px-6 py-10 text-center">
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">Are you a parent or student?</h2>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              Soar gives your student a college and career planning partner that actually knows them,
+              and gives you a window into the process. It works through your counselor, so if you&rsquo;d
+              like to use it, ask your IEC or school counselor to set up Soar and invite you. There&rsquo;s
+              a free tier for up to three students, so they can get started at no cost.
+            </p>
+            <Link
+              href="/families"
+              className="inline-block mt-4 text-sm font-medium text-blue-600 hover:underline"
+            >
+              Learn how it works for families →
+            </Link>
+          </div>
         </section>
       </main>
 
