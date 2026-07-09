@@ -2,6 +2,14 @@ import type { NextConfig } from 'next'
 import { withSentryConfig } from '@sentry/nextjs'
 
 const nextConfig: NextConfig = {
+  // Bake the deploy's git commit SHA into the client bundle so a running tab knows
+  // which build it loaded. Compared against /api/version (the currently-deployed SHA)
+  // to detect when a newer version has shipped while the tab was open (next#85).
+  // Locally VERCEL_GIT_COMMIT_SHA is undefined → 'dev' (the version check no-ops in dev).
+  env: {
+    NEXT_PUBLIC_BUILD_ID: process.env.VERCEL_GIT_COMMIT_SHA || 'dev',
+  },
+
   // Allow images from Clerk's CDN
   images: {
     remotePatterns: [

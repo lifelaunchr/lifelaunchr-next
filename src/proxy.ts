@@ -19,6 +19,7 @@ const isPublicRoute = createRouteMatcher([
   '/accept-invite(.*)', // migration invite claim
   '/sign-in(.*)',
   '/sign-up(.*)',
+  '/api/version',       // build-version probe for the update banner (no auth, no PII) — next#85
 ])
 
 const MAINTENANCE_MODE = process.env.MAINTENANCE_MODE === 'true'
