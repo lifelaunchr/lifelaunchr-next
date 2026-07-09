@@ -2,9 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-// The commit this bundle was built from (baked in at build time via next.config.ts `env`).
-// On Vercel this is the deploy's git SHA; locally it is 'dev'.
-const BUILD_ID = process.env.NEXT_PUBLIC_BUILD_ID || 'dev'
 const POLL_MS = 5 * 60 * 1000 // check every 5 minutes
 
 /**
@@ -15,17 +12,26 @@ const POLL_MS = 5 * 60 * 1000 // check every 5 minutes
  * closes that gap. It never force-reloads (a counselor may be mid-typing a report);
  * it surfaces a dismissible banner instead.
  *
- * Safe-by-construction against hydration: it renders null until a check finds a new
+ * `buildId` is the commit SHA of the deploy that SERVER-rendered this page, passed in
+ * from the root layout (which reads process.env.VERCEL_GIT_COMMIT_SHA at request time).
+ * We compare it to /api/version (the currently-deployed SHA). Using a server-rendered
+ * prop — rather than a build-time-inlined client env var — is deliberate: the runtime
+ * env read is the mechanism we know works, and it sidesteps client-bundle inlining.
+ *
+ * Safe-by-construction against hydration: renders null until a check finds a new
  * version (post-mount, client-only), so server and first client render both produce
  * nothing — no hydration mismatch.
  */
-export default function VersionBanner() {
+export default function VersionBanner({ buildId }: { buildId: string }) {
   const [newVersion, setNewVersion] = useState<string | null>(null)
   const dismissedRef = useRef<string | null>(null)
 
   useEffect(() => {
-    // No build signal in local dev — don't poll or nag.
-    if (BUILD_ID === 'dev') return
+    // TEMP diagnostic (next#85 staging verification) — remove before/at prod push.
+    console.log('[version-check] this tab was built from', buildId)
+
+    // No build signal (local dev, or env var absent) — don't poll or nag.
+    if (!buildId || buildId === 'dev') return
 
     let cancelled = false
 
@@ -35,10 +41,12 @@ export default function VersionBanner() {
         if (!res.ok) return
         const data = await res.json()
         const server = typeof data?.version === 'string' ? data.version : ''
+        // TEMP diagnostic — remove before/at prod push.
+        console.log('[version-check] server is on', server, '| this tab', buildId)
         if (cancelled) return
         // Only prompt when the server is on a real, different build than ours, and the
         // user hasn't already dismissed this exact version.
-        if (server && server !== 'dev' && server !== BUILD_ID && server !== dismissedRef.current) {
+        if (server && server !== 'dev' && server !== buildId && server !== dismissedRef.current) {
           setNewVersion(server)
         }
       } catch {
@@ -59,7 +67,7 @@ export default function VersionBanner() {
       clearInterval(id)
       document.removeEventListener('visibilitychange', onVisible)
     }
-  }, [])
+  }, [buildId])
 
   if (!newVersion) return null
 

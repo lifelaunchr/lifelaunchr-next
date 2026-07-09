@@ -99,11 +99,17 @@ export default async function RootLayout({
     ? { isSatellite: true, domain: 'withsoar.ai', signInUrl: 'https://soar.lifelaunchr.com/sign-in' }
     : {}
 
+  // SHA of the deploy that server-rendered this page. Read at request time (runtime),
+  // then handed to the client VersionBanner, which compares it to /api/version (the
+  // currently-deployed SHA) to detect that a newer build shipped while the tab stayed
+  // open (next#85). Runtime read — not build-time client inlining — so it's reliable.
+  const buildId = process.env.VERCEL_GIT_COMMIT_SHA || 'dev'
+
   return (
     <ClerkProvider afterSignOutUrl="/chat" {...satelliteProps}>
       <html lang="en" suppressHydrationWarning>
         <body className={inter.className}>
-          <VersionBanner />
+          <VersionBanner buildId={buildId} />
           <BetaBanner />
           {children}
           <Footer />
