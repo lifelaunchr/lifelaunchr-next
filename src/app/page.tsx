@@ -16,7 +16,7 @@ const ALLOWLIST_ENABLED = process.env.NEXT_PUBLIC_CLERK_ALLOWLIST_ENABLED === 't
 const ACCESS_PUBLIC = !ALLOWLIST_ENABLED
 
 const TRUST_MARKERS: { label: string; note: string; logo?: string }[] = [
-  { label: 'HECA Business Partner', logo: '/heca-business-partner.png', note: 'a recognized resource for the independent consulting community' },
+  { label: 'HECA Business Partner', logo: '/heca-business-partner.png', note: 'a member of HECA’s Business Partner program' },
   { label: 'Built on the Anthropic Claude API', note: 'student data is never used to train AI models' },
   { label: 'Won’t write essays', note: 'by design, so the work stays the student’s own' },
 ]
@@ -43,8 +43,9 @@ const FEATURES = [
   'Research colleges by major, size, location, cost, culture, and fit, using real data on 1,800+ schools',
   'Estimate admissions likelihood from a student’s actual profile, with a plain-English explanation',
   'Search 6,700+ scholarships scored against each student',
-  'Explore majors, careers, and 250+ enrichment programs',
+  'Explore majors and careers, and search 250+ enrichment programs',
   'Analyze transcripts, including international transcripts and dual enrollment',
+  'Organize college and scholarship lists, activities, and deadlines in one shared record',
   'Draft session reports and meeting briefs so you walk into every meeting prepared',
   'Coach essays in the Writing Hub, where humans do the coaching and Soar never writes the essay',
 ]
@@ -147,20 +148,23 @@ export default function Home() {
             </h1>
             <p className="text-lg leading-relaxed mb-5 max-w-2xl mx-auto" style={{ color: '#cbd5e1' }}>
               Your students are already using AI for college planning. They&rsquo;re doing it late at
-              night, without you in the room. Soar&trade; gives them a better place to do it, and gives
-              you a shared record of everything they explore.
+              night, without you in the room. Soar&trade; is the AI college and career planning
+              platform that puts you back in it: an AI that actually knows each student, with a
+              shared record of everything they explore.
             </p>
             <p className="text-lg leading-relaxed mb-5 max-w-2xl mx-auto" style={{ color: '#cbd5e1' }}>
-              Where most AI tools hand students a smarter search engine, Soar is a college and career
-              research assistant with authoritative data on thousands of colleges and scholarships,
-              hundreds of enrichment programs, and the process knowledge to guide students, parents,
-              and counselors toward the right decisions on majors, careers, fit, and cost.
+              Where general AI hands students a smarter search engine, Soar is built for the whole
+              job. It researches colleges, scholarships, majors, and careers on authoritative data
+              covering 1,800+ colleges, 6,700+ scholarships, and 250+ enrichment programs. It
+              organizes lists, deadlines, and activities. It guides essays and self-discovery in the
+              Writing Hub. And it prepares you for every session, all personalized to each student
+              and remembered over time.
             </p>
             <p className="text-lg leading-relaxed mb-5 max-w-2xl mx-auto" style={{ color: '#cbd5e1' }}>
-              For IECs and school counselors, that means Soar keeps you connected with your students
-              between sessions, helps them make real progress on their own, and prepares you for every
-              meeting. You&rsquo;re not just faster. You&rsquo;re more effective. It&rsquo;s free to
-              get started, and you can do meaningful research from day one.
+              For IECs and school counselors, Soar keeps you connected with your students between
+              sessions, helps them make real progress on their own, and makes your time with students
+              count for more. It&rsquo;s free to get started, and you can do meaningful work from day
+              one.
             </p>
             <p className="text-base leading-relaxed mb-10 max-w-2xl mx-auto italic" style={{ color: '#7dd3fc' }}>
               Built by a counselor who has been working with AI since before it was cool.

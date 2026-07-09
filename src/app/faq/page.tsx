@@ -11,12 +11,14 @@ const faqs: { q: string; a: React.ReactNode; id?: string }[] = [
     q: 'What is Soar?',
     a: (
       <>
-        Soar is an AI-powered college and career planning research assistant, built by a counselor
-        for counselors. It helps IECs and school counselors do in-depth research on colleges,
-        scholarships, majors, and enrichment programs with their students, and keeps the whole team
-        organized and connected throughout the process. Unlike general-purpose AI tools, Soar knows
-        each student&rsquo;s profile, remembers what has already been researched, and gets more
-        useful over time. Soar is a HECA Business Partner.
+        Soar is the AI-powered college and career planning platform built for IECs and school
+        counselors, and its defining feature is that it is an AI that actually knows each student.
+        It spans the whole process: researching colleges, scholarships, majors, and careers;
+        organizing college lists, deadlines, and activities; guiding essays and self-discovery in
+        the Writing Hub; and preparing counselors for every session, all held in one shared record
+        that the student, parent, and counselor work from together. Unlike general-purpose AI tools,
+        Soar remembers what has already been researched and gets more useful over time. Soar is a
+        HECA Business Partner.
       </>
     ),
   },
@@ -121,14 +123,19 @@ const faqs: { q: string; a: React.ReactNode; id?: string }[] = [
         <p>Soar is free to get started, and you can do real work on the free tier from day one.</p>
         <ul className="mt-3 list-disc pl-5 space-y-1">
           <li><strong>Free:</strong> one counselor with up to three students and their parents, permanently free.</li>
-          <li><strong>Paid (private beta):</strong> $29.95/month per counselor seat, plus $5.95/student/month for students four and up. Per-student rates go down at higher student counts.</li>
+          <li><strong>Paid (private beta):</strong> $29.95/month per counselor seat, plus a per-student rate that steps down as you add students: $5.95/month each for students 4 through 25, $4.95 for students 26 through 75, and $3.95 for students 76 and up.</li>
           <li><strong>Annual billing:</strong> twelve months for the price of ten.</li>
         </ul>
         <p className="mt-3">
-          These are private-beta rates, and standard pricing will be higher once we exit beta. If
-          you subscribe during the beta, your rate locks in permanently: whatever you pay now is what
-          you always pay per student, as long as you keep your subscription. For school or district
-          pricing, or to talk through the right plan for your practice, email us at{' '}
+          These are private-beta rates. If you subscribe during the beta, your rate locks in
+          permanently: whatever you pay now is what you always pay per student, for as long as you
+          keep your subscription, even after we raise prices.
+        </p>
+        <p className="mt-3">
+          After the beta, the standard per-student rate will be $6.95/month, and HECA members will
+          receive roughly 15% off that standard rate. Because beta rates come in below the standard
+          rate, subscribing now locks in savings before prices go up. For school or district pricing,
+          or to talk through the right plan for your practice, email us at{' '}
           <a href="mailto:help@withsoar.ai" className="text-blue-600 hover:underline">help@withsoar.ai</a>.
         </p>
       </>
@@ -262,7 +269,8 @@ const faqs: { q: string; a: React.ReactNode; id?: string }[] = [
       <>
         Yes. Safety is built in at multiple layers. Every message a student sends is scanned for
         crisis language before Soar processes it, and if anything is flagged, the student&rsquo;s
-        counselor is notified immediately and Soar responds with the 988 Suicide and Crisis Lifeline.
+        counselor and parents are both notified immediately and Soar responds with the 988 Suicide
+        and Crisis Lifeline.
         Soar is also built on Anthropic&rsquo;s Claude, which declines harmful content at the model
         level. Because Soar is a shared workspace connected to a counselor, there is always a
         professional in the loop. For the full picture, see our{' '}
