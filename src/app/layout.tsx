@@ -22,11 +22,11 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: 'Soar',
+    default: 'Soar: AI College and Career Planning for Counselors',
     template: '%s | Soar',
   },
   description:
-    'The AI college and career planning assistant that keeps counselors, students, and parents on the same page. Built on real data, deep counseling methodology, and a shared research record.',
+    'The AI college and career planning platform for IECs and school counselors, built on real data and one shared record for the whole team.',
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'https://lifelaunchr-next.vercel.app'),
   alternates: {
     canonical: process.env.NEXT_PUBLIC_APP_URL ?? 'https://lifelaunchr-next.vercel.app',
@@ -42,9 +42,9 @@ export const metadata: Metadata = {
     'Soar',
   ],
   openGraph: {
-    title: 'Soar',
+    title: 'Soar: AI College and Career Planning, Built for the Whole Team',
     description:
-      'The AI college and career planning assistant that keeps counselors, students, and parents on the same page. Built on real data, deep counseling methodology, and a shared research record.',
+      'The AI college and career planning platform for IECs and school counselors, built on real data and one shared record for the whole team.',
     url: process.env.NEXT_PUBLIC_APP_URL ?? 'https://lifelaunchr-next.vercel.app',
     siteName: 'Soar',
     images: [
@@ -59,9 +59,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Soar',
+    title: 'Soar: AI College and Career Planning, Built for the Whole Team',
     description:
-      'The AI college and career planning assistant that keeps counselors, students, and parents on the same page. Built on real data, deep counseling methodology, and a shared research record.',
+      'The AI college and career planning platform for IECs and school counselors, built on real data and one shared record for the whole team.',
     images: ['/og-image.png?v=3'],
   },
   icons: {
