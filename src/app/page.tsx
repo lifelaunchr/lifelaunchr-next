@@ -25,12 +25,12 @@ const STEPS = [
   {
     step: '1',
     title: 'Invite your families',
-    body: "Connect with your students and their families. Soar uses each student's information — GPA, test scores, college list, activities — to personalize every conversation from day one.",
+    body: "Connect with your students and their families. Soar uses each student's information (GPA, test scores, college list, activities) to personalize every conversation from day one.",
   },
   {
     step: '2',
-    title: 'Research with AI',
-    body: "Research anything for a student: fit, cost, deadlines, scholarships, majors, careers. Soar pulls real data, remembers what you've discussed, and guides the conversation with thoughtful follow-up questions. When you research on behalf of a student, it goes into their shared record automatically.",
+    title: 'Work with them using AI',
+    body: "Research anything for a student: fit, cost, deadlines, scholarships, majors, careers. Soar pulls real data, remembers what you've discussed, and guides the conversation with thoughtful follow-up questions. When you research on behalf of a student, it goes into their shared record automatically. Build college and scholarship lists, generate meeting notes, make writing assignments, plan essays, and build activities lists.",
   },
   {
     step: '3',
@@ -144,13 +144,15 @@ export default function Home() {
         <section style={{ background: '#0c1b33' }}>
           <div className="mx-auto max-w-3xl px-6 pt-16 pb-14 text-center">
             <h1 className="text-3xl sm:text-4xl font-bold leading-tight mb-8" style={{ color: '#fff' }}>
-              The AI college and career counseling assistant that keeps you in the room.
+              Soar: the College Counselor&rsquo;s Edge in a World Run by AI.
             </h1>
             <p className="text-lg leading-relaxed mb-5 max-w-2xl mx-auto" style={{ color: '#cbd5e1' }}>
               Your students are already using AI for college planning. They&rsquo;re doing it late at
-              night, without you in the room. Soar&trade; is the AI college and career planning
-              platform that puts you back in it: an AI that actually knows each student, with a
-              shared record of everything they explore.
+              night, without you in the room. And college admissions conversations now range far
+              beyond: careers, majors, costs, scholarships, and everything in between. Soar&trade; is
+              the AI college and career planning platform that has your back: an AI that actually
+              knows each student and has deep knowledge of college and career, with a shared record
+              of everything they explore.
             </p>
             <p className="text-lg leading-relaxed mb-5 max-w-2xl mx-auto" style={{ color: '#cbd5e1' }}>
               Where general AI hands students a smarter search engine, Soar is built for the whole
@@ -163,8 +165,8 @@ export default function Home() {
             <p className="text-lg leading-relaxed mb-5 max-w-2xl mx-auto" style={{ color: '#cbd5e1' }}>
               For IECs and school counselors, Soar keeps you connected with your students between
               sessions, helps them make real progress on their own, and makes your time with students
-              count for more. It&rsquo;s free to get started, and you can do meaningful work from day
-              one.
+              count for more. It helps you meet the challenges of a changing college counseling world.
+              Soar is free to get started, and you can do meaningful work from day one.
             </p>
             <p className="text-base leading-relaxed mb-10 max-w-2xl mx-auto italic" style={{ color: '#7dd3fc' }}>
               Built by a counselor who has been working with AI since before it was cool.
@@ -255,20 +257,37 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Be the counselor families choose */}
+        {/* College is the gateway to careers and life */}
         <section className="bg-white border-b border-gray-100">
           <div className="mx-auto max-w-3xl px-6 py-14">
             <h2 className="text-2xl font-bold text-gray-900 text-center mb-6">
-              Be the counselor families choose
+              College is the gateway to careers and life
             </h2>
             <p className="text-gray-600 leading-relaxed max-w-2xl mx-auto text-center">
-              Most tools for counselors promise to save you time. Soar is built to make you the
-              counselor families want to work with. AI is becoming part of how every student
-              researches, and the counselors who get ahead are the ones who guide it. With Soar you
-              see everything your students explore, you teach them to use these tools well, and you
-              bring the judgment, mentorship, and honest conversations a chatbot never will. Soar
-              takes the research and prep off your plate, so your time goes to the human work
-              families come to a professional for.
+              Soar also covers the parts of this work that have grown: careers and where a major
+              actually leads, scholarships and the real cost of college, and the enrichment programs
+              that strengthen a student&rsquo;s profile. Soar helps you cover the ground, so you can
+              focus on the judgment and mentorship your students need, and help them build skills
+              they will use long after they are admitted.
+            </p>
+          </div>
+        </section>
+
+        {/* Built to make you more effective */}
+        <section className="bg-gray-50 border-b border-gray-100">
+          <div className="mx-auto max-w-3xl px-6 py-14">
+            <h2 className="text-2xl font-bold text-gray-900 text-center mb-6">
+              Built to make you more effective
+            </h2>
+            <p className="text-gray-600 leading-relaxed max-w-2xl mx-auto text-center">
+              Most tools for counselors are built to save you time. Soar is built to make your work
+              better. Families now have AI in their pocket, and some are asking what a counselor adds
+              that a chatbot doesn&rsquo;t. This is where you get ahead of it. With Soar you become the
+              professional who teaches students to use AI well, who sees everything they explore, and
+              who brings the judgment, mentorship, and honest conversations a chatbot never will. Soar
+              takes the research and the prep off your plate, so your time goes to the human work only
+              you can do. And Soar works alongside the tools you already use: Scoir, Maia Learning,
+              College Planner Pro, and others.
             </p>
           </div>
         </section>
