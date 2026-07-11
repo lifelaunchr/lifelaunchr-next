@@ -3,7 +3,7 @@ import Link from 'next/link'
 
 export const metadata: Metadata = {
   title: 'FAQ',
-  description: 'Frequently asked questions about Soar — the AI college and career planning assistant for counselors.',
+  description: 'Frequently asked questions about Soar, the AI college and career planning platform for counselors.',
 }
 
 const faqs: { q: string; a: React.ReactNode; id?: string }[] = [
