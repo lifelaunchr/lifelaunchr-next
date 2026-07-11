@@ -26,10 +26,10 @@ export const metadata: Metadata = {
     template: '%s | Soar',
   },
   description:
-    'The AI college and career planning platform for IECs and school counselors, built on real data and one shared record for the whole team.',
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'https://lifelaunchr-next.vercel.app'),
+    'The AI college and career planning platform for IECs and school counselors. It keeps you in the loop and your students on track between sessions.',
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'https://withsoar.ai'),
   alternates: {
-    canonical: process.env.NEXT_PUBLIC_APP_URL ?? 'https://lifelaunchr-next.vercel.app',
+    canonical: process.env.NEXT_PUBLIC_APP_URL ?? 'https://withsoar.ai',
   },
   keywords: [
     'college planning',
@@ -42,10 +42,10 @@ export const metadata: Metadata = {
     'Soar',
   ],
   openGraph: {
-    title: 'Soar: AI College and Career Planning, Built for the Whole Team',
+    title: 'Soar: the College Counselor\'s Edge in a World Run by AI',
     description:
-      'The AI college and career planning platform for IECs and school counselors, built on real data and one shared record for the whole team.',
-    url: process.env.NEXT_PUBLIC_APP_URL ?? 'https://lifelaunchr-next.vercel.app',
+      'The AI college and career planning platform for IECs and school counselors. It keeps you in the loop and your students on track between sessions.',
+    url: process.env.NEXT_PUBLIC_APP_URL ?? 'https://withsoar.ai',
     siteName: 'Soar',
     images: [
       {
@@ -59,9 +59,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Soar: AI College and Career Planning, Built for the Whole Team',
+    title: 'Soar: the College Counselor\'s Edge in a World Run by AI',
     description:
-      'The AI college and career planning platform for IECs and school counselors, built on real data and one shared record for the whole team.',
+      'The AI college and career planning platform for IECs and school counselors. It keeps you in the loop and your students on track between sessions.',
     images: ['/og-image.png?v=3'],
   },
   icons: {
