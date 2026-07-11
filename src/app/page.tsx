@@ -17,8 +17,7 @@ const ACCESS_PUBLIC = !ALLOWLIST_ENABLED
 
 const TRUST_MARKERS: { label: string; note: string; logo?: string }[] = [
   { label: 'HECA Business Partner', logo: '/heca-business-partner.png', note: 'a member of HECA’s Business Partner program' },
-  { label: 'Built on the Anthropic Claude API', note: 'student data is never used to train AI models' },
-  { label: 'Won’t write essays', note: 'by design, so the work stays the student’s own' },
+  { label: 'Student data is protected', note: 'never sold, and never used to train AI models because we use the Anthropic API' },
 ]
 
 const STEPS = [
@@ -198,12 +197,14 @@ export default function Home() {
         {/* Trust strip */}
         <section className="border-b border-gray-100" style={{ background: '#f8fafc' }}>
           <div className="mx-auto max-w-5xl px-6 py-6">
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-6 sm:grid-cols-2 items-start max-w-3xl mx-auto">
               {TRUST_MARKERS.map(({ label, note, logo }) => (
                 <div key={label} className="text-center sm:text-left">
                   {logo ? (
-                    <div className="flex justify-center sm:justify-start">
-                      <Image src={logo} alt={label} width={147} height={50} />
+                    <div className="flex justify-center sm:justify-start mb-2">
+                      <span className="inline-block bg-white rounded-lg border border-gray-200 px-5 py-3.5">
+                        <Image src={logo} alt={label} width={216} height={73} />
+                      </span>
                     </div>
                   ) : (
                     <p className="text-sm font-semibold text-gray-900">{label}</p>
