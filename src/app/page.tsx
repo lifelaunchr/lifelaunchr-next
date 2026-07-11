@@ -248,11 +248,9 @@ export default function Home() {
               college counseling office.
             </p>
             <p className="text-gray-600 leading-relaxed max-w-2xl mx-auto text-center">
-              General AI doesn&rsquo;t know your student, can hallucinate acceptance rates and aid
-              figures, and forgets everything when the session ends. Soar knows each student&rsquo;s
-              profile, works from authoritative data on 1,800+ colleges and 6,700+ scholarships,
-              applies real counseling methodology, and keeps a permanent shared record for the whole
-              team.
+              General AI does not know your student and can hallucinate acceptance rates and aid
+              figures. Soar knows each student&rsquo;s profile, works from authoritative data, applies
+              real counseling methodology, and keeps a permanent shared record.
             </p>
           </div>
         </section>
@@ -265,10 +263,9 @@ export default function Home() {
             </h2>
             <p className="text-gray-600 leading-relaxed max-w-2xl mx-auto text-center">
               Soar also covers the parts of this work that have grown: careers and where a major
-              actually leads, scholarships and the real cost of college, and the enrichment programs
-              that strengthen a student&rsquo;s profile. Soar helps you cover the ground, so you can
-              focus on the judgment and mentorship your students need, and help them build skills
-              they will use long after they are admitted.
+              actually leads, scholarships and the cost of college, and the enrichment programs that
+              strengthen a student&rsquo;s profile. Soar helps you cover the ground, so you can focus
+              on the judgment and mentorship your students need as they plan their life.
             </p>
           </div>
         </section>
@@ -280,13 +277,11 @@ export default function Home() {
               Built to make you more effective
             </h2>
             <p className="text-gray-600 leading-relaxed max-w-2xl mx-auto text-center">
-              Most tools for counselors are built to save you time. Soar is built to make your work
-              better. Families now have AI in their pocket, and some are asking what a counselor adds
-              that a chatbot doesn&rsquo;t. This is where you get ahead of it. With Soar you become the
-              professional who teaches students to use AI well, who sees everything they explore, and
-              who brings the judgment, mentorship, and honest conversations a chatbot never will. Soar
-              takes the research and the prep off your plate, so your time goes to the human work only
-              you can do. And Soar works alongside the tools you already use: Scoir, Maia Learning,
+              Soar is built to make your work better, not just save time. Families with AI in their
+              pocket are asking what a counselor adds that a chatbot doesn&rsquo;t. Soar helps you
+              become the professional who teaches students to use AI well, who sees everything they
+              explore, and who brings the judgment, mentorship, and honest conversations a chatbot
+              never will. And Soar works alongside the tools you already use: Scoir, Maia Learning,
               College Planner Pro, and others.
             </p>
           </div>
