@@ -6,10 +6,10 @@ import SessionsInfoButton from '@/components/billing/SessionsInfoButton'
 export const metadata: Metadata = {
   title: 'Plans & Pricing — Soar',
   description:
-    'Soar connects counselors, students, and parents around a shared research record. Free to start. Beta pricing locked in forever when you upgrade now.',
+    'The AI college and career planning platform for IECs and school counselors. Free to start, with beta pricing locked in permanently when you upgrade now. Students and families join through their counselor.',
 }
 
-const SUPPORT_EMAIL = 'help@lifelaunchr.com'
+const SUPPORT_EMAIL = 'help@withsoar.ai'
 
 const FEATURES = [
   {
@@ -42,16 +42,6 @@ const FEATURES = [
     title: 'Student privacy, by design',
     body: "Soar uses the Anthropic API, which means your students' conversations are never used to train AI models. That's different from using Claude.ai or ChatGPT directly, where data handling depends on your account settings. For counselors working with minors and handling sensitive family information, that distinction matters. Your students' data stays in your practice.",
   },
-]
-
-const STUDENT_FEATURES = [
-  { label: 'Research sessions/month', free: '5', plus: '20', pro: '50' },
-  { label: 'College and career research', free: '✓', plus: '✓', pro: '✓' },
-  { label: 'Scholarship and financial aid research', free: '✓', plus: '✓', pro: '✓' },
-  { label: 'Student profile and college list', free: '✓', plus: '✓', pro: '✓' },
-  { label: 'Counselor and parent integration', free: '✓', plus: '✓', pro: '✓' },
-  { label: 'Research history', free: '90 days', plus: '1 year', pro: '2 years' },
-  { label: 'Essay prompts', free: '', plus: '', pro: '✓' },
 ]
 
 const COUNSELOR_FEATURES = [
@@ -109,11 +99,15 @@ const FAQS = [
   },
   {
     q: "What happens to my data if I downgrade or cancel?",
-    a: "Your student profiles, college lists, and research history are always yours. If you need an export of your data, reach out to us at help@lifelaunchr.com and we'll make it happen.",
+    a: "Your student profiles, college lists, and research history are always yours. If you need an export of your data, reach out to us at help@withsoar.ai and we'll make it happen.",
   },
   {
-    q: "Can I use Soar if I'm not working with a counselor?",
-    a: "Absolutely. Soar is built to be genuinely useful to students and families working independently. The counselor integration is an add-on, not a requirement. If you add a counselor later, everything you've already researched is there waiting for them.",
+    q: 'Can students or parents buy Soar directly?',
+    a: "No. Soar is sold to IECs and school counselors, and students and parents join by counselor invitation. A student's sessions are covered by their counselor's plan. If you are a family interested in Soar, ask your counselor whether they offer it, or email us and we can help point you in the right direction.",
+  },
+  {
+    q: 'Is there a HECA discount?',
+    a: "Yes, after the beta. HECA members receive roughly 15% off the standard post-beta per-student rate. During the beta, everyone pays the beta rates, which are already below the coming standard price.",
   },
 ]
 
@@ -161,10 +155,10 @@ export default function UpgradePage() {
               href="#counselors"
               style={{ background: '#3b82f6', color: '#fff', fontWeight: 600, fontSize: '0.95rem', padding: '11px 24px', borderRadius: 8, textDecoration: 'none', display: 'inline-block' }}
             >
-              I&apos;m a counselor ↓
+              I&apos;m an IEC or school counselor ↓
             </a>
             <a
-              href="#students"
+              href="#families"
               style={{ background: 'rgba(255,255,255,0.08)', color: '#e2e8f0', fontWeight: 600, fontSize: '0.95rem', padding: '11px 24px', borderRadius: 8, textDecoration: 'none', display: 'inline-block', border: '1px solid rgba(255,255,255,0.15)' }}
             >
               I&apos;m a student or family ↓
@@ -220,7 +214,7 @@ export default function UpgradePage() {
           </p>
           <CounselorCheckout />
           <div style={{ marginTop: 16, background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '14px 18px', fontSize: '0.875rem', color: '#92400e', lineHeight: 1.65 }}>
-            <strong>Beta pricing, locked in forever.</strong> Upgrade now and your rate is guaranteed for as long as you remain subscribed. When we raise prices at public launch, yours stays the same.
+            <strong>Beta pricing, locked in forever.</strong> Upgrade now and your rate is guaranteed for as long as you remain subscribed. When we raise prices at public launch, yours stays the same. After the beta, the standard per-student rate will be $6.95/month, and HECA members receive roughly 15% off that standard rate, so subscribing now locks in savings before prices go up.
           </div>
           <div style={{ marginTop: 16, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '16px 20px' }}>
             <p style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0c1b33', marginBottom: 10 }}>
@@ -243,60 +237,25 @@ export default function UpgradePage() {
           </div>
         </div>
 
-        {/* ── STUDENTS ── */}
-        <div id="students" style={{ marginBottom: 48, scrollMarginTop: 24 }}>
+        {/* ── FAMILIES ── */}
+        <div id="families" style={{ marginBottom: 56, scrollMarginTop: 24 }}>
           <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#0c1b33', marginBottom: 6, paddingBottom: 8, borderBottom: '2px solid #e2e8f0' }}>
-            🎓 For Students
-          </h2>
-          <div style={{ overflowX: 'auto', marginTop: 16 }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff', borderRadius: 12, overflow: 'hidden', border: '1px solid #e2e8f0', fontSize: '0.85rem' }}>
-              <thead>
-                <tr style={{ background: '#f8fafc' }}>
-                  <th style={{ ...headCell, textAlign: 'left', color: '#6b7280', width: '40%' }}></th>
-                  <th style={{ ...headCell, textAlign: 'center', color: '#0c1b33' }}>Free</th>
-                  <th style={{ ...headCell, textAlign: 'center', color: '#0369a1', background: '#f0f9ff' }}>Plus</th>
-                  <th style={{ ...headCell, textAlign: 'center', color: '#0c1b33' }}>Pro</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td style={{ ...cell, fontWeight: 600, color: '#374151' }}>Price</td>
-                  <td style={{ ...cell, textAlign: 'center', color: '#374151' }}>$0</td>
-                  <td style={{ ...cell, textAlign: 'center', background: '#f0f9ff', color: '#0369a1', fontWeight: 600 }}>$12/mo</td>
-                  <td style={{ ...cell, textAlign: 'center', color: '#374151', fontWeight: 600 }}>$25/mo</td>
-                </tr>
-                {STUDENT_FEATURES.map((row) => (
-                  <tr key={row.label}>
-                    <td style={{ ...cell, color: '#374151' }}>{row.label}</td>
-                    <td style={{ ...cell, textAlign: 'center', color: row.free === '✓' ? '#16a34a' : '#374151' }}>{row.free || <span style={{ color: '#d1d5db' }}>—</span>}</td>
-                    <td style={{ ...cell, textAlign: 'center', background: '#f0f9ff', color: row.plus === '✓' ? '#16a34a' : '#374151' }}>{row.plus || <span style={{ color: '#d1d5db' }}>—</span>}</td>
-                    <td style={{ ...cell, textAlign: 'center', color: row.pro === '✓' ? '#16a34a' : '#374151' }}>{row.pro || <span style={{ color: '#d1d5db' }}>—</span>}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div style={{ marginTop: 12, background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '10px 14px', fontSize: '0.82rem', color: '#92400e' }}>
-            Plus and Pro self-serve checkout coming soon. To upgrade now, email{' '}
-            <a href={`mailto:${SUPPORT_EMAIL}?subject=Student plan upgrade`} style={{ color: '#92400e', fontWeight: 600 }}>{SUPPORT_EMAIL}</a>.
-          </div>
-        </div>
-
-        {/* ── PARENTS ── */}
-        <div style={{ marginBottom: 56 }}>
-          <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#0c1b33', marginBottom: 6, paddingBottom: 8, borderBottom: '2px solid #e2e8f0' }}>
-            👨‍👩‍👧 For Parents
+            🎓 For Students &amp; Families
           </h2>
           <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '20px 24px', marginTop: 16 }}>
             <p style={{ fontSize: '0.9rem', color: '#374151', lineHeight: 1.7, marginBottom: 12 }}>
-              Parent accounts are always free. When you use Soar on your student&apos;s behalf, sessions draw from their shared pool — not a separate parent limit. A student connected to a paid counselor plan gets up to 25 sessions/month shared across the student, parent, and counselor.
+              Students and parents do not sign up for Soar on their own, and there is no separate family subscription to buy. Every student joins through their counselor&apos;s invitation and is covered by that counselor&apos;s plan.
             </p>
-            <p style={{ fontSize: '0.9rem', color: '#374151', lineHeight: 1.7 }}>
-              Want your student to have more sessions? Upgrade their account to Plus or Pro.{' '}
-              <a href={`mailto:${SUPPORT_EMAIL}?subject=Student plan upgrade`} style={{ color: '#0369a1', fontWeight: 600 }}>
-                Email us to get started →
-              </a>
+            <p style={{ fontSize: '0.9rem', color: '#374151', lineHeight: 1.7, marginBottom: 12 }}>
+              <strong>Students</strong> get a knowledgeable research partner that knows their profile and remembers everything they have explored. <strong>Parents</strong> always have free accounts. When a student or parent researches, it draws from the student&apos;s shared monthly session pool, not a separate limit, so a student on a paid counselor plan has up to 25 sessions a month shared across the student, their parents, and their counselor.
             </p>
+            <p style={{ fontSize: '0.9rem', color: '#374151', lineHeight: 1.7, marginBottom: 14 }}>
+              If you are a student or parent who wants to use Soar, ask your counselor whether they offer it. If you are not working with a counselor and would like to be, email us at{' '}
+              <a href={`mailto:${SUPPORT_EMAIL}`} style={{ color: '#0369a1', fontWeight: 600 }}>{SUPPORT_EMAIL}</a>.
+            </p>
+            <Link href="/families" style={{ fontSize: '0.9rem', color: '#0369a1', fontWeight: 600, textDecoration: 'none' }}>
+              Learn how it works for families →
+            </Link>
           </div>
         </div>
 
@@ -309,7 +268,7 @@ export default function UpgradePage() {
             Every counselor knows the feeling. You sit down with a student and spend the first twenty minutes untangling something they read online: a wrong acceptance rate, a misunderstood financial aid rule, a major they&apos;ve ruled out based on a Reddit thread. Or worse, you ask what they&apos;ve been thinking about and get a shrug. They&apos;ve been talking to ChatGPT for hours. You just can&apos;t see it.
           </p>
           <p style={{ fontSize: '0.95rem', color: '#374151', lineHeight: 1.75, marginBottom: 32 }}>
-            Soar changes that. It&apos;s a college and career planning assistant built specifically for this work, with real data, deep counseling methodology, and a shared research record that connects you to everything your students are exploring between your sessions.
+            Soar changes that. It&apos;s a college and career planning platform built specifically for this work, with real data, deep counseling methodology, and a shared research record that connects you to everything your students are exploring between your sessions.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {FEATURES.map((f) => (
