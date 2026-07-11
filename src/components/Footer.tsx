@@ -18,6 +18,12 @@ export default function Footer() {
           <Link href="/families" className="hover:text-gray-700 transition-colors">
             For families
           </Link>
+          <Link href="/blog" className="hover:text-gray-700 transition-colors">
+            Blog
+          </Link>
+          <Link href="/webinars" className="hover:text-gray-700 transition-colors">
+            Webinars
+          </Link>
           <Link href="/faq" className="hover:text-gray-700 transition-colors">
             FAQ
           </Link>

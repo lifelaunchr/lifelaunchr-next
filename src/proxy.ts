@@ -14,6 +14,8 @@ const isPublicRoute = createRouteMatcher([
   '/privacy',
   '/safety',            // public "How we keep teens safe" info page
   '/families',          // public "For families" page (referral, no direct sign-up)
+  '/blog(.*)',          // public blog (Sanity-backed)
+  '/webinars(.*)',      // public webinar replays (Sanity-backed)
   '/upgrade',           // public upsell page
   '/tutorials',         // public video walkthrough library
   '/join(.*)',          // counselor invite acceptance landing
