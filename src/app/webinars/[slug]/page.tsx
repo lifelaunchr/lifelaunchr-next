@@ -43,6 +43,16 @@ export default async function WebinarPage({ params }: { params: Promise<{ slug: 
         )}
         {webinar.summary && <p className="text-base text-gray-700 leading-relaxed mb-6">{webinar.summary}</p>}
         <PortableBody value={webinar.body} />
+        {webinar.transcript?.length ? (
+          <details className="mt-10 border-t border-gray-200 pt-6">
+            <summary className="cursor-pointer select-none text-sm font-semibold text-blue-700 hover:text-blue-900">
+              Transcript
+            </summary>
+            <div className="mt-5">
+              <PortableBody value={webinar.transcript} />
+            </div>
+          </details>
+        ) : null}
       </main>
     </div>
   )

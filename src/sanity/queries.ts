@@ -32,6 +32,7 @@ export type WebinarCard = {
 
 export type Webinar = WebinarCard & {
   body?: PortableTextBlock[]
+  transcript?: PortableTextBlock[]
 }
 
 // ---- Queries ----
@@ -54,5 +55,5 @@ export const webinarsQuery = groq`*[_type == "webinar" && defined(slug.current)]
 export const webinarSlugsQuery = groq`*[_type == "webinar" && defined(slug.current)].slug.current`
 
 export const webinarQuery = groq`*[_type == "webinar" && slug.current == $slug][0]{
-  _id, title, "slug": slug.current, summary, date, videoUrl, mainImage, body
+  _id, title, "slug": slug.current, summary, date, videoUrl, mainImage, body, transcript
 }`
