@@ -6,14 +6,14 @@ import PageHeader from '@/components/blog/PageHeader'
 import PortableBody from '@/components/blog/PortableBody'
 import { client } from '@/sanity/client'
 import { urlFor } from '@/sanity/image'
-import { postQuery, postSlugsQuery, type Post } from '@/sanity/queries'
+import { postQuery, type Post } from '@/sanity/queries'
 
-export const revalidate = 60
-
-export async function generateStaticParams() {
-  const slugs = await client.fetch<string[]>(postSlugsQuery)
-  return slugs.map((slug) => ({ slug }))
-}
+// Rendered dynamically: the root layout calls headers() (Clerk satellite-domain
+// detection), which forces dynamic rendering app-wide. Declaring this route
+// static (revalidate + generateStaticParams) makes on-demand generation of a
+// not-yet-prerendered post throw DYNAMIC_SERVER_USAGE. force-dynamic renders
+// each request server-side (Sanity CDN keeps it fast) and shows new posts instantly.
+export const dynamic = 'force-dynamic'
 
 function fmtDate(d?: string) {
   if (!d) return ''

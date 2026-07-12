@@ -5,14 +5,12 @@ import PageHeader from '@/components/blog/PageHeader'
 import PortableBody from '@/components/blog/PortableBody'
 import VideoEmbed from '@/components/blog/VideoEmbed'
 import { client } from '@/sanity/client'
-import { webinarQuery, webinarSlugsQuery, type Webinar } from '@/sanity/queries'
+import { webinarQuery, type Webinar } from '@/sanity/queries'
 
-export const revalidate = 60
-
-export async function generateStaticParams() {
-  const slugs = await client.fetch<string[]>(webinarSlugsQuery)
-  return slugs.map((slug) => ({ slug }))
-}
+// Rendered dynamically — see the note in blog/[slug]/page.tsx. The root layout's
+// headers() call forces dynamic rendering, so a static/ISR declaration here would
+// make on-demand rendering of a not-yet-prerendered webinar throw DYNAMIC_SERVER_USAGE.
+export const dynamic = 'force-dynamic'
 
 function fmtDate(d?: string) {
   if (!d) return ''

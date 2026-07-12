@@ -6,7 +6,7 @@ import { client } from '@/sanity/client'
 import { urlFor } from '@/sanity/image'
 import { postsQuery, type PostCard } from '@/sanity/queries'
 
-export const revalidate = 60
+export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
   title: 'Blog',
