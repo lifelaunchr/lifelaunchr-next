@@ -311,17 +311,31 @@ export default function Home() {
             <h2 className="text-2xl font-bold text-gray-900 text-center mb-8">
               From counselors using Soar
             </h2>
-            <figure className="rounded-xl bg-white border border-gray-200 px-6 py-6 shadow-sm">
-              <blockquote className="text-gray-800 leading-relaxed">
-                &ldquo;It&rsquo;s helped me go deeper. The surface-level first hour is gone, my
-                students have already answered those questions, so now we start where the real
-                conversation begins.&rdquo;
-              </blockquote>
-              <figcaption className="mt-4 text-sm text-gray-600">
-                <span className="font-semibold text-gray-900">Ranna Patel</span>, College Admissions
-                Consultant
-              </figcaption>
-            </figure>
+            <div className="space-y-5">
+              <figure className="rounded-xl bg-white border border-gray-200 px-6 py-6 shadow-sm">
+                <blockquote className="text-gray-800 leading-relaxed">
+                  &ldquo;It&rsquo;s helped me go deeper. The surface-level first hour is gone, my
+                  students have already answered those questions, so now we start where the real
+                  conversation begins.&rdquo;
+                </blockquote>
+                <figcaption className="mt-4 text-sm text-gray-600">
+                  <span className="font-semibold text-gray-900">Ranna Patel</span>, College
+                  Admissions Consultant, San Francisco Bay Area
+                </figcaption>
+              </figure>
+              <figure className="rounded-xl bg-white border border-gray-200 px-6 py-6 shadow-sm">
+                <blockquote className="text-gray-800 leading-relaxed">
+                  &ldquo;A student with a 3.0 wanted a professional sales program, practice rooms
+                  without a music major, and Greek life. I didn&rsquo;t even know where to start.
+                  Not only did I get the answer, I learned about an entire niche of college life
+                  I&rsquo;d never heard of.&rdquo;
+                </blockquote>
+                <figcaption className="mt-4 text-sm text-gray-600">
+                  <span className="font-semibold text-gray-900">Kelly Hertzig</span>, Independent
+                  Educational Consultant, San Jose, CA
+                </figcaption>
+              </figure>
+            </div>
           </div>
         </section>
 
