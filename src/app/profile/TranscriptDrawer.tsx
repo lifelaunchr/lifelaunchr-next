@@ -598,7 +598,7 @@ export default function TranscriptDrawer({
                       <div style={{ fontWeight: 600, fontSize: '0.82rem', color: '#0c1b33' }}>{proj.subject}</div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                          {proj.completed_years} / {proj.projected_years} yr{proj.projected_years !== 1 ? 's' : ''} projected
+                          {proj.completed_years} completed / {proj.projected_years} projected
                         </span>
                         <StatusChip status={proj.status} />
                       </div>
