@@ -624,6 +624,9 @@ export default function TranscriptDrawer({
                 <h3 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 700, color: '#0c1b33' }}>UC/CSU A-G Requirements</h3>
                 <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>(California)</span>
               </div>
+              <div style={{ marginBottom: 10, fontSize: '0.72rem', color: '#64748b', lineHeight: 1.5, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 11px' }}>
+                These requirements count only courses completed with a letter grade of <strong>C or better</strong>. D, F, and Pass/Credit (P/CR) grades aren&rsquo;t counted. Some colleges may accept Pass/Credit grades, so check each college&rsquo;s policy.
+              </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {AG_ROWS.map(({ key, label, required, detail }) => {
                   const cat = analysis.ag_requirements?.[key]
