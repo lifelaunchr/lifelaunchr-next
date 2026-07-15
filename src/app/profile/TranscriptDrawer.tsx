@@ -57,8 +57,7 @@ export interface TranscriptAnalysis {
     weighted_capped?: number | null
     overall_unweighted?: number | null
     overall_weighted?: number | null
-    school_reported_unweighted?: number | null
-    school_reported_weighted?: number | null
+    school_reported_gpas?: { label: string; value: number | null }[]
     data_quality?: string
     notes?: string
   }
@@ -461,36 +460,27 @@ export default function TranscriptDrawer({
                 {qualityBadge(analysis.gpa.data_quality)}
               </div>
 
-              {/* School-reported GPA — transcribed verbatim from the transcript; the number families recognize */}
-              {(analysis.gpa.school_reported_unweighted != null || analysis.gpa.school_reported_weighted != null) && (
+              {/* School-reported GPA(s) — transcribed verbatim from the transcript with the school's own labels; the numbers families recognize */}
+              {Array.isArray(analysis.gpa.school_reported_gpas) && analysis.gpa.school_reported_gpas.length > 0 && (
                 <div style={{ marginBottom: 10 }}>
                   <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 5 }}>
                     School-Reported
                   </div>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
                     <tbody>
-                      {analysis.gpa.school_reported_unweighted != null && (
-                        <tr style={{ borderBottom: analysis.gpa.school_reported_weighted != null ? '1px solid #f1f5f9' : undefined }}>
-                          <td style={{ padding: '7px 10px', color: '#374151' }}>Unweighted</td>
+                      {analysis.gpa.school_reported_gpas.map((g, i) => (
+                        <tr key={i} style={{ borderBottom: i < (analysis.gpa?.school_reported_gpas?.length ?? 0) - 1 ? '1px solid #f1f5f9' : undefined }}>
+                          <td style={{ padding: '7px 10px', color: '#374151' }}>{g.label}</td>
                           <td style={{ padding: '7px 10px', textAlign: 'center', fontWeight: 700, color: '#374151' }}>
-                            {fmt(analysis.gpa.school_reported_unweighted)}
+                            {fmt(g.value)}
                           </td>
                           <td style={{ padding: '7px 10px', color: '#9ca3af', fontSize: '0.72rem' }}>As printed on the transcript</td>
                         </tr>
-                      )}
-                      {analysis.gpa.school_reported_weighted != null && (
-                        <tr>
-                          <td style={{ padding: '7px 10px', color: '#374151' }}>Weighted</td>
-                          <td style={{ padding: '7px 10px', textAlign: 'center', fontWeight: 700, color: '#374151' }}>
-                            {fmt(analysis.gpa.school_reported_weighted)}
-                          </td>
-                          <td style={{ padding: '7px 10px', color: '#9ca3af', fontSize: '0.72rem' }}>As printed on the transcript</td>
-                        </tr>
-                      )}
+                      ))}
                     </tbody>
                   </table>
                   <div style={{ marginTop: 4, fontSize: '0.7rem', color: '#9ca3af', lineHeight: 1.4, fontStyle: 'italic' }}>
-                    The school&rsquo;s official GPA. Our computed figures below may differ — they exclude PE/health, and the UC/CSU figures use UC&rsquo;s A-G, whole-letter methodology.
+                    The school&rsquo;s official GPA(s), exactly as printed. Our computed figures below may differ — they exclude PE/health, and the UC/CSU figures use UC&rsquo;s A-G, whole-letter methodology.
                   </div>
                 </div>
               )}
