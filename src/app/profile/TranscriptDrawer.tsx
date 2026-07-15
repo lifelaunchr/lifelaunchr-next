@@ -57,6 +57,8 @@ export interface TranscriptAnalysis {
     weighted_capped?: number | null
     overall_unweighted?: number | null
     overall_weighted?: number | null
+    school_reported_unweighted?: number | null
+    school_reported_weighted?: number | null
     data_quality?: string
     notes?: string
   }
@@ -326,7 +328,7 @@ export default function TranscriptDrawer({
           {sameInstitutionWarning && (
             <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '12px 14px', marginBottom: 16, fontSize: '0.82rem', color: '#92400e' }}>
               <div style={{ fontWeight: 600, marginBottom: 4 }}>⚠ Possible duplicate institution</div>
-              <div>You already have a transcript from <strong>{sameInstitutionWarning.institution_name}</strong>. For the same school, the most recent transcript usually contains all prior coursework. Both are kept — the analysis combines them. You can delete the older one if it's redundant.</div>
+              <div>You already have a transcript from <strong>{sameInstitutionWarning.institution_name}</strong>. For the same school, the most recent transcript usually contains all prior coursework. Both are kept — the analysis combines them. You can delete the older one if it&rsquo;s redundant.</div>
               <button onClick={onDismissSameInstitutionWarning} style={{ marginTop: 8, background: 'none', border: 'none', color: '#92400e', textDecoration: 'underline', cursor: 'pointer', fontSize: '0.78rem', padding: 0 }}>
                 Dismiss
               </button>
@@ -458,6 +460,40 @@ export default function TranscriptDrawer({
                 <h3 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 700, color: '#0c1b33' }}>GPA</h3>
                 {qualityBadge(analysis.gpa.data_quality)}
               </div>
+
+              {/* School-reported GPA — transcribed verbatim from the transcript; the number families recognize */}
+              {(analysis.gpa.school_reported_unweighted != null || analysis.gpa.school_reported_weighted != null) && (
+                <div style={{ marginBottom: 10 }}>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 5 }}>
+                    School-Reported
+                  </div>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                    <tbody>
+                      {analysis.gpa.school_reported_unweighted != null && (
+                        <tr style={{ borderBottom: analysis.gpa.school_reported_weighted != null ? '1px solid #f1f5f9' : undefined }}>
+                          <td style={{ padding: '7px 10px', color: '#374151' }}>Unweighted</td>
+                          <td style={{ padding: '7px 10px', textAlign: 'center', fontWeight: 700, color: '#374151' }}>
+                            {fmt(analysis.gpa.school_reported_unweighted)}
+                          </td>
+                          <td style={{ padding: '7px 10px', color: '#9ca3af', fontSize: '0.72rem' }}>As printed on the transcript</td>
+                        </tr>
+                      )}
+                      {analysis.gpa.school_reported_weighted != null && (
+                        <tr>
+                          <td style={{ padding: '7px 10px', color: '#374151' }}>Weighted</td>
+                          <td style={{ padding: '7px 10px', textAlign: 'center', fontWeight: 700, color: '#374151' }}>
+                            {fmt(analysis.gpa.school_reported_weighted)}
+                          </td>
+                          <td style={{ padding: '7px 10px', color: '#9ca3af', fontSize: '0.72rem' }}>As printed on the transcript</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                  <div style={{ marginTop: 4, fontSize: '0.7rem', color: '#9ca3af', lineHeight: 1.4, fontStyle: 'italic' }}>
+                    The school&rsquo;s official GPA. Our computed figures below may differ — they exclude PE/health, and the UC/CSU figures use UC&rsquo;s A-G, whole-letter methodology.
+                  </div>
+                </div>
+              )}
 
               {/* Overall GPA */}
               {(analysis.gpa.overall_unweighted != null || analysis.gpa.overall_weighted != null) && (
