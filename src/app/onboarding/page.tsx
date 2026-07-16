@@ -12,6 +12,16 @@ const ACCOUNT_TYPES = [
   { value: 'parent', label: 'Parent / guardian', emoji: '👪', desc: 'I\'m supporting a student' },
 ]
 
+// Public registration (allowlist OFF) opens self-signup to counselors only — families
+// stay invite-only. Invited students/parents never reach this picker (they're routed by
+// account_type from their invite), so restricting the options here only affects un-invited
+// self-signups. Same env flag that gates the home-page CTA; a no-op while the allowlist is on.
+const COUNSELOR_ROLE_VALUES = ['school_counselor', 'iec', 'admissions_coach']
+const PUBLIC_SIGNUP = process.env.NEXT_PUBLIC_CLERK_ALLOWLIST_ENABLED !== 'true'
+const SIGNUP_ACCOUNT_TYPES = PUBLIC_SIGNUP
+  ? ACCOUNT_TYPES.filter((t) => COUNSELOR_ROLE_VALUES.includes(t.value))
+  : ACCOUNT_TYPES
+
 const US_STATES = [
   'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA',
   'KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ',
@@ -688,7 +698,7 @@ export default function OnboardingPage() {
             <div className="mb-6">
               <p className="text-sm font-semibold text-gray-700 mb-3">I am a…</p>
               <div className="flex flex-col gap-2">
-                {ACCOUNT_TYPES.map((t) => (
+                {SIGNUP_ACCOUNT_TYPES.map((t) => (
                   <button
                     key={t.value}
                     onClick={() => {
@@ -714,6 +724,12 @@ export default function OnboardingPage() {
                   </button>
                 ))}
               </div>
+              {PUBLIC_SIGNUP && (
+                <p className="mt-3 text-xs text-gray-500">
+                  Student or parent? You&rsquo;ll get access to Soar through your counselor.{' '}
+                  <a href="/families" className="text-indigo-600 hover:underline">Learn more &rarr;</a>
+                </p>
+              )}
             </div>
 
             {/* School counselor: state + school lookup */}
