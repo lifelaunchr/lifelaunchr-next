@@ -17,15 +17,15 @@ interface PriceTier {
 // Keep in sync with Stripe if prices ever change, but ideally the live fetch below takes over.
 const FALLBACK_TIERS_MONTHLY: PriceTier[] = [
   { unit_amount: 0,    flat_amount: 0,      up_to: 3  },
-  { unit_amount: 5.99, flat_amount: 29.95,  up_to: 25 },
-  { unit_amount: 4.99, flat_amount: 0,      up_to: 75 },
-  { unit_amount: 3.99, flat_amount: 0,      up_to: null },
+  { unit_amount: 6.99, flat_amount: 29.99,  up_to: 25 },
+  { unit_amount: 5.99, flat_amount: 0,      up_to: 75 },
+  { unit_amount: 4.99, flat_amount: 0,      up_to: null },
 ]
 const FALLBACK_TIERS_ANNUAL: PriceTier[] = [
   { unit_amount: 0,     flat_amount: 0,       up_to: 3  },
-  { unit_amount: 59.90, flat_amount: 299.50,  up_to: 25 },
-  { unit_amount: 49.90, flat_amount: 0,       up_to: 75 },
-  { unit_amount: 39.90, flat_amount: 0,       up_to: null },
+  { unit_amount: 69.90, flat_amount: 299.90,  up_to: 25 },
+  { unit_amount: 59.90, flat_amount: 0,       up_to: 75 },
+  { unit_amount: 49.90, flat_amount: 0,       up_to: null },
 ]
 
 // Graduated: tiers apply progressively; flat fee charged once per tier entered.

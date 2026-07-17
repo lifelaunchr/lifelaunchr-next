@@ -6,7 +6,7 @@ import SessionsInfoButton from '@/components/billing/SessionsInfoButton'
 export const metadata: Metadata = {
   title: 'Plans & Pricing — Soar',
   description:
-    'The AI college and career planning platform for IECs and school counselors. Free to start, with beta pricing locked in permanently when you upgrade now. Students and families join through their counselor.',
+    'The AI college and career planning platform for IECs and school counselors. Free to start, with simple per-student pricing as you grow. Students and families join through their counselor.',
 }
 
 const SUPPORT_EMAIL = 'help@withsoar.ai'
@@ -107,7 +107,7 @@ const FAQS = [
   },
   {
     q: 'Is there a HECA discount?',
-    a: "Yes, after the beta. HECA members receive roughly 15% off the standard post-beta per-student rate. During the beta, everyone pays the beta rates, which are already below the coming standard price.",
+    a: "Yes. HECA members receive 15% off for as long as they maintain HECA membership. Email help@withsoar.ai to request your discount code, then enter it at checkout. We may verify membership from time to time.",
   },
 ]
 
@@ -194,7 +194,7 @@ export default function UpgradePage() {
                   <td style={{ ...cell, fontWeight: 600, color: '#374151' }}>Price</td>
                   <td style={{ ...cell, textAlign: 'center', color: '#374151' }}>Free</td>
                   <td style={{ ...cell, textAlign: 'center', background: '#f0f9ff', color: '#0369a1', fontWeight: 600 }}>
-                    $29.95/mo + per student
+                    $29.99/mo + per student
                   </td>
                 </tr>
                 {COUNSELOR_FEATURES.map((row) => (
@@ -214,7 +214,7 @@ export default function UpgradePage() {
           </p>
           <CounselorCheckout />
           <div style={{ marginTop: 16, background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '14px 18px', fontSize: '0.875rem', color: '#92400e', lineHeight: 1.65 }}>
-            <strong>Beta pricing, locked in forever.</strong> Upgrade now and your rate is guaranteed for as long as you remain subscribed. When we raise prices at public launch, yours stays the same. After the beta, the standard per-student rate will be $6.95/month, and HECA members receive roughly 15% off that standard rate, so subscribing now locks in savings before prices go up.
+            <strong>HECA members save 15%.</strong> If you&apos;re a HECA member, you&apos;re entitled to 15% off for as long as you maintain your membership. Email <a href="mailto:help@withsoar.ai" style={{ color: '#92400e', textDecoration: 'underline' }}>help@withsoar.ai</a> to request your discount code, then enter it at checkout. (We may verify membership from time to time.)
           </div>
           <div style={{ marginTop: 16, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '16px 20px' }}>
             <p style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0c1b33', marginBottom: 10 }}>
