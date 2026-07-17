@@ -374,7 +374,7 @@ export default function OnboardingPage() {
       setError('Please select or enter your school name.'); return
     }
     if (needsOrg && !selectedTenant) {
-      setError('Please select your practice from the list.'); return
+      setError('Please enter your practice name.'); return
     }
     if (isStudent) {
       setStep(2)
@@ -447,8 +447,15 @@ export default function OnboardingPage() {
       })
 
       if (!syncRes.ok) {
-        const body = await syncRes.text().catch(() => '(unreadable)')
-        throw new Error(`auth/sync failed: ${syncRes.status} — ${body}`)
+        // Intentional, actionable errors (e.g. a taken practice name) come back as a
+        // structured 409 { detail: { code, message } } — surface the message, not a raw dump.
+        const raw = await syncRes.text().catch(() => '')
+        let msg = ''
+        try {
+          const err = JSON.parse(raw)
+          msg = err?.detail?.message || (typeof err?.detail === 'string' ? err.detail : '')
+        } catch { /* not JSON — fall through */ }
+        throw new Error(msg || `auth/sync failed: ${syncRes.status} — ${raw || '(unreadable)'}`)
       }
 
       // For students: save profile + college wishlist if provided
@@ -825,27 +832,32 @@ export default function OnboardingPage() {
                     <input
                       value={tenantQuery}
                       onChange={(e) => { setTenantQuery(e.target.value); setTenantResults([]) }}
-                      placeholder="Search for your practice…"
+                      placeholder="Enter your practice name…"
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
                     />
                     {searchingTenant && <p className="text-xs text-gray-400 mt-1">Searching…</p>}
                     {(tenantResults.length > 0 || tenantQuery.length >= 2) && (
                       <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-52 overflow-y-auto">
-                        {tenantResults.map((t) => (
-                          <button
-                            key={t.id}
-                            onClick={() => { setSelectedTenant(t); setTenantResults([]); setTenantQuery('') }}
-                            className="w-full text-left px-3 py-2.5 hover:bg-indigo-50 border-b border-gray-100 last:border-0"
-                          >
-                            <p className="text-sm font-medium text-gray-800">{t.display_name}</p>
-                          </button>
-                        ))}
-                        {!searchingTenant && tenantQuery.length >= 2 && (
+                        {/* Self-signup always creates a NEW practice — existing practices are
+                            shown as "taken" warnings, not selectable. Colleagues join an existing
+                            practice via the tenant-admin "invite a colleague" flow. */}
+                        {tenantResults.length > 0 && (
+                          <div className="px-3 py-2 border-b border-gray-100 bg-amber-50">
+                            <p className="text-xs text-amber-700 font-medium">
+                              Already in use — please choose a different name. Joining a colleague&rsquo;s practice? Ask them to invite you.
+                            </p>
+                            {tenantResults.map((t) => (
+                              <p key={t.id} className="text-xs text-gray-500 mt-1">{t.display_name}</p>
+                            ))}
+                          </div>
+                        )}
+                        {!searchingTenant && tenantQuery.length >= 2 &&
+                         !tenantResults.some((t) => t.display_name.trim().toLowerCase() === tenantQuery.trim().toLowerCase()) && (
                           <button
                             onClick={() => { setSelectedTenant({ id: null, display_name: tenantQuery.trim() }); setTenantResults([]); setTenantQuery('') }}
                             className="w-full text-left px-3 py-2.5 hover:bg-indigo-50 text-indigo-600"
                           >
-                            <p className="text-sm font-medium">➕ Add &ldquo;{tenantQuery.trim()}&rdquo; as a new practice</p>
+                            <p className="text-sm font-medium">➕ Use &ldquo;{tenantQuery.trim()}&rdquo; as your practice name</p>
                           </button>
                         )}
                       </div>
