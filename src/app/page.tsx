@@ -325,10 +325,8 @@ export default function Home() {
               </figure>
               <figure className="rounded-xl bg-white border border-gray-200 px-6 py-6 shadow-sm">
                 <blockquote className="text-gray-800 leading-relaxed">
-                  &ldquo;A student with a 3.0 wanted a professional sales program, practice rooms
-                  without a music major, and Greek life. I didn&rsquo;t even know where to start.
-                  Not only did I get the answer, I learned about an entire niche of college life
-                  I&rsquo;d never heard of.&rdquo;
+                  &ldquo;I jumped at the chance to differentiate my practice in a tangible way.
+                  Soar did that. It&rsquo;s made me a better professional than I was before.&rdquo;
                 </blockquote>
                 <figcaption className="mt-4 text-sm text-gray-600">
                   <span className="font-semibold text-gray-900">Kelly Hertzig</span>, Independent
