@@ -94,10 +94,6 @@ const FAQS = [
     a: "You'll see a clear message when you've reached your monthly limit. You can upgrade at any time, or wait for your sessions to reset at the start of your next billing cycle. If you're a student connected to a counselor, your counselor's plan also contributes sessions to your pool, so your effective limit is often higher than your own plan alone.",
   },
   {
-    q: 'What does "beta pricing locked in forever" actually mean?',
-    a: "If you upgrade during the beta period, your monthly rate is guaranteed for as long as you remain subscribed, even after we raise prices at public launch. If you cancel and resubscribe later, the rate in effect at that time applies. No tricks, no surprise increases, no fine print.",
-  },
-  {
     q: "What happens to my data if I downgrade or cancel?",
     a: "Your student profiles, college lists, and research history are always yours. If you need an export of your data, reach out to us at help@withsoar.ai and we'll make it happen.",
   },
