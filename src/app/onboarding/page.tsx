@@ -1204,6 +1204,10 @@ export default function OnboardingPage() {
               </div>
             </div>
 
+            <p className="text-xs text-gray-400 text-center mb-3 leading-relaxed">
+              Essay coaching (Common App, UC PIQ, Why Major/College) is off by default &mdash; you can turn it on per student anytime from their settings.
+            </p>
+
             <button
               onClick={handleInviteSubmit}
               disabled={invSubmitting}
