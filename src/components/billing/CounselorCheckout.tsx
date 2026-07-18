@@ -225,10 +225,10 @@ export default function CounselorCheckout() {
       marginTop: 20,
     }}>
       <p style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0c1b33', marginBottom: 4 }}>
-        Subscribe now — beta pricing locked in forever
+        Subscribe now
       </p>
       <p style={{ fontSize: '0.82rem', color: '#6b7280', marginBottom: 20, lineHeight: 1.5 }}>
-        $29.95/month + per-student fee. Volume discounts apply automatically.
+        $29.99/month + per-student fee. Volume discounts apply automatically.
         Annual billing — 2 months free.
       </p>
 
@@ -283,8 +283,8 @@ export default function CounselorCheckout() {
           />
           <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>
             {isAnnual
-              ? `students — $${marginalRate(tiers, count).toFixed(2)}/student/year (graduated) + $299.50 base/year`
-              : `students — $${marginalRate(tiers, count).toFixed(2)}/student (graduated) + $29.95 base`
+              ? `students — $${marginalRate(tiers, count).toFixed(2)}/student/year (graduated) + $299.90 base/year`
+              : `students — $${marginalRate(tiers, count).toFixed(2)}/student (graduated) + $29.99 base`
             }
           </span>
         </div>

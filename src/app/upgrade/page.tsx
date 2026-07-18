@@ -218,7 +218,6 @@ export default function UpgradePage() {
             </p>
             <ul style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 6 }}>
               {[
-                'Essay coaching modules (CommonApp personal statement, UC PIQs, Why essays)',
                 'Practice branding — your logo, colors, and custom assistant name',
                 'Custom SLA, FERPA compliance, and extended data retention',
                 'Enterprise / school district pricing',
