@@ -7,7 +7,6 @@ import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import Footer from '@/components/Footer'
 import CookieBanner from '@/components/CookieBanner'
-import BetaBanner from '@/components/BetaBanner'
 import VersionBanner from '@/components/VersionBanner'
 import './globals.css'
 
@@ -110,7 +109,6 @@ export default async function RootLayout({
       <html lang="en" suppressHydrationWarning>
         <body className={inter.className}>
           <VersionBanner buildId={buildId} />
-          <BetaBanner />
           {children}
           <Footer />
           <CookieBanner />

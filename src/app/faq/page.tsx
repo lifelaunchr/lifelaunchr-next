@@ -117,11 +117,9 @@ const faqs: { q: string; a: React.ReactNode; id?: string }[] = [
     a: (
       <>
         <p>
-          Soar is for IECs and school counselors. During our current private beta, counselors can
-          request access from the{' '}
-          <Link href="/" className="text-blue-600 hover:underline">home page</Link>, and we follow
-          up personally. Students and parents do not request access here. Their counselor invites
-          them directly with an invite link.
+          Soar is for IECs and school counselors. Counselors can get started free from the{' '}
+          <Link href="/" className="text-blue-600 hover:underline">home page</Link>. Students and
+          parents do not sign up here. Their counselor invites them directly with an invite link.
         </p>
         <p className="mt-3">
           If you are a student or parent working with a counselor who uses Soar, watch for that
@@ -138,19 +136,13 @@ const faqs: { q: string; a: React.ReactNode; id?: string }[] = [
         <p>Soar is free to get started, and you can do real work on the free tier from day one.</p>
         <ul className="mt-3 list-disc pl-5 space-y-1">
           <li><strong>Free:</strong> one counselor with up to three students and their parents, permanently free.</li>
-          <li><strong>Paid (private beta):</strong> $29.95/month per counselor seat, plus a per-student rate that steps down as you add students: $5.95/month each for students 4 through 25, $4.95 for students 26 through 75, and $3.95 for students 76 and up.</li>
+          <li><strong>Paid:</strong> $29.99/month per counselor seat, plus a per-student rate that steps down as you add students: $6.99/month each for students 4 through 25, $5.99 for students 26 through 75, and $4.99 for students 76 and up.</li>
           <li><strong>Annual billing:</strong> twelve months for the price of ten.</li>
         </ul>
         <p className="mt-3">
-          These are private-beta rates. If you subscribe during the beta, your rate locks in
-          permanently: whatever you pay now is what you always pay per student, for as long as you
-          keep your subscription, even after we raise prices.
-        </p>
-        <p className="mt-3">
-          After the beta, the standard per-student rate will be $6.95/month, and HECA members will
-          receive roughly 15% off that standard rate. Because beta rates come in below the standard
-          rate, subscribing now locks in savings before prices go up. For school or district pricing,
-          or to talk through the right plan for your practice, email us at{' '}
+          HECA members receive 15% off for as long as they maintain membership — email us for a
+          discount code and enter it at checkout. For school or district pricing, or to talk through
+          the right plan for your practice, email us at{' '}
           <a href="mailto:help@withsoar.ai" className="text-blue-600 hover:underline">help@withsoar.ai</a>.
         </p>
       </>
