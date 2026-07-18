@@ -9,6 +9,7 @@ import Footer from '@/components/Footer'
 import CookieBanner from '@/components/CookieBanner'
 import BetaBanner from '@/components/BetaBanner'
 import VersionBanner from '@/components/VersionBanner'
+import PendingInviteRedirect from '@/components/PendingInviteRedirect'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -111,6 +112,7 @@ export default async function RootLayout({
         <body className={inter.className}>
           <VersionBanner buildId={buildId} />
           <BetaBanner />
+          <PendingInviteRedirect />
           {children}
           <Footer />
           <CookieBanner />
