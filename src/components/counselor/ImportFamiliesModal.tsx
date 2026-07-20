@@ -510,6 +510,14 @@ export default function ImportFamiliesModal({ open, onClose, onSuccess, counselo
                 </table>
               </div>
 
+              {/* Reminder */}
+              {!done && (
+                <div className="rounded-md bg-amber-50 border border-amber-200 text-amber-900 text-xs px-3 py-2">
+                  Please review every row carefully before you continue — check names, emails, graduation years, and
+                  engagement types. Creating families sends invite emails immediately and can&apos;t be undone.
+                </div>
+              )}
+
               {/* Commit controls */}
               <div className="flex items-center justify-between pt-1">
                 <button onClick={() => setStep('map')} className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800" disabled={committing}>← Back</button>
