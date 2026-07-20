@@ -5,6 +5,7 @@ import { useAuth } from '@clerk/nextjs'
 import Link from 'next/link'
 import SafetyEventModal from '@/components/safety/SafetyEventModal'
 import AddFamilyModal from '@/components/counselor/AddFamilyModal'
+import ImportFamiliesModal from '@/components/counselor/ImportFamiliesModal'
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -589,6 +590,7 @@ export default function DashboardPage() {
   const [archiveConfirm, setArchiveConfirm] = useState(false)
   const [archiving, setArchiving]   = useState(false)
   const [addFamilyOpen, setAddFamilyOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const [tenantCounselors, setTenantCounselors] = useState<{id: number; full_name: string}[] | null>(null)
 
   // Hydration guard (next#79): render the interactive dashboard only after mount, so the
@@ -808,6 +810,16 @@ export default function DashboardPage() {
           >
             + Add Family
           </button>
+
+          {/* Import from CSV — tenant admins only */}
+          {tenantCounselors && tenantCounselors.length > 0 && (
+            <button
+              onClick={() => setImportOpen(true)}
+              className="px-4 py-2 text-sm font-medium bg-white text-blue-700 border border-blue-600 rounded-lg hover:bg-blue-50"
+            >
+              Import from CSV
+            </button>
+          )}
 
           {/* Bulk archive */}
           {selected.size > 0 && (
@@ -1113,6 +1125,16 @@ export default function DashboardPage() {
         onSuccess={load}
         counselors={tenantCounselors && tenantCounselors.length > 0 ? tenantCounselors : undefined}
       />
+
+      {/* Import families modal — tenant admins only */}
+      {tenantCounselors && tenantCounselors.length > 0 && (
+        <ImportFamiliesModal
+          open={importOpen}
+          onClose={() => setImportOpen(false)}
+          onSuccess={load}
+          counselors={tenantCounselors}
+        />
+      )}
     </div>
   )
 }
