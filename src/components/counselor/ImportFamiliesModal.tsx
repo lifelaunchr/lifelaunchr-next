@@ -565,7 +565,7 @@ function CapacityBanner({ cap, valid, fits, overBy }: { cap: Capacity; valid: nu
   if (fits) {
     return (
       <div className="rounded-md bg-green-50 border border-green-200 text-green-800 text-sm px-3 py-2">
-        Importing {valid} student{valid === 1 ? '' : 's'} — your plan covers {cap.tenant_limit} ({cap.tenant_active} active now). You&apos;re within capacity.
+        Importing {valid} student{valid === 1 ? '' : 's'} — your plan covers {cap.tenant_limit} ({cap.tenant_active}{' '}active now). You&apos;re within capacity.
       </div>
     )
   }
