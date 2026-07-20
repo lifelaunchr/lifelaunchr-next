@@ -450,6 +450,8 @@ export default function ImportFamiliesModal({ open, onClose, onSuccess, counselo
                       <th className="px-2 py-2 text-left">Student</th>
                       <th className="px-2 py-2 text-left">Parent email(s)</th>
                       <th className="px-2 py-2 text-left">Grad</th>
+                      <th className="px-2 py-2 text-left">Engagement</th>
+                      <th className="px-2 py-2 text-left">Package</th>
                       <th className="px-2 py-2 text-left">Counselor</th>
                       <th className="px-2 py-2 text-left">Status</th>
                     </tr>
@@ -474,7 +476,24 @@ export default function ImportFamiliesModal({ open, onClose, onSuccess, counselo
                           <td className="px-2 py-1.5 align-top text-slate-600">
                             {[r.parent1_email, r.parent2_email].filter(Boolean).join(', ') || <span className="text-slate-300">—</span>}
                           </td>
-                          <td className="px-2 py-1.5 align-top text-slate-600">{r.graduation_year || '—'}</td>
+                          <td className="px-2 py-1.5 align-top">
+                            <input type="number" value={r.graduation_year ?? ''}
+                              onChange={e => setRow(i, { graduation_year: e.target.value ? parseInt(e.target.value, 10) : null })}
+                              className="w-16 border rounded px-1 py-1" placeholder="—" />
+                          </td>
+                          <td className="px-2 py-1.5 align-top">
+                            <select value={r.engagement_type || ''}
+                              onChange={e => setRow(i, { engagement_type: e.target.value || null })}
+                              className="border rounded px-1 py-1 max-w-[9rem]">
+                              <option value="">{defEngagement ? '(default)' : '—'}</option>
+                              {ENGAGEMENT_TYPES.filter(t => t.value).map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                            </select>
+                          </td>
+                          <td className="px-2 py-1.5 align-top">
+                            <input value={r.coaching_package_name || ''}
+                              onChange={e => setRow(i, { coaching_package_name: e.target.value || null })}
+                              className="w-28 border rounded px-1.5 py-1" placeholder={defPackage || '—'} />
+                          </td>
                           <td className="px-2 py-1.5 align-top text-slate-600">{cName}</td>
                           <td className="px-2 py-1.5 align-top">
                             {invalid ? <Badge tone="red">needs email</Badge>
