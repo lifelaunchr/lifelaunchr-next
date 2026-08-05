@@ -27,6 +27,7 @@ function AcceptInviteInner() {
   // Clerk session — corrupting an account or 500ing on a clerk_id collision.
   const [mismatch, setMismatch] = useState<{ inviteEmail: string; currentEmail: string } | null>(null)
   const [signingOut, setSigningOut] = useState(false)
+  const [signOutError, setSignOutError] = useState(false)
 
   useEffect(() => {
     if (!isLoaded) return
@@ -73,6 +74,7 @@ function AcceptInviteInner() {
         : '/accept-invite'
     const handleSignOut = async () => {
       setSigningOut(true)
+      setSignOutError(false)
       try {
         // Let Clerk own the post-sign-out navigation so the session cookie is fully
         // cleared BEFORE we land back on the invite. A manual reload here raced the
@@ -80,8 +82,10 @@ function AcceptInviteInner() {
         // still-present session cookie). redirectUrl clears then navigates atomically.
         await signOut({ redirectUrl: returnUrl })
       } catch {
-        // Fallback only if the SDK redirect didn't fire.
-        window.location.href = returnUrl
+        // The Clerk sign-out request failed (network error, or an ad blocker eating
+        // the request). Don't silently reload into a loop — surface a retryable error.
+        setSigningOut(false)
+        setSignOutError(true)
       }
     }
     return (
@@ -106,6 +110,12 @@ function AcceptInviteInner() {
           >
             {signingOut ? 'Signing out…' : 'Sign out & continue'}
           </button>
+          {signOutError && (
+            <p className="text-sm text-red-600 mt-3">
+              We couldn&apos;t sign you out just now — please try again. If it keeps happening,
+              disable any ad blocker for this site (or open the link in a private window) and retry.
+            </p>
+          )}
         </div>
       </main>
     )
