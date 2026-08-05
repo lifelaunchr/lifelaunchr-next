@@ -74,8 +74,13 @@ function AcceptInviteInner() {
     const handleSignOut = async () => {
       setSigningOut(true)
       try {
-        await signOut()
-      } finally {
+        // Let Clerk own the post-sign-out navigation so the session cookie is fully
+        // cleared BEFORE we land back on the invite. A manual reload here raced the
+        // sign-out and intermittently re-showed this screen (the reload re-read a
+        // still-present session cookie). redirectUrl clears then navigates atomically.
+        await signOut({ redirectUrl: returnUrl })
+      } catch {
+        // Fallback only if the SDK redirect didn't fire.
         window.location.href = returnUrl
       }
     }
