@@ -183,6 +183,12 @@ function EditPanel({
   const [parentsLoading, setParentsLoading] = useState(false)
   const [resendingParent, setResendingParent] = useState<number | null>(null)
   const [resentParent, setResentParent] = useState<number | null>(null)
+  const [showAddParent, setShowAddParent] = useState(false)
+  const [newParentName, setNewParentName] = useState('')
+  const [newParentEmail, setNewParentEmail] = useState('')
+  const [addingParent, setAddingParent] = useState(false)
+  const [addParentError, setAddParentError] = useState<string | null>(null)
+  const [addParentStatus, setAddParentStatus] = useState<string | null>(null)
 
   const set = (k: keyof DashboardStudent, v: unknown) =>
     setForm(p => ({ ...p, [k]: v }))
@@ -209,6 +215,53 @@ function EditPanel({
     return () => { cancelled = true }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [student.id])
+
+  const handleAddParent = async () => {
+    const name = newParentName.trim()
+    const email = newParentEmail.trim()
+    if (!name || !email) { setAddParentError('Name and email are required.'); return }
+    setAddingParent(true)
+    setAddParentError(null)
+    setAddParentStatus(null)
+    try {
+      const token = await getToken()
+      const res = await fetch(`${apiUrl}/admin/students/${student.id}/add-parent`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ full_name: name, email }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setAddParentError(typeof data.detail === 'string' ? data.detail : 'Could not add parent — please try again.')
+        return
+      }
+      // Reflect the new/linked parent in the list without a refetch.
+      setParents(prev => {
+        if (prev.some(x => x.id === data.parent_id)) return prev
+        return [...prev, {
+          id: data.parent_id,
+          full_name: data.full_name,
+          email: data.email,
+          clerk_user_id: data.status === 'connected' ? 'connected' : null,
+          invite_url: data.invite_url ?? null,
+        }]
+      })
+      const label = data.status === 'connected'
+        ? 'Already has an account — connected & notified'
+        : data.status === 'reactivated'
+        ? 'Account reactivated — invite sent'
+        : data.status === 'reinvited'
+        ? 'Invite re-sent'
+        : 'Invite sent'
+      setAddParentStatus(label)
+      setNewParentName('')
+      setNewParentEmail('')
+      setShowAddParent(false)
+      setTimeout(() => setAddParentStatus(null), 5000)
+    } finally {
+      setAddingParent(false)
+    }
+  }
 
   const save = async () => {
     setSaving(true)
@@ -463,13 +516,26 @@ function EditPanel({
           )}
 
           {/* Parents */}
-          {(parentsLoading || parents.length > 0) && (
           <section>
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Parents</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Parents</h3>
+              {!parentsLoading && !showAddParent && (
+                <button
+                  type="button"
+                  onClick={() => { setShowAddParent(true); setAddParentError(null); setAddParentStatus(null) }}
+                  className="text-xs px-2 py-1 rounded border border-green-300 text-green-700 hover:bg-green-50 font-medium"
+                >
+                  + Add parent
+                </button>
+              )}
+            </div>
             {parentsLoading ? (
               <p className="text-xs text-gray-400">Loading…</p>
             ) : (
               <div className="space-y-3">
+                {parents.length === 0 && !showAddParent && (
+                  <p className="text-xs text-gray-400">No parents linked yet.</p>
+                )}
                 {parents.map(p => (
                   <div key={p.id} className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
@@ -523,8 +589,49 @@ function EditPanel({
                 ))}
               </div>
             )}
+            {addParentStatus && (
+              <p className="mt-3 text-xs text-green-700 bg-green-50 border border-green-200 rounded px-2 py-1.5">{addParentStatus}</p>
+            )}
+            {showAddParent && (
+              <div className="mt-3 space-y-2 rounded-lg border border-gray-200 p-3 bg-gray-50">
+                <input
+                  type="text"
+                  value={newParentName}
+                  onChange={e => setNewParentName(e.target.value)}
+                  placeholder="Parent full name"
+                  className="w-full text-sm px-2.5 py-1.5 rounded border border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                />
+                <input
+                  type="email"
+                  value={newParentEmail}
+                  onChange={e => setNewParentEmail(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleAddParent() }}
+                  placeholder="parent@email.com"
+                  className="w-full text-sm px-2.5 py-1.5 rounded border border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                />
+                {addParentError && <p className="text-xs text-red-600">{addParentError}</p>}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleAddParent}
+                    disabled={addingParent}
+                    className="text-xs px-3 py-1.5 rounded bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {addingParent ? 'Adding…' : 'Add parent'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowAddParent(false); setNewParentName(''); setNewParentEmail(''); setAddParentError(null) }}
+                    disabled={addingParent}
+                    className="text-xs px-3 py-1.5 rounded border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+                <p className="text-[11px] text-gray-400">They&apos;ll get an email invite. If they already have an account, they&apos;ll just be connected.</p>
+              </div>
+            )}
           </section>
-          )}
         </div>
 
         {/* Footer */}
