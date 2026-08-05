@@ -111,10 +111,17 @@ function AcceptInviteInner() {
             {signingOut ? 'Signing out…' : 'Sign out & continue'}
           </button>
           {signOutError && (
-            <p className="text-sm text-red-600 mt-3">
-              We couldn&apos;t sign you out just now — please try again. If it keeps happening,
-              disable any ad blocker for this site (or open the link in a private window) and retry.
-            </p>
+            <div className="mt-4 text-sm text-slate-600 text-left bg-amber-50 border border-amber-200 rounded-md p-3">
+              <p className="mb-2">
+                We couldn&apos;t switch accounts automatically — a browser extension may be
+                blocking the sign-out.
+              </p>
+              <p>
+                The most reliable fix: open this invitation link in a new{' '}
+                <strong>private / incognito window</strong> and sign in as{' '}
+                <strong>{mismatch.inviteEmail}</strong> there. (Or just tap the button again.)
+              </p>
+            </div>
           )}
         </div>
       </main>
