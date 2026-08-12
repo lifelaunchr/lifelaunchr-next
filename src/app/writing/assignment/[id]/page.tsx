@@ -64,6 +64,21 @@ interface Assignment {
   section_key: string
   section_title: string
   responses: Response[]
+  prompt_set?: string | null            // app#181 — 'uc_piq' | 'commonapp' when a prompt must be chosen
+  prompt_options?: PromptOptions | null // canonical prompt list for prompt_set
+}
+
+interface PromptOption {
+  key: string
+  label: string
+  text: string
+}
+
+interface PromptOptions {
+  label: string
+  word_limit?: number
+  instructions?: string
+  prompts: PromptOption[]
 }
 
 interface Response {
@@ -76,6 +91,8 @@ interface Response {
   coach_notes: string | null
   coach_reviewed_at: string | null
   soar_observations?: string | null
+  selected_prompt_key?: string | null   // app#181
+  selected_prompt_text?: string | null
 }
 
 interface StructuredField {
@@ -104,6 +121,9 @@ function AssignmentPageInner() {
   const [assignment, setAssignment] = useState<Assignment | null>(null)
   const [schedulingLink, setSchedulingLink] = useState<string | null>(null)
   const [body, setBody] = useState('')
+  const [selectedPromptKey, setSelectedPromptKey] = useState('')  // app#181
+  const selectedPromptText =
+    assignment?.prompt_options?.prompts.find(p => p.key === selectedPromptKey)?.text || ''
   // For structured exercises: per-field answers keyed by field id
   const [structuredBody, setStructuredBody] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
@@ -158,6 +178,8 @@ function AssignmentPageInner() {
         } else {
           setBody(latest.content || '')
         }
+        // app#181: remember which canonical prompt this draft was answering
+        if (latest.selected_prompt_key) setSelectedPromptKey(latest.selected_prompt_key)
       }
       setLoading(false)
     }).catch(() => setLoading(false))
@@ -293,6 +315,11 @@ function AssignmentPageInner() {
       ? Object.values(structuredBody).some(v => v.trim())
       : body.trim()
     if (!hasContent) return
+    // app#181: prompt-set exercises require the student to pick which prompt first
+    if (assignment?.prompt_set && !selectedPromptKey) {
+      setError('Please choose which prompt you’re answering before saving.')
+      return
+    }
     const freshToken = await getToken()
     if (!freshToken) return
     setSaving(true)
@@ -305,7 +332,7 @@ function AssignmentPageInner() {
           Authorization: `Bearer ${freshToken}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content, selected_prompt_key: selectedPromptKey || undefined }),
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
@@ -322,6 +349,8 @@ function AssignmentPageInner() {
         submitted_at: data.response.submitted_at,
         coach_notes: null,
         coach_reviewed_at: null,
+        selected_prompt_key: selectedPromptKey || null,
+        selected_prompt_text: selectedPromptText || null,
       }
       setAssignment(prev => prev ? { ...prev, responses: [newResponse, ...prev.responses] } : prev)
       setSaved(true)
@@ -338,6 +367,11 @@ function AssignmentPageInner() {
     const hasContent = isStructured
       ? Object.values(structuredBody).some(v => v.trim())
       : body.trim()
+    // app#181: prompt-set exercises require the student to pick which prompt first
+    if (assignment?.prompt_set && !selectedPromptKey) {
+      setError('Please choose which prompt you’re answering before submitting.')
+      return
+    }
     const freshToken = await getToken()
     if (!freshToken) return
     setSubmitting(true)
@@ -349,7 +383,7 @@ function AssignmentPageInner() {
         const saveRes = await fetch(`${API}/writing/assignments/${assignmentId}/responses`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${freshToken}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content }),
+          body: JSON.stringify({ content, selected_prompt_key: selectedPromptKey || undefined }),
         })
         if (!saveRes.ok) {
           const err = await saveRes.json().catch(() => ({}))
@@ -366,6 +400,8 @@ function AssignmentPageInner() {
           submitted_at: saveData.response.submitted_at,
           coach_notes: null,
           coach_reviewed_at: null,
+          selected_prompt_key: selectedPromptKey || null,
+          selected_prompt_text: selectedPromptText || null,
         }
         setAssignment(prev => prev ? { ...prev, responses: [newResponse, ...prev.responses] } : prev)
       }
@@ -526,6 +562,13 @@ function AssignmentPageInner() {
                 </p>
               )}
             </div>
+            {/* app#181: which canonical prompt the student chose to answer */}
+            {latestResponse?.selected_prompt_text && (
+              <div className="mb-2 px-3 py-2 bg-violet-900/20 border border-violet-700/30 rounded-lg">
+                <p className="text-[11px] font-semibold text-violet-300 uppercase tracking-wider mb-0.5">Answering this prompt</p>
+                <p className="text-sm text-slate-200 leading-relaxed">{latestResponse.selected_prompt_text}</p>
+              </div>
+            )}
             {hasResponse ? (
               <div className="bg-slate-700/30 rounded-xl border border-slate-600/40 p-4 space-y-4">
                 {isStructuredEx ? (
@@ -972,7 +1015,35 @@ function AssignmentPageInner() {
                 ) : !isSubmitted && !isTimedWrite ? (
                   /* Free-write / synthesis exercise — single textarea */
                   <>
-                    {assignment.prompt_text && (
+                    {/* app#181: prompt picker — required for UC PIQ / Common App drafts */}
+                    {assignment.prompt_set && assignment.prompt_options && (
+                      <div className="space-y-2 bg-violet-900/15 border border-violet-700/30 rounded-xl p-4">
+                        <label className="block text-xs font-semibold text-violet-300 uppercase tracking-wider">
+                          Which prompt are you answering? <span className="text-red-400">*</span>
+                        </label>
+                        {assignment.prompt_options.instructions && (
+                          <p className="text-xs text-slate-400 leading-relaxed">{assignment.prompt_options.instructions}</p>
+                        )}
+                        <select
+                          value={selectedPromptKey}
+                          onChange={e => setSelectedPromptKey(e.target.value)}
+                          className="w-full bg-slate-800/70 border border-slate-700/60 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500/60"
+                        >
+                          <option value="">Choose a prompt…</option>
+                          {assignment.prompt_options.prompts.map(p => (
+                            <option key={p.key} value={p.key}>{p.label}</option>
+                          ))}
+                        </select>
+                        {selectedPromptText ? (
+                          <p className="text-sm text-slate-300 leading-relaxed bg-slate-800/40 rounded-lg p-3 border-l-2 border-violet-500/50">
+                            {selectedPromptText}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-amber-400/80">Pick your prompt before saving or submitting a draft.</p>
+                        )}
+                      </div>
+                    )}
+                    {assignment.prompt_text && !assignment.prompt_set && (
                       <p className="text-sm text-slate-400 bg-slate-800/30 rounded-lg p-3 leading-relaxed">
                         {assignment.prompt_text}
                       </p>
@@ -1053,6 +1124,11 @@ function AssignmentPageInner() {
                         {new Date(r.submitted_at).toLocaleDateString()}
                       </span>
                     </div>
+                    {r.selected_prompt_text && (
+                      <p className="text-xs text-slate-400 italic mb-2 border-l-2 border-violet-500/40 pl-2 leading-relaxed">
+                        {r.selected_prompt_text}
+                      </p>
+                    )}
                     {r.coach_notes && (
                       <div className="mb-2 px-3 py-2 bg-violet-900/20 border border-violet-700/30 rounded-lg">
                         <p className="text-xs text-violet-300 font-medium mb-0.5">Coach feedback</p>

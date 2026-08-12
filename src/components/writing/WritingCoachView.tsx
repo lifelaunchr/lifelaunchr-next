@@ -153,6 +153,8 @@ interface AssignmentResponse {
   coach_notes: string | null
   coach_reviewed_at: string | null
   soar_observations: string | null
+  selected_prompt_key?: string | null   // app#181
+  selected_prompt_text?: string | null
 }
 
 interface LibraryExercise {
@@ -688,6 +690,14 @@ function ReviewPanel({
                 </p>
               )}
             </div>
+
+            {/* app#181: which canonical prompt the student chose to answer */}
+            {latestResponse?.selected_prompt_text && (
+              <div className="mb-2 px-3 py-2 bg-violet-900/20 border border-violet-700/30 rounded-lg">
+                <p className="text-[11px] font-semibold text-violet-300 uppercase tracking-wider mb-0.5">Answering this prompt</p>
+                <p className="text-sm text-slate-200 leading-relaxed">{latestResponse.selected_prompt_text}</p>
+              </div>
+            )}
 
             {loadingResponses ? (
               <div className="flex items-center justify-center py-8">
