@@ -537,6 +537,33 @@ function ActivitiesContent() {
   const isWork     = ucCat === 'Work experience'
   const isExtra    = ucCat === 'Extracurricular activity'
 
+  // app#186 — Common App's new position/leadership Yes/No (+ conditional role).
+  // Shown for the activity types where a role is natural: Extracurricular, Work,
+  // and Volunteer/community service.
+  const positionField = (
+    <>
+      <Field label="Did you have a specific position or leadership role?">
+        <select
+          value={form.had_position == null ? '' : form.had_position ? 'yes' : 'no'}
+          onChange={e => pf({
+            had_position: e.target.value === '' ? null : e.target.value === 'yes',
+            ...(e.target.value === 'no' ? { role: '' } : {}),
+          })}
+          style={inp}
+        >
+          <option value="">Choose…</option>
+          <option value="yes">Yes</option>
+          <option value="no">No</option>
+        </select>
+      </Field>
+      {form.had_position && (
+        <Field label="What was your role?" hint="Your title or leadership position (max 50 characters)">
+          <input value={form.role || ''} maxLength={50} onChange={e => pf({ role: e.target.value })} placeholder="Captain, President, Shift Lead, Coordinator…" style={inp} />
+        </Field>
+      )}
+    </>
+  )
+
   return (
     <div style={{ minHeight: '100vh', background: '#f5f6fa', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
 
@@ -913,26 +940,8 @@ function ActivitiesContent() {
                 <Field label="Activity Name *">
                   <input value={form.organization || ''} onChange={e => pf({ organization: e.target.value })} placeholder="Varsity Soccer, Debate Club, Student Newspaper…" style={inp} />
                 </Field>
-                {/* app#186 — Common App now gates the role behind a Yes/No */}
-                <Field label="Did you have a specific position or leadership role?">
-                  <select
-                    value={form.had_position == null ? '' : form.had_position ? 'yes' : 'no'}
-                    onChange={e => pf({
-                      had_position: e.target.value === '' ? null : e.target.value === 'yes',
-                      ...(e.target.value === 'no' ? { role: '' } : {}),
-                    })}
-                    style={inp}
-                  >
-                    <option value="">Choose…</option>
-                    <option value="yes">Yes</option>
-                    <option value="no">No</option>
-                  </select>
-                </Field>
-                {form.had_position && (
-                  <Field label="What was your role?" hint="Your title or leadership position (max 50 characters)">
-                    <input value={form.role || ''} maxLength={50} onChange={e => pf({ role: e.target.value })} placeholder="Captain, President, Section Leader…" style={inp} />
-                  </Field>
-                )}
+                {/* app#186 — Common App position/leadership */}
+                {positionField}
                 <Field label="Grade(s) participated">
                   <GradeCheckboxes value={form.grade_levels || ''} onChange={v => pf({ grade_levels: v })} />
                 </Field>
@@ -976,6 +985,8 @@ function ActivitiesContent() {
                 <Field label="Describe the organization" hint="What does this org do? Who does it serve?">
                   <textarea value={form.organization_description || ''} onChange={e => pf({ organization_description: e.target.value })} rows={2} placeholder="A nonprofit that builds affordable housing for low-income families. Operates in 70 countries with over 2 million volunteers annually…" style={{ ...inp, resize: 'vertical' }} />
                 </Field>
+                {/* app#186 — Common App position/leadership */}
+                {positionField}
                 <Field label="Grade(s) volunteered">
                   <GradeCheckboxes value={form.grade_levels || ''} onChange={v => pf({ grade_levels: v })} />
                 </Field>
@@ -1005,9 +1016,8 @@ function ActivitiesContent() {
                 <Field label="Describe the company or organization" hint="What does the company do? Size, industry, etc.">
                   <textarea value={form.organization_description || ''} onChange={e => pf({ organization_description: e.target.value })} rows={2} placeholder="A regional dental practice with 3 dentists serving ~1,200 patients. Specializes in pediatric and family dentistry…" style={{ ...inp, resize: 'vertical' }} />
                 </Field>
-                <Field label="Job Title *">
-                  <input value={form.role || ''} onChange={e => pf({ role: e.target.value })} placeholder="Barista, Dental Assistant, Lawn Care Technician…" style={inp} />
-                </Field>
+                {/* app#186 — Common App position/leadership (was "Job Title") */}
+                {positionField}
                 <Field label="Grade(s) worked">
                   <GradeCheckboxes value={form.grade_levels || ''} onChange={v => pf({ grade_levels: v })} />
                 </Field>
