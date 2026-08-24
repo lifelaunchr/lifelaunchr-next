@@ -31,6 +31,7 @@ interface Activity {
   // CA-specific
   intend_to_continue?: boolean | null
   is_common_app_award?: boolean
+  had_position?: boolean | null   // app#186 — CA "specific position or leadership role?" Yes/No
 }
 
 interface FormState {
@@ -53,6 +54,7 @@ interface FormState {
   earnings_use?: string
   intend_to_continue?: boolean | null
   is_common_app_award?: boolean
+  had_position?: boolean | null   // app#186
 }
 
 interface ProposedActivity {
@@ -81,35 +83,41 @@ const UC_CATEGORIES = [
   'Work experience',
 ]
 
+// Common App activity types — current (2025–26) form list (app#186).
+// "Award or Honor" is intentionally NOT here: the new Common App has no such
+// activity type — honors are a separate CA section, flagged via is_common_app_award
+// (set from the UC "Award or Honor" category). Migration remaps old values → these.
 const CA_CATEGORIES = [
   'Academic',
   'Art',
-  'Athletics: Club',
-  'Athletics: JV/Varsity',
-  'Award or Honor',
-  'Career-Oriented',
-  'Community Service (Volunteer)',
-  'Computer/Technology',
+  'Athletics (JV or varsity)',
+  'Athletics (other)',
+  'Career readiness or practicums',
+  'Community service or volunteer work',
+  'Computer or technology',
   'Cultural',
   'Dance',
-  'Debate/Speech',
+  'Debate or speech',
+  'Employment or work (paid)',
   'Environmental',
-  'Family Responsibilities',
-  'Foreign Exchange',
-  'Journalism/Publication',
-  'Junior R.O.T.C.',
-  'LGBT',
-  'Music: Instrumental',
-  'Music: Vocal',
+  'Family responsibilities',
+  'Foreign language',
+  'Hobby',
+  'Internship',
+  'Journalism or publishing',
+  'LGBT+',
+  'Music',
   'Religious',
   'Research',
   'Robotics',
-  'School Spirit',
-  'Science/Math',
-  'Student Gov./Politics',
-  'Theater/Drama',
-  'Work (paid)',
-  'Other Club/Activity',
+  'R.O.T.C. or military',
+  'School spirit',
+  'Science or math',
+  'Social justice or organizing',
+  'Student government or politics',
+  'Study abroad or foreign exchange',
+  'Theater or drama',
+  'Other',
 ]
 
 const RECOGNITION_LEVELS = [
@@ -146,6 +154,7 @@ const BLANK: FormState = {
   earnings_use: '',
   intend_to_continue: null,
   is_common_app_award: false,
+  had_position: null,
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -308,6 +317,7 @@ function ActivitiesContent() {
       earnings_use: a.earnings_use || '',
       intend_to_continue: a.intend_to_continue ?? null,
       is_common_app_award: a.is_common_app_award ?? false,
+      had_position: a.had_position ?? null,
     })
     setSaveError(null); setModalOpen(true)
   }
@@ -327,7 +337,7 @@ function ActivitiesContent() {
         uc_category: form.uc_category.trim(),
         common_app_category: form.common_app_category || null,
         category: form.uc_category.trim(),
-        role: form.role?.trim() || null,
+        role: form.had_position === false ? null : (form.role?.trim() || null),
         organization: form.organization?.trim() || null,
         organization_description: form.organization_description?.trim() || null,
         description: form.description?.trim() || null,
@@ -343,6 +353,7 @@ function ActivitiesContent() {
         earnings_use: form.earnings_use?.trim() || null,
         intend_to_continue: form.intend_to_continue,
         is_common_app_award: form.is_common_app_award,
+        had_position: form.had_position ?? null,
       }
       const url = editingId
         ? `${apiUrl}/profile/activities/${editingId}`
@@ -830,7 +841,7 @@ function ActivitiesContent() {
               {/* ── UC Category (required) ── */}
               <div>
                 <label style={lbl}>UC Category *</label>
-                <select value={form.uc_category} onChange={e => pf({ uc_category: e.target.value })} style={inp}>
+                <select value={form.uc_category} onChange={e => pf({ uc_category: e.target.value, is_common_app_award: e.target.value === 'Award or Honor' })} style={inp}>
                   <option value="">Choose UC category…</option>
                   {UC_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
@@ -902,9 +913,26 @@ function ActivitiesContent() {
                 <Field label="Activity Name *">
                   <input value={form.organization || ''} onChange={e => pf({ organization: e.target.value })} placeholder="Varsity Soccer, Debate Club, Student Newspaper…" style={inp} />
                 </Field>
-                <Field label="Your Role / Position" hint="Your title or leadership role within this activity">
-                  <input value={form.role || ''} onChange={e => pf({ role: e.target.value })} placeholder="Captain, President, Section Leader, Staff Writer…" style={inp} />
+                {/* app#186 — Common App now gates the role behind a Yes/No */}
+                <Field label="Did you have a specific position or leadership role?">
+                  <select
+                    value={form.had_position == null ? '' : form.had_position ? 'yes' : 'no'}
+                    onChange={e => pf({
+                      had_position: e.target.value === '' ? null : e.target.value === 'yes',
+                      ...(e.target.value === 'no' ? { role: '' } : {}),
+                    })}
+                    style={inp}
+                  >
+                    <option value="">Choose…</option>
+                    <option value="yes">Yes</option>
+                    <option value="no">No</option>
+                  </select>
                 </Field>
+                {form.had_position && (
+                  <Field label="What was your role?" hint="Your title or leadership position (max 50 characters)">
+                    <input value={form.role || ''} maxLength={50} onChange={e => pf({ role: e.target.value })} placeholder="Captain, President, Section Leader…" style={inp} />
+                  </Field>
+                )}
                 <Field label="Grade(s) participated">
                   <GradeCheckboxes value={form.grade_levels || ''} onChange={v => pf({ grade_levels: v })} />
                 </Field>
