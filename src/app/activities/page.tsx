@@ -462,35 +462,54 @@ function ActivitiesContent() {
   }
   const handleDragEnd = () => { setDragSrcIndex(null); setDragOverIndex(null) }
 
-  // ── Hours sanity check ──────────────────────────────────────────────────────
-  // A typical week: 168 hrs total − 56 sleep − 35 school − 14 basic needs = ~63 free hrs during school year
-  // Summer: ~98 free hrs (no school). We warn at 50 / 80 to leave headroom.
+  // ── Hours sanity check (next#90) ────────────────────────────────────────────
+  // A typical week: 168 hrs total − 56 sleep − 35 school − 14 basic needs = ~63 free hrs
+  // during the school year (~98 in summer). We warn at 50 / 80 to leave headroom.
+  //
+  // Peak *concurrent* load per grade × season — NOT a cross-year total. Activities in
+  // different years never overlap, so summing them all over-counts badly (e.g. 10 hrs/wk
+  // in each of 9th–12th read as 40 concurrent hrs). We take the busiest single year for
+  // each season instead. Untagged activities (no grade_levels) count in every year (and
+  // we nudge the student to tag grades). "After 12th" is its own exact-match bucket.
   const SCHOOL_YEAR_WARN = 50
   const SUMMER_WARN = 80
 
-  const schoolYearHours = activities.reduce((sum, a) => {
-    if (a.timing === 'school_year' || a.timing === 'year_round') {
-      return sum + (Number(a.hours_per_week) || 0)
-    }
-    return sum
-  }, 0)
+  const gradesOf = (a: { grade_levels?: string }) =>
+    (a.grade_levels || '').split(',').map(s => s.trim()).filter(Boolean)
 
-  const summerHours = activities.reduce((sum, a) => {
-    if (a.timing === 'summer' || a.timing === 'year_round') {
-      return sum + (Number(a.hours_per_week) || 0)
-    }
-    return sum
-  }, 0)
+  // Max concurrent hrs/week in any single grade level for the given timing(s).
+  const concurrentMax = (timings: string[]) =>
+    GRADE_OPTIONS.reduce((max, g) => {
+      const perGrade = activities.reduce((sum, a) => {
+        const gl = gradesOf(a)
+        const inGrade = gl.length === 0 || gl.includes(g) // untagged → count in every year
+        return (timings.includes(a.timing || '') && inGrade)
+          ? sum + (Number(a.hours_per_week) || 0)
+          : sum
+      }, 0)
+      return Math.max(max, perGrade)
+    }, 0)
+
+  const schoolYearHours = concurrentMax(['school_year', 'year_round'])
+  const summerHours     = concurrentMax(['summer', 'year_round'])
+  const hasUntaggedHours = activities.some(
+    a => gradesOf(a).length === 0 && (Number(a.hours_per_week) || 0) > 0
+  )
 
   const hoursWarnings: string[] = []
   if (schoolYearHours > SCHOOL_YEAR_WARN) {
     hoursWarnings.push(
-      `School year: ${schoolYearHours} hrs/week across all activities — that's likely more than a realistic week allows (~${SCHOOL_YEAR_WARN} hrs free after school, sleep, and meals). Admissions officers may question these numbers.`
+      `School year: in your busiest year these total ${schoolYearHours} hrs/week if they overlap — likely more than a realistic week allows (~${SCHOOL_YEAR_WARN} hrs free after school, sleep, and meals). Worth double-checking before admissions officers do.`
     )
   }
   if (summerHours > SUMMER_WARN) {
     hoursWarnings.push(
-      `Summer: ${summerHours} hrs/week across all activities — this exceeds a realistic cap (~${SUMMER_WARN} hrs free after sleep and meals). Consider reviewing your estimates.`
+      `Summer: in your busiest summer these total ${summerHours} hrs/week if they overlap — above a realistic cap (~${SUMMER_WARN} hrs free after sleep and meals). Worth double-checking your estimates.`
+    )
+  }
+  if (hoursWarnings.length > 0 && hasUntaggedHours) {
+    hoursWarnings.push(
+      `Some activities have no grade levels tagged, so they're counted in every year and may be inflating this. Tag the grades on each activity for an accurate estimate.`
     )
   }
 
