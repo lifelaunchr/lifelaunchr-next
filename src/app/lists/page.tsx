@@ -33,6 +33,7 @@ interface CollegeEntry {
   relevant_merit_scholarships?: string | null
   coach_notes?: string | null
   parent_notes?: string | null
+  not_applying_reason?: string | null
   soar_research_summary?: string | null
   soar_summary_generated_at?: string | null
   student_note?: string | null
@@ -135,27 +136,49 @@ const LIKELIHOOD_LABELS: Record<string, string> = {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  researching: '#7c3aed',
-  considering: '#7c3aed',  // legacy alias for 'researching'
-  applying:    '#2563eb',
-  applied:     '#0891b2',
-  accepted:    '#16a34a',
-  denied:      '#6b7280',
-  waitlisted:  '#d97706',
-  deferred:    '#ea580c',
-  withdrawn:   '#9ca3af',
+  researching:  '#7c3aed',
+  considering:  '#7c3aed',  // legacy alias for 'researching'
+  not_applying: '#78716c',  // decided against — muted warm gray
+  applying:     '#2563eb',
+  applied:      '#0891b2',
+  accepted:     '#16a34a',
+  decided:      '#0d9488',  // enrolling / committed — set by the application tracker
+  denied:       '#6b7280',
+  waitlisted:   '#d97706',
+  deferred:     '#ea580c',
+  withdrawn:    '#9ca3af',
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  researching: 'Researching',
-  considering: 'Researching',  // legacy alias
-  applying:    'Applying',
-  applied:     'Applied',
-  accepted:    'Accepted',
-  denied:      'Denied',
-  waitlisted:  'Waitlisted',
-  deferred:    'Deferred',
-  withdrawn:   'Withdrawn',
+  researching:  'Researching',
+  considering:  'Researching',  // legacy alias
+  not_applying: 'Not applying',
+  applying:     'Applying',
+  applied:      'Applied',
+  accepted:     'Accepted',
+  decided:      'Enrolling',    // auto-set when the student commits (accepted + enrolled)
+  denied:       'Denied',
+  waitlisted:   'Waitlisted',
+  deferred:     'Deferred',
+  withdrawn:    'Withdrawn',
+}
+
+// Canonical, manually-selectable statuses (drives every college status <select>).
+// Excludes the legacy `considering` alias (displays as "Researching" but is not a
+// separate option) and `decided` (owned by the application tracker, never picked here).
+const STATUS_OPTIONS = [
+  'researching', 'not_applying', 'applying', 'applied',
+  'accepted', 'waitlisted', 'deferred', 'denied', 'withdrawn',
+]
+
+// Options for a status <select>. STATUS_OPTIONS omits `considering` (legacy alias)
+// and `decided` (auto-set by the application tracker), but a row that already holds
+// one of those must still show its correct label — so prepend the current value when
+// it's outside the canonical set.
+function statusOptionsFor(current?: string | null): string[] {
+  return current && !STATUS_OPTIONS.includes(current)
+    ? [current, ...STATUS_OPTIONS]
+    : STATUS_OPTIONS
 }
 
 const DEADLINE_TYPE_LABELS: Record<string, string> = {
@@ -175,8 +198,8 @@ const LIKELIHOOD_RANK: Record<string, number> = {
 }
 
 const STATUS_ORDER = [
-  'researching', 'considering', 'applying', 'applied', 'accepted',
-  'waitlisted', 'deferred', 'denied', 'withdrawn', 'decided',
+  'researching', 'considering', 'not_applying', 'applying', 'applied', 'accepted',
+  'decided', 'waitlisted', 'deferred', 'denied', 'withdrawn',
 ]
 
 function sortCollegeEntries(
@@ -217,47 +240,52 @@ function sortCollegeEntries(
 // ─────────────────────────────────────────────────────────────────────────────
 
 const SCHOLARSHIP_STATUS_COLORS: Record<string, string> = {
-  researching: '#7c3aed',
-  applying:    '#2563eb',
-  submitted:   '#0891b2',
-  awarded:     '#16a34a',
-  not_awarded: '#6b7280',
+  researching:  '#7c3aed',
+  not_applying: '#78716c',
+  applying:     '#2563eb',
+  submitted:    '#0891b2',
+  awarded:      '#16a34a',
+  not_awarded:  '#6b7280',
 }
 
 const SCHOLARSHIP_STATUS_LABELS: Record<string, string> = {
-  researching: 'Researching',
-  applying:    'Applying',
-  submitted:   'Submitted',
-  awarded:     'Awarded',
-  not_awarded: 'Not Awarded',
+  researching:  'Researching',
+  not_applying: 'Not applying',
+  applying:     'Applying',
+  submitted:    'Submitted',
+  awarded:      'Awarded',
+  not_awarded:  'Not Awarded',
 }
 
 const ENRICHMENT_STATUS_COLORS: Record<string, string> = {
-  researching: '#6b7280',
-  applying:    '#3b82f6',
-  submitted:   '#8b5cf6',
-  accepted:    '#10b981',
-  waitlisted:  '#f59e0b',
-  rejected:    '#ef4444',
-  attending:   '#059669',
-  enrolled:    '#10b981',
-  completed:   '#059669',
+  researching:  '#6b7280',
+  not_applying: '#78716c',
+  applying:     '#3b82f6',
+  submitted:    '#8b5cf6',
+  accepted:     '#10b981',
+  waitlisted:   '#f59e0b',
+  rejected:     '#ef4444',
+  attending:    '#059669',
+  enrolled:     '#10b981',
+  completed:    '#059669',
 }
 
 const ENRICHMENT_PROGRAM_STATUS_LABELS: Record<string, string> = {
-  researching: 'Researching',
-  applying:    'Applying',
-  submitted:   'Submitted',
-  accepted:    'Accepted',
-  waitlisted:  'Waitlisted',
-  rejected:    'Rejected',
-  attending:   'Attending',
+  researching:  'Researching',
+  not_applying: 'Not pursuing',
+  applying:     'Applying',
+  submitted:    'Submitted',
+  accepted:     'Accepted',
+  waitlisted:   'Waitlisted',
+  rejected:     'Rejected',
+  attending:    'Attending',
 }
 
 const ENRICHMENT_SERVICE_STATUS_LABELS: Record<string, string> = {
-  researching: 'Researching',
-  enrolled:    'Enrolled',
-  completed:   'Completed',
+  researching:  'Researching',
+  not_applying: 'Not pursuing',
+  enrolled:     'Enrolled',
+  completed:    'Completed',
 }
 
 // ─── Small UI helpers ─────────────────────────────────────────────────────────
@@ -885,8 +913,9 @@ function ScholarshipCardView({ entries, canWrite, onEdit, onDelete, onDrop }: Sc
   const [draggingId, setDraggingId] = useState<number | null>(null)
   const [dragOver, setDragOver] = useState<string | null>(null)
 
+  const notApplying = entries.filter((e) => e.status === 'not_applying')
   const researching = entries.filter((e) => e.status === 'researching')
-  const active      = entries.filter((e) => e.status !== 'researching')
+  const active      = entries.filter((e) => e.status !== 'researching' && e.status !== 'not_applying')
 
   const handleDragStart = (e: React.DragEvent, id: number) => {
     setDraggingId(id)
@@ -918,6 +947,33 @@ function ScholarshipCardView({ entries, canWrite, onEdit, onDelete, onDrop }: Sc
 
   return (
     <div style={{ display: 'flex', gap: 16 }}>
+      {/* Not applying column */}
+      <div
+        style={colStyle('not_applying')}
+        onDragOver={(e) => { e.preventDefault(); setDragOver('not_applying') }}
+        onDragLeave={() => setDragOver(null)}
+        onDrop={(e) => handleDrop(e, 'not_applying')}
+      >
+        <p style={{ margin: '0 0 12px', fontSize: '0.8rem', fontWeight: 700, color: '#78716c' }}>
+          Not applying ({notApplying.length})
+        </p>
+        {notApplying.map((e) => (
+          <ScholarshipCard
+            key={e.id}
+            entry={e}
+            canWrite={canWrite}
+            onEdit={() => onEdit(e)}
+            onDelete={() => onDelete(e.id)}
+            onDragStart={(ev) => handleDragStart(ev, e.id)}
+          />
+        ))}
+        {notApplying.length === 0 && (
+          <p style={{ color: '#d6d3d1', fontSize: '0.82rem', textAlign: 'center', margin: 0 }}>
+            Scholarships you&rsquo;ve decided against
+          </p>
+        )}
+      </div>
+
       {/* Researching column */}
       <div
         style={colStyle('researching')}
@@ -1526,8 +1582,9 @@ function EnrichmentCardView({ entries, canWrite, onEdit, onDelete, onDrop }: Enr
   const [draggingId, setDraggingId] = useState<number | null>(null)
   const [dragOver, setDragOver] = useState<string | null>(null)
 
+  const notApplying = entries.filter((e) => e.status === 'not_applying')
   const researching = entries.filter((e) => e.status === 'researching')
-  const active      = entries.filter((e) => e.status !== 'researching')
+  const active      = entries.filter((e) => e.status !== 'researching' && e.status !== 'not_applying')
 
   const handleDragStart = (e: React.DragEvent, id: number) => {
     setDraggingId(id)
@@ -1559,6 +1616,33 @@ function EnrichmentCardView({ entries, canWrite, onEdit, onDelete, onDrop }: Enr
 
   return (
     <div style={{ display: 'flex', gap: 16 }}>
+      {/* Not pursuing column */}
+      <div
+        style={colStyle('not_applying')}
+        onDragOver={(e) => { e.preventDefault(); setDragOver('not_applying') }}
+        onDragLeave={() => setDragOver(null)}
+        onDrop={(e) => handleDrop(e, 'not_applying')}
+      >
+        <p style={{ margin: '0 0 12px', fontSize: '0.8rem', fontWeight: 700, color: '#78716c' }}>
+          Not pursuing ({notApplying.length})
+        </p>
+        {notApplying.map((e) => (
+          <EnrichmentCard
+            key={e.id}
+            entry={e}
+            canWrite={canWrite}
+            onEdit={() => onEdit(e)}
+            onDelete={() => onDelete(e.id)}
+            onDragStart={(ev) => handleDragStart(ev, e.id)}
+          />
+        ))}
+        {notApplying.length === 0 && (
+          <p style={{ color: '#d6d3d1', fontSize: '0.82rem', textAlign: 'center', margin: 0 }}>
+            Programs you&rsquo;ve decided against
+          </p>
+        )}
+      </div>
+
       {/* Researching column */}
       <div
         style={colStyle('researching')}
@@ -2007,14 +2091,32 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
                     onChange={(e) => set('status', e.target.value)}
                     style={inputStyle}
                   >
-                    {Object.entries(STATUS_LABELS).map(([v, l]) => (
-                      <option key={v} value={v}>{l}</option>
+                    {statusOptionsFor(form.status || entry.status).map((v) => (
+                      <option key={v} value={v}>{STATUS_LABELS[v] || v}</option>
                     ))}
                   </select>
                 ) : (
                   <StatusBadge status={entry.status} />
                 )}
               </div>
+
+              {(form.status || entry.status) === 'not_applying' && (
+                <div style={fieldStyle}>
+                  <label style={labelStyle}>Why not applying (optional)</label>
+                  {(canWrite && !isParent) ? (
+                    <textarea
+                      value={form.not_applying_reason ?? entry.not_applying_reason ?? ''}
+                      onChange={(e) => set('not_applying_reason', e.target.value)}
+                      style={{ ...inputStyle, minHeight: 60, resize: 'vertical' }}
+                      placeholder="e.g. too expensive, wrong location, decided against after visiting"
+                    />
+                  ) : (
+                    entry.not_applying_reason
+                      ? <p style={{ margin: 0, fontSize: '0.85rem', color: '#374151' }}>{entry.not_applying_reason}</p>
+                      : <p style={{ margin: 0, fontSize: '0.82rem', color: '#9ca3af' }}>No reason noted.</p>
+                  )}
+                </div>
+              )}
 
               <div style={fieldStyle}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
@@ -2726,8 +2828,8 @@ function SpreadsheetView({ entries, canWrite, accountType, sortBy, sortDir, onSo
                         background: '#fff', cursor: 'pointer', outline: 'none',
                       }}
                     >
-                      {Object.entries(STATUS_LABELS).map(([v, l]) => (
-                        <option key={v} value={v}>{l}</option>
+                      {statusOptionsFor(e.status).map((v) => (
+                        <option key={v} value={v}>{STATUS_LABELS[v] || v}</option>
                       ))}
                     </select>
                   ) : (
@@ -2838,6 +2940,7 @@ function CardView({ entries, canWrite, accountType, onEdit, onDelete, onDrop }: 
 
   // 'considering' is a legacy alias for 'researching' — treat as researching
   const APPLYING_STATUSES = ['applying', 'applied', 'accepted', 'denied', 'waitlisted', 'deferred', 'withdrawn', 'decided']
+  const notApplying = entries.filter((e) => e.status === 'not_applying')
   const researching = entries.filter((e) => !e.status || e.status === 'researching' || e.status === 'considering')
   const applying    = entries.filter((e) => e.status && APPLYING_STATUSES.includes(e.status))
 
@@ -2865,6 +2968,34 @@ function CardView({ entries, canWrite, accountType, onEdit, onDelete, onDrop }: 
 
   return (
     <div style={{ display: 'flex', gap: 16 }}>
+      {/* Not applying column */}
+      <div
+        style={colStyle('not_applying')}
+        onDragOver={(e) => { e.preventDefault(); setDragOver('not_applying') }}
+        onDragLeave={() => setDragOver(null)}
+        onDrop={(e) => handleDrop(e, 'not_applying')}
+      >
+        <p style={{ margin: '0 0 12px', fontSize: '0.8rem', fontWeight: 700, color: '#78716c' }}>
+          Not applying ({notApplying.length})
+        </p>
+        {notApplying.map((e) => (
+          <CollegeCard
+            key={e.id}
+            entry={e}
+            onEdit={() => onEdit(e)}
+            onDelete={() => onDelete(e.id)}
+            canWrite={canWrite}
+            accountType={accountType}
+            onDragStart={(ev) => handleDragStart(ev, e.id)}
+          />
+        ))}
+        {notApplying.length === 0 && (
+          <p style={{ color: '#d6d3d1', fontSize: '0.82rem', textAlign: 'center', margin: 0 }}>
+            Schools you&rsquo;ve decided against
+          </p>
+        )}
+      </div>
+
       {/* Researching column */}
       <div
         style={colStyle('researching')}
@@ -3123,7 +3254,9 @@ function ListsContent() {
     const entry = scholarships.find((e) => e.id === entryId)
     if (!entry) return
     let newStatus: string
-    if (targetSide === 'applying' && entry.status === 'researching') {
+    if (targetSide === 'not_applying' && entry.status !== 'not_applying') {
+      newStatus = 'not_applying'
+    } else if (targetSide === 'applying' && (entry.status === 'researching' || entry.status === 'not_applying')) {
       newStatus = 'applying'
     } else if (targetSide === 'researching' && entry.status !== 'researching') {
       newStatus = 'researching'
@@ -3205,7 +3338,9 @@ function ListsContent() {
     const entry = enrichmentEntries.find((e) => e.id === entryId)
     if (!entry) return
     let newStatus: string
-    if (targetStatus === 'active' && entry.status === 'researching') {
+    if (targetStatus === 'not_applying' && entry.status !== 'not_applying') {
+      newStatus = 'not_applying'
+    } else if (targetStatus === 'active' && (entry.status === 'researching' || entry.status === 'not_applying')) {
       newStatus = entry.program_category === 'service' ? 'enrolled' : 'applying'
     } else if (targetStatus === 'researching' && entry.status !== 'researching') {
       newStatus = 'researching'
@@ -3221,7 +3356,9 @@ function ListsContent() {
     if (!entry) return
     // Map drop column to correct status
     let newStatus = targetStatus
-    if (targetStatus === 'applying' && entry.status === 'researching') {
+    if (targetStatus === 'not_applying' && entry.status !== 'not_applying') {
+      newStatus = 'not_applying'
+    } else if (targetStatus === 'applying' && (entry.status === 'researching' || entry.status === 'not_applying')) {
       newStatus = 'applying'
     } else if (targetStatus === 'researching' && entry.status !== 'researching') {
       newStatus = 'researching'
@@ -3388,6 +3525,9 @@ function ListsContent() {
               {entries.filter((e) => e.status && ['applying','applied','accepted','denied','waitlisted','deferred','withdrawn','decided'].includes(e.status)).length > 0
                 ? ` · ${entries.filter((e) => e.status && ['applying','applied','accepted','denied','waitlisted','deferred','withdrawn','decided'].includes(e.status)).length} applying`
                 : ''}
+              {entries.filter((e) => e.status === 'not_applying').length > 0
+                ? ` · ${entries.filter((e) => e.status === 'not_applying').length} not applying`
+                : ''}
             </p>
 
             {/* Main view */}
@@ -3422,6 +3562,9 @@ function ListsContent() {
               {scholarships.filter((e) => e.status === 'awarded').length > 0
                 ? ` · ${scholarships.filter((e) => e.status === 'awarded').length} awarded`
                 : ''}
+              {scholarships.filter((e) => e.status === 'not_applying').length > 0
+                ? ` · ${scholarships.filter((e) => e.status === 'not_applying').length} not applying`
+                : ''}
             </p>
 
             {/* Scholarship view */}
@@ -3449,6 +3592,9 @@ function ListsContent() {
               {enrichmentEntries.length} program{enrichmentEntries.length !== 1 ? 's' : ''} on this list
               {enrichmentEntries.filter((e) => e.status === 'accepted' || e.status === 'attending' || e.status === 'enrolled').length > 0
                 ? ` · ${enrichmentEntries.filter((e) => e.status === 'accepted' || e.status === 'attending' || e.status === 'enrolled').length} active/accepted`
+                : ''}
+              {enrichmentEntries.filter((e) => e.status === 'not_applying').length > 0
+                ? ` · ${enrichmentEntries.filter((e) => e.status === 'not_applying').length} not pursuing`
                 : ''}
             </p>
 
