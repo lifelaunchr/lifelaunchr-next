@@ -1,5 +1,5 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
-import { NextResponse } from 'next/server'
+import { NextResponse, type NextRequest, type NextFetchEvent } from 'next/server'
 
 /**
  * Public routes — accessible without signing in.
@@ -134,7 +134,7 @@ const clerkOptions = async (req: Request) => {
   return {}
 }
 
-export default clerkMiddleware(async (auth, req) => {
+const handler = clerkMiddleware(async (auth, req) => {
   const url = new URL(req.url)
 
   // ── MAINTENANCE MODE ──────────────────────────────────────────────────────
@@ -237,6 +237,18 @@ export default clerkMiddleware(async (auth, req) => {
     }
   }
 }, clerkOptions)
+
+// A CORS preflight (OPTIONS) carries no auth and never needs Clerk. On the
+// withsoar.ai satellite, running Clerk on a preflight hits the satellite
+// signInUrl validation and 500s — which is what our own auth-page footer
+// prefetches trigger when they redirect cross-origin (next#96). Answer OPTIONS
+// directly, before Clerk runs; real requests (GET/POST) go through Clerk as before.
+export default function middleware(req: NextRequest, ev: NextFetchEvent) {
+  if (req.method === 'OPTIONS') {
+    return new NextResponse(null, { status: 204 })
+  }
+  return handler(req, ev)
+}
 
 export const config = {
   matcher: [
