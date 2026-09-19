@@ -406,7 +406,7 @@ function AssignmentPageInner() {
       }
       if (!res.ok) {
         setSaveState('failed')
-        setSaveFailReason('Couldn’t reach the server. Your work is still on screen — keep this tab open.')
+        setSaveFailReason('Couldn’t reach the server.')
         return
       }
 
@@ -417,7 +417,7 @@ function AssignmentPageInner() {
       setSaveState('saved')
     } catch {
       setSaveState('failed')
-      setSaveFailReason('Couldn’t reach the server. Your work is still on screen — keep this tab open.')
+      setSaveFailReason('Couldn’t reach the server.')
     } finally {
       inFlightRef.current = false
     }
