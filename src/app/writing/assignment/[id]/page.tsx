@@ -66,6 +66,20 @@ interface Assignment {
   responses: Response[]
   prompt_set?: string | null            // app#181 — 'uc_piq' | 'commonapp' when a prompt must be chosen
   prompt_options?: PromptOptions | null // canonical prompt list for prompt_set
+  // app#182 — the open autosaved draft, deliberately NOT inside `responses`
+  // so nothing that reads responses[0] can mistake unfinished work for a
+  // submission. Null when the student has never typed, or has just submitted.
+  draft?: Draft | null
+}
+
+// app#182
+interface Draft {
+  id: number
+  content: string | null
+  structured_data: Record<string, string> | null
+  word_count: number | null
+  selected_prompt_key: string | null
+  updated_at: string
 }
 
 interface PromptOption {
@@ -127,7 +141,20 @@ function AssignmentPageInner() {
   // For structured exercises: per-field answers keyed by field id
   const [structuredBody, setStructuredBody] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
+
+  // ── Autosave (app#182) ─────────────────────────────────────────────────────
+  // 'failed' is deliberately sticky: it stays until a save succeeds. A student
+  // whose session quietly expired keeps typing into a page that looks fine, so
+  // a toast that fades is worse than useless here — the whole point is that
+  // they find out while they can still do something about it.
+  type SaveState = 'idle' | 'saving' | 'saved' | 'failed'
+  const [saveState, setSaveState] = useState<SaveState>('idle')
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
+  const [saveFailReason, setSaveFailReason] = useState<string | null>(null)
+  const dirtyRef = useRef(false)          // typed since the last successful save
+  const inFlightRef = useRef(false)       // one save at a time; the last write wins
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const draftLoadedRef = useRef(false)    // don't autosave the content we just restored
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'guide' | 'write' | 'history'>('guide')
@@ -166,8 +193,26 @@ function AssignmentPageInner() {
       setAssignment(a)
       setAccountType(usageData.account_type ?? null)
       if (usageData.scheduling_link) setSchedulingLink(usageData.scheduling_link)
+      // app#182 — an open autosaved draft is what the student was last
+      // working on, so it takes precedence over their last SUBMISSION.
+      // Submit clears the draft, so normally only one of these exists; when
+      // both do, the draft is strictly the later of the two.
+      if (a.draft && (a.draft.content || '').trim()) {
+        if (a.exercise_type === 'structured') {
+          try {
+            setStructuredBody(JSON.parse(a.draft.content || '{}') as Record<string, string>)
+          } catch {
+            setStructuredBody({})
+          }
+        } else {
+          setBody(a.draft.content || '')
+        }
+        if (a.draft.selected_prompt_key) setSelectedPromptKey(a.draft.selected_prompt_key)
+        setLastSavedAt(new Date(a.draft.updated_at))
+        setSaveState('saved')
+      }
       // Pre-populate write tab with most recent response (students only)
-      if (a.responses && a.responses.length > 0) {
+      else if (a.responses && a.responses.length > 0) {
         const latest = a.responses[0]
         if (a.exercise_type === 'structured' && latest.content) {
           try {
@@ -310,57 +355,108 @@ function AssignmentPageInner() {
   }
 
   async function handleSave() {
-    const isStructured = assignment?.exercise_type === 'structured'
-    const hasContent = isStructured
-      ? Object.values(structuredBody).some(v => v.trim())
-      : body.trim()
-    if (!hasContent) return
-    // app#181: prompt-set exercises require the student to pick which prompt first
-    if (assignment?.prompt_set && !selectedPromptKey) {
-      setError('Please choose which prompt you’re answering before saving.')
-      return
-    }
-    const freshToken = await getToken()
-    if (!freshToken) return
-    setSaving(true)
-    setError(null)
-    const content = isStructured ? JSON.stringify(structuredBody) : body
-    try {
-      const res = await fetch(`${API}/writing/assignments/${assignmentId}/responses`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${freshToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ content, selected_prompt_key: selectedPromptKey || undefined }),
-      })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error((err as { detail?: string }).detail || 'Save failed')
-      }
-      const data = await res.json()
-      // Add new response to top of list
-      const newResponse: Response = {
-        id: data.response.id,
-        content,
-        structured_data: null,
-        word_count: wordCount(body),
-        revision_number: data.response.revision_number,
-        submitted_at: data.response.submitted_at,
-        coach_notes: null,
-        coach_reviewed_at: null,
-        selected_prompt_key: selectedPromptKey || null,
-        selected_prompt_text: selectedPromptText || null,
-      }
-      setAssignment(prev => prev ? { ...prev, responses: [newResponse, ...prev.responses] } : prev)
-      setSaved(true)
-      setTimeout(() => setSaved(false), 3000)
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Save failed')
-    } finally {
-      setSaving(false)
-    }
+    // app#182: Save Draft now does exactly what autosave does — write the one
+    // open draft row — just without waiting for the debounce. Submit is the
+    // only thing that mints a revision, so revision numbers count submissions
+    // rather than however many times someone pressed a button.
+    await saveDraft({ immediate: true })
   }
+
+  // ── Autosave core (app#182) ────────────────────────────────────────────────
+  // Never creates a submission: PUT .../draft UPSERTs the single open draft.
+  const saveDraft = useCallback(async (opts?: { immediate?: boolean }) => {
+    if (!assignmentId) return
+    if (inFlightRef.current && !opts?.immediate) return
+
+    const isStructured = assignment?.exercise_type === 'structured'
+    const content = isStructured ? JSON.stringify(structuredBody) : body
+    // Nothing typed yet — don't create an empty draft row.
+    if (!content.trim()) return
+
+    inFlightRef.current = true
+    setSaveState('saving')
+
+    const attempt = async (tok: string) =>
+      fetch(`${API}/writing/assignments/${assignmentId}/draft`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${tok}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content,
+          selected_prompt_key: selectedPromptKey || undefined,
+        }),
+      })
+
+    try {
+      let tok = await getToken()
+      if (!tok) throw new Error('no-token')
+      let res = await attempt(tok)
+
+      // A 401 is usually a token that aged out mid-session, not a real
+      // sign-out. Refresh once and retry before alarming anyone — most
+      // "logged out" cases resolve here and the student never sees a warning.
+      if (res.status === 401) {
+        tok = await getToken({ skipCache: true })
+        if (tok) res = await attempt(tok)
+      }
+
+      if (res.status === 401 || res.status === 403) {
+        setSaveState('failed')
+        setSaveFailReason('Your session has expired. Sign in again in another tab, then press Save.')
+        return
+      }
+      if (!res.ok) {
+        setSaveState('failed')
+        setSaveFailReason('Couldn’t reach the server. Your work is still on screen — keep this tab open.')
+        return
+      }
+
+      const data = await res.json().catch(() => ({}))
+      dirtyRef.current = false
+      setLastSavedAt(data?.draft?.updated_at ? new Date(data.draft.updated_at) : new Date())
+      setSaveFailReason(null)
+      setSaveState('saved')
+    } catch {
+      setSaveState('failed')
+      setSaveFailReason('Couldn’t reach the server. Your work is still on screen — keep this tab open.')
+    } finally {
+      inFlightRef.current = false
+    }
+  }, [assignmentId, assignment?.exercise_type, body, structuredBody, selectedPromptKey, getToken])
+
+  // Debounced autosave: ~1.5s after typing stops.
+  useEffect(() => {
+    if (!assignment || accountType === 'counselor') return
+    // Don't fire on the content we just restored from the server — that would
+    // write the draft straight back and make "Saved" appear before any typing.
+    if (!draftLoadedRef.current) { draftLoadedRef.current = true; return }
+
+    dirtyRef.current = true
+    setSaveState(prev => (prev === 'failed' ? 'failed' : 'idle'))
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => { void saveDraft() }, 1500)
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+  }, [body, structuredBody, selectedPromptKey, assignment, accountType, saveDraft])
+
+  // Periodic flush — a slow, steady typer never stops for 1.5s, so the
+  // debounce alone could leave them unsaved indefinitely.
+  useEffect(() => {
+    if (!assignment || accountType === 'counselor') return
+    const id = setInterval(() => { if (dirtyRef.current) void saveDraft() }, 20000)
+    return () => clearInterval(id)
+  }, [assignment, accountType, saveDraft])
+
+  // Tab close with unsaved work: the browser's own prompt. No storage, no
+  // user identity, nothing that could be inherited by the next person to use
+  // this computer (see app#140 / app#170 — shared family machines are normal).
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!dirtyRef.current) return
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [])
 
   async function handleSubmitForReview() {
     const isStructured = assignment?.exercise_type === 'structured'
@@ -373,7 +469,12 @@ function AssignmentPageInner() {
       return
     }
     const freshToken = await getToken()
-    if (!freshToken) return
+    if (!freshToken) {
+      setSaveState('failed')
+      setSaveFailReason('Your session has expired, so this couldn’t be submitted. Sign in again in another tab, then press Submit.')
+      setError('Couldn’t submit — your session has expired.')
+      return
+    }
     setSubmitting(true)
     setError(null)
     try {
@@ -412,7 +513,10 @@ function AssignmentPageInner() {
         body: JSON.stringify({ status: 'submitted' }),
       })
       if (!patchRes.ok) throw new Error('Submit failed')
-      setAssignment(prev => prev ? { ...prev, status: 'submitted' } : prev)
+      setAssignment(prev => prev ? { ...prev, status: 'submitted', draft: null } : prev)
+      dirtyRef.current = false
+      setSaveState('idle')
+      setSaveFailReason(null)
       setActiveTab('history')
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Submit failed')
@@ -911,6 +1015,32 @@ function AssignmentPageInner() {
             {/* Write */}
             {activeTab === 'write' && (
               <div className="space-y-4">
+                {/* app#182 — autosave failure. Sticky on purpose: it stays until a
+                    save succeeds. The dangerous case is a session that expired
+                    quietly while the student kept writing, so this has to be
+                    something they cannot miss, not a toast that fades. */}
+                {saveState === 'failed' && !isSubmitted && (
+                  <div className="bg-amber-900/20 border border-amber-600/40 rounded-xl px-4 py-3 flex items-start gap-3">
+                    <span className="text-amber-400 text-sm leading-none mt-0.5">⚠</span>
+                    <div className="space-y-1">
+                      <p className="text-sm text-amber-200 font-medium">Not saving</p>
+                      <p className="text-xs text-amber-200/80 leading-relaxed">
+                        {saveFailReason || 'We can’t save your work right now.'}
+                        {lastSavedAt && (
+                          <> Your last saved version is from {lastSavedAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}.</>
+                        )}
+                        {' '}Don’t close this tab — what you’ve written is still here.
+                      </p>
+                      <button
+                        onClick={() => void saveDraft({ immediate: true })}
+                        className="text-xs text-amber-300 underline hover:text-amber-200 pt-0.5"
+                      >
+                        Try saving again
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Submitted state — show confirmation instead of editor */}
                 {isSubmitted && (
                   <div className="bg-slate-800/40 border border-slate-700/40 rounded-xl px-5 py-10 text-center space-y-3">
@@ -1074,7 +1204,18 @@ function AssignmentPageInner() {
                     </span>
 
                     <div className="flex items-center gap-3">
-                      {saved && <span className="text-xs text-green-400">Draft saved ✓ — submit when ready</span>}
+                      {/* app#182 — autosave status. 'failed' is sticky by design. */}
+                      {saveState === 'saving' && (
+                        <span className="text-xs text-slate-400 flex items-center gap-1.5">
+                          <div className="w-3 h-3 border-2 border-slate-500 border-t-transparent rounded-full animate-spin" />
+                          Saving…
+                        </span>
+                      )}
+                      {saveState === 'saved' && lastSavedAt && (
+                        <span className="text-xs text-green-400">
+                          Saved ✓ {lastSavedAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                        </span>
+                      )}
                       {error && <span className="text-xs text-red-400">{error}</span>}
                       {/* Save Draft hidden for timed writes — auto-saved at time's up */}
                       {!isTimedWrite && (
