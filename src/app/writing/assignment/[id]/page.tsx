@@ -159,6 +159,10 @@ function AssignmentPageInner() {
   // "did the effect run again" wrote a stray draft every time `assignment`
   // was replaced, including the setAssignment inside submit.
   const savedSnapshotRef = useRef<string | null>(null)
+  // A submitted assignment shows a confirmation instead of the editor. This
+  // flag is the student asking for the editor back, which the UI promised
+  // ("You can revise and resubmit using the Write tab") but never delivered.
+  const [reopened, setReopened] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'guide' | 'write' | 'history'>('guide')
@@ -562,6 +566,7 @@ function AssignmentPageInner() {
       dirtyRef.current = false
       setSaveState('idle')
       setSaveFailReason(null)
+      setReopened(false)
       setActiveTab('history')
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Submit failed')
@@ -845,6 +850,8 @@ function AssignmentPageInner() {
   const isComplete = assignment.status === 'complete'
   const isReviewed = assignment.status === 'reviewed' || isComplete
   const isSubmitted = assignment.status === 'submitted'
+  // Closed = show the confirmation; open = show the editor.
+  const editorClosed = isSubmitted && !reopened
 
   // Section back-link
   const backSection = SECTION_BACK[assignment.section_key] || ''
@@ -1064,7 +1071,7 @@ function AssignmentPageInner() {
                     save succeeds. The dangerous case is a session that expired
                     quietly while the student kept writing, so this has to be
                     something they cannot miss, not a toast that fades. */}
-                {saveState === 'failed' && !isSubmitted && (
+                {saveState === 'failed' && !editorClosed && (
                   <div className="bg-amber-900/20 border border-amber-600/40 rounded-xl px-4 py-3 flex items-start gap-3">
                     <span className="text-amber-400 text-sm leading-none mt-0.5">⚠</span>
                     <div className="space-y-1">
@@ -1087,7 +1094,7 @@ function AssignmentPageInner() {
                 )}
 
                 {/* Submitted state — show confirmation instead of editor */}
-                {isSubmitted && (
+                {editorClosed && (
                   <div className="bg-slate-800/40 border border-slate-700/40 rounded-xl px-5 py-10 text-center space-y-3">
                     <div className="text-3xl">📬</div>
                     <p className="text-sm font-semibold text-slate-200">Submitted for coach review</p>
@@ -1102,10 +1109,18 @@ function AssignmentPageInner() {
                         View your submission →
                       </button>
                     )}
+                    <div>
+                      <button
+                        onClick={() => setReopened(true)}
+                        className="text-sm text-slate-400 hover:text-slate-300 underline transition-colors"
+                      >
+                        Revise and resubmit
+                      </button>
+                    </div>
                   </div>
                 )}
                 {/* ── Timed write ── */}
-                {!isSubmitted && isTimedWrite && (
+                {!editorClosed && isTimedWrite && (
                   <>
                     {/* Not yet started and no previous draft — prompt back to Context tab */}
                     {!timerStarted && !isAlreadyDone && (
@@ -1164,7 +1179,7 @@ function AssignmentPageInner() {
                 )}
 
                 {/* Structured exercise — render each field as a labeled textarea */}
-                {!isSubmitted && !isTimedWrite && isStructured && schema ? (
+                {!editorClosed && !isTimedWrite && isStructured && schema ? (
                   <div className="space-y-8">
                     {schema.fields.map(field => (
                       <div key={field.id} className="space-y-2">
@@ -1187,7 +1202,7 @@ function AssignmentPageInner() {
                       </div>
                     ))}
                   </div>
-                ) : !isSubmitted && !isTimedWrite ? (
+                ) : !editorClosed && !isTimedWrite ? (
                   /* Free-write / synthesis exercise — single textarea */
                   <>
                     {/* app#181: prompt picker — required for UC PIQ / Common App drafts */}
@@ -1234,7 +1249,7 @@ function AssignmentPageInner() {
                 ) : null}
 
                 {/* Action bar — hidden during active countdown, and when not yet started on timed writes */}
-                {!isSubmitted && !(isTimedWrite && !timerStarted && !isAlreadyDone) && !(isTimedWrite && timerStarted && !timerDone) && (
+                {!editorClosed && !(isTimedWrite && !timerStarted && !isAlreadyDone) && !(isTimedWrite && timerStarted && !timerDone) && (
                   <div className="flex items-center justify-between">
                     <span className={`text-xs tabular-nums ${
                       !withinLimit ? 'text-red-400' : wc > 0 ? 'text-slate-400' : 'text-slate-600'
@@ -1345,6 +1360,7 @@ function AssignmentPageInner() {
                         } else {
                           setBody(r.content || '')
                         }
+                        setReopened(true)
                         setActiveTab('write')
                       }}
                       className="mt-2 text-xs text-violet-400 hover:text-violet-300"
