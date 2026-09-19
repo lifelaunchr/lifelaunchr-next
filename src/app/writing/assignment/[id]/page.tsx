@@ -154,7 +154,11 @@ function AssignmentPageInner() {
   const dirtyRef = useRef(false)          // typed since the last successful save
   const inFlightRef = useRef(false)       // one save at a time; the last write wins
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const draftLoadedRef = useRef(false)    // don't autosave the content we just restored
+  // What the server is known to already hold. Autosave fires when the editor
+  // differs from this — NOT merely because a re-render happened. Keying off
+  // "did the effect run again" wrote a stray draft every time `assignment`
+  // was replaced, including the setAssignment inside submit.
+  const savedSnapshotRef = useRef<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'guide' | 'write' | 'history'>('guide')
@@ -208,6 +212,14 @@ function AssignmentPageInner() {
           setBody(a.draft.content || '')
         }
         if (a.draft.selected_prompt_key) setSelectedPromptKey(a.draft.selected_prompt_key)
+        savedSnapshotRef.current = snapshotOf(
+          a.exercise_type === 'structured'
+            ? JSON.stringify(((): Record<string, string> => {
+                try { return JSON.parse(a.draft?.content || '{}') } catch { return {} }
+              })())
+            : (a.draft.content || ''),
+          a.draft.selected_prompt_key,
+        )
         setLastSavedAt(new Date(a.draft.updated_at))
         setSaveState('saved')
       }
@@ -225,6 +237,14 @@ function AssignmentPageInner() {
         }
         // app#181: remember which canonical prompt this draft was answering
         if (latest.selected_prompt_key) setSelectedPromptKey(latest.selected_prompt_key)
+        savedSnapshotRef.current = snapshotOf(
+          a.exercise_type === 'structured' && latest.content
+            ? JSON.stringify(((): Record<string, string> => {
+                try { return JSON.parse(latest.content) } catch { return {} }
+              })())
+            : (latest.content || ''),
+          latest.selected_prompt_key,
+        )
       }
       setLoading(false)
     }).catch(() => setLoading(false))
@@ -373,6 +393,14 @@ function AssignmentPageInner() {
     // Nothing typed yet — don't create an empty draft row.
     if (!content.trim()) return
 
+    // Already on the server, unchanged. The manual Save Draft button still
+    // goes through, so pressing it always produces a confirmation.
+    const snap = snapshotOf(content, selectedPromptKey)
+    if (!opts?.immediate && snap === savedSnapshotRef.current) {
+      dirtyRef.current = false
+      return
+    }
+
     inFlightRef.current = true
     setSaveState('saving')
 
@@ -411,6 +439,7 @@ function AssignmentPageInner() {
       }
 
       const data = await res.json().catch(() => ({}))
+      savedSnapshotRef.current = snap
       dirtyRef.current = false
       setLastSavedAt(data?.draft?.updated_at ? new Date(data.draft.updated_at) : new Date())
       setSaveFailReason(null)
@@ -426,9 +455,18 @@ function AssignmentPageInner() {
   // Debounced autosave: ~1.5s after typing stops.
   useEffect(() => {
     if (!assignment || accountType === 'counselor') return
-    // Don't fire on the content we just restored from the server — that would
-    // write the draft straight back and make "Saved" appear before any typing.
-    if (!draftLoadedRef.current) { draftLoadedRef.current = true; return }
+
+    // This effect re-runs whenever `assignment` is replaced, which happens for
+    // reasons that have nothing to do with typing — restoring a draft, and
+    // submitting. Treating those as edits queued a save that landed AFTER the
+    // submit had cleared the draft, minting a fresh draft row with no new work.
+    // So compare the content instead of trusting the re-run.
+    const content =
+      assignment.exercise_type === 'structured' ? JSON.stringify(structuredBody) : body
+    if (snapshotOf(content, selectedPromptKey) === savedSnapshotRef.current) {
+      dirtyRef.current = false
+      return
+    }
 
     dirtyRef.current = true
     setSaveState(prev => (prev === 'failed' ? 'failed' : 'idle'))
@@ -514,6 +552,13 @@ function AssignmentPageInner() {
       })
       if (!patchRes.ok) throw new Error('Submit failed')
       setAssignment(prev => prev ? { ...prev, status: 'submitted', draft: null } : prev)
+      // The submitted text is on the server; belt and braces alongside the
+      // content check in the debounce effect.
+      if (debounceRef.current) { clearTimeout(debounceRef.current); debounceRef.current = null }
+      savedSnapshotRef.current = snapshotOf(
+        isStructured ? JSON.stringify(structuredBody) : body,
+        selectedPromptKey,
+      )
       dirtyRef.current = false
       setSaveState('idle')
       setSaveFailReason(null)
@@ -1315,6 +1360,13 @@ function AssignmentPageInner() {
       </div>
     </div>
   )
+}
+
+// One string standing for "everything autosave would persist". Comparing this
+// against what the server last took is the only honest test of "is there
+// unsaved work" — a React dependency changing is not.
+function snapshotOf(content: string, promptKey: string | null | undefined): string {
+  return `${promptKey || ''}\u0000${content}`
 }
 
 export default function AssignmentPage() {
