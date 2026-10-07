@@ -210,7 +210,10 @@ function EssaysPageInner() {
 
   const [drafts, setDrafts] = useState<Assignment[]>([])
   const [draftsLoading, setDraftsLoading] = useState(false)
-  const [roundsUsed, setRoundsUsed] = useState(0)
+  // app#236 — null means Editate could not tell us. The backend deliberately sends null
+  // rather than a locally computed figure, because a wrong count that looks authoritative
+  // is what the bug was. Render "unavailable", never 0.
+  const [roundsUsed, setRoundsUsed] = useState<number | null>(0)
   const [reviewLimit, setReviewLimit] = useState(0)
 
   const [reviewModalOpen, setReviewModalOpen] = useState(false)
@@ -305,7 +308,7 @@ function EssaysPageInner() {
         if (res.ok) {
           const data = await res.json()
           setDrafts(data.assignments || [])
-          setRoundsUsed(data.rounds_used ?? 0)
+          setRoundsUsed(data.rounds_used ?? null)   // null = Editate unavailable (app#236)
           setReviewLimit(data.review_limit ?? 0)
         }
       } catch { /* ignore */ }
@@ -501,7 +504,9 @@ function EssaysPageInner() {
             <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-slate-200">
-                  Detailed Feedback Rounds: {roundsUsed} used of {effectiveReviewLimit}
+                  {roundsUsed === null
+                    ? `Detailed Feedback Rounds: usage unavailable \u2014 limit ${effectiveReviewLimit}`
+                    : `Detailed Feedback Rounds: ${roundsUsed} used of ${effectiveReviewLimit}`}
                 </span>
                 {(isStudent || isParent) && (
                   <button
@@ -512,17 +517,24 @@ function EssaysPageInner() {
                   </button>
                 )}
               </div>
-              {/* Progress bar */}
-              <div className="h-1.5 rounded-full bg-slate-700 overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-all"
-                  style={{
-                    width: `${Math.min(100, effectiveReviewLimit > 0 ? (roundsUsed / effectiveReviewLimit) * 100 : 0)}%`,
-                    background: roundsUsed >= effectiveReviewLimit ? '#f87171' : roundsUsed / effectiveReviewLimit >= 0.75 ? '#fbbf24' : '#7c3aed',
-                  }}
-                />
-              </div>
-              {roundsUsed >= effectiveReviewLimit && (
+              {/* Progress bar — hidden when we have no trustworthy figure to draw */}
+              {roundsUsed !== null && (
+                <div className="h-1.5 rounded-full bg-slate-700 overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{
+                      width: `${Math.min(100, effectiveReviewLimit > 0 ? (roundsUsed / effectiveReviewLimit) * 100 : 0)}%`,
+                      background: roundsUsed >= effectiveReviewLimit ? '#f87171' : roundsUsed / effectiveReviewLimit >= 0.75 ? '#fbbf24' : '#7c3aed',
+                    }}
+                  />
+                </div>
+              )}
+              {roundsUsed === null && (
+                <p className="text-xs text-slate-400">
+                  We couldn&apos;t reach Editate to check how many rounds have been used. Try again shortly.
+                </p>
+              )}
+              {roundsUsed !== null && roundsUsed >= effectiveReviewLimit && (
                 <p className="text-xs text-red-400">
                   You&apos;ve used all your included feedback rounds. Additional reviews are available — contact your coach.
                 </p>
