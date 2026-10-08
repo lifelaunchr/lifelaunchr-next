@@ -48,6 +48,9 @@ interface WritingAssignment {
   unit_title: string
   section_key: string
   section_title: string
+  section_order: number | null      // next#98 — curriculum sequence, not assignment time
+  unit_order: number | null
+  exercise_order: number | null
   latest_revision: number | null
   last_submitted_at: string | null
 }
@@ -1153,6 +1156,31 @@ function SelfDiscoveryTab({
 
 // ── Unit assignment list (Units 2–4 of Self-Discovery) ─────────────────────────
 
+
+// next#98 — "completed" means three different things on this page, and conflating them
+// hides the wrong work.
+//
+//   essay      submitted = waiting on the COACH, still outstanding for the student
+//              reviewed  = the coach's feedback is sitting there, and rereading it is one
+//                          of the main reasons a student comes back to this page
+//   reading    submitted and reviewed both render "Complete ✓" — genuinely done
+//   milestone  submitted and reviewed both render "Scheduled ✓" — genuinely done
+//
+// So a naive "hide everything green" would bury a student's feedback behind a checkbox
+// they would have to know to untick.
+function isFinished(a: WritingAssignment): boolean {
+  if (a.exercise_type === 'content' || a.exercise_type === 'milestone') {
+    return a.status === 'submitted' || a.status === 'reviewed'
+  }
+  return a.status === 'reviewed'
+}
+
+// Curriculum order: section, then unit, then exercise. Falls back to the assignment's own
+// position when a display_order is missing, so an unordered row never jumps to the front.
+function curriculumRank(a: WritingAssignment): [number, number, number] {
+  return [a.section_order ?? 9999, a.unit_order ?? 9999, a.exercise_order ?? 9999]
+}
+
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   assigned:    { label: 'Not started',  className: 'text-slate-500' },
   in_progress: { label: 'In progress',  className: 'text-amber-400' },
@@ -1213,6 +1241,9 @@ function AssignmentCard({ a, studentId }: { a: WritingAssignment; studentId?: st
           )}
         </div>
       </div>
+      {a.unit_title && (
+        <p className="text-xs text-slate-500 mt-0.5">{a.unit_title}</p>
+      )}
       {a.note_to_student && (
         <p className="text-xs text-slate-400 mt-1 italic">"{a.note_to_student}"</p>
       )}
@@ -1842,6 +1873,7 @@ function WritingPageInner() {
   const [usageData, setUsageData] = useState<UsageData | null>(null)
   const [studentDisplayName, setStudentDisplayName] = useState<string | null>(null)
   const [assignments, setAssignments] = useState<WritingAssignment[]>([])
+  const [hideCompleted, setHideCompleted] = useState(false)   // next#98
   const [loadingAssignments, setLoadingAssignments] = useState(true)
   const [assessmentDone, setAssessmentDone] = useState<boolean | null>(null)
   const [showAssessment, setShowAssessment] = useState(false)
@@ -2149,6 +2181,17 @@ function WritingPageInner() {
                   ? `${studentDisplayName ? studentDisplayName.split(' ')[0] + "'s" : 'Student'} Assignments`
                   : 'My Assignments'}
               </h2>
+              {assignments.some(isFinished) && (
+                <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={hideCompleted}
+                    onChange={e => setHideCompleted(e.target.checked)}
+                    className="accent-violet-500 cursor-pointer"
+                  />
+                  Hide completed
+                </label>
+              )}
               {isCounselor && forParam && (
                 <button
                   onClick={() => { window.location.href = '/writing' }}
@@ -2177,14 +2220,44 @@ function WritingPageInner() {
                 )}
               </div>
             ) : (
-              <div className="space-y-3">
-                {[...assignments]
-                  .sort((a, b) => {
-                    const order: Record<string, number> = { in_progress: 0, submitted: 1, assigned: 2, reviewed: 3, complete: 4 }
-                    return (order[a.status] ?? 99) - (order[b.status] ?? 99)
+              <div className="space-y-5">
+                {(() => {
+                  // next#98 — ordered by CURRICULUM, grouped by section, so a student
+                  // works top to bottom and the list does not reshuffle as they work.
+                  // Status used to be the entire sort; it is now only a badge.
+                  const visible = hideCompleted
+                    ? assignments.filter(a => !isFinished(a))
+                    : assignments
+                  const ordered = [...visible].sort((a, b) => {
+                    const ra = curriculumRank(a), rb = curriculumRank(b)
+                    for (let i = 0; i < 3; i++) if (ra[i] !== rb[i]) return ra[i] - rb[i]
+                    return a.assigned_at.localeCompare(b.assigned_at)
                   })
-                  .map(a => <AssignmentCard key={a.id} a={a} studentId={forParam} />)
-                }
+                  const sections: { title: string; items: WritingAssignment[] }[] = []
+                  for (const a of ordered) {
+                    const title = a.section_title || 'Assignments'
+                    const last = sections[sections.length - 1]
+                    if (last && last.title === title) last.items.push(a)
+                    else sections.push({ title, items: [a] })
+                  }
+                  if (sections.length === 0) {
+                    return (
+                      <p className="text-sm text-slate-500">
+                        Everything is finished. Untick &ldquo;Hide completed&rdquo; to see it again.
+                      </p>
+                    )
+                  }
+                  return sections.map(sec => (
+                    <div key={sec.title} className="space-y-3">
+                      <h3 className="text-[11px] uppercase tracking-widest text-slate-500 font-medium">
+                        {sec.title}
+                      </h3>
+                      {sec.items.map(a => (
+                        <AssignmentCard key={a.id} a={a} studentId={forParam} />
+                      ))}
+                    </div>
+                  ))
+                })()}
               </div>
             )}
           </div>
