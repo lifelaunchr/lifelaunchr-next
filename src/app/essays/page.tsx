@@ -213,7 +213,9 @@ function EssaysPageInner() {
   // app#236 — null means Editate could not tell us. The backend deliberately sends null
   // rather than a locally computed figure, because a wrong count that looks authoritative
   // is what the bug was. Render "unavailable", never 0.
-  const [roundsUsed, setRoundsUsed] = useState<number | null>(0)
+  // Starts null, not 0: until Editate answers we do not know the count, and 0 reads as
+  // "this student has done nothing" — the wrong guess in both directions (app#236).
+  const [roundsUsed, setRoundsUsed] = useState<number | null>(null)
   const [reviewLimit, setReviewLimit] = useState(0)
 
   const [reviewModalOpen, setReviewModalOpen] = useState(false)
@@ -310,8 +312,11 @@ function EssaysPageInner() {
           setDrafts(data.assignments || [])
           setRoundsUsed(data.rounds_used ?? null)   // null = Editate unavailable (app#236)
           setReviewLimit(data.review_limit ?? 0)
+        } else {
+          // A failed call must NOT leave a stale or default count on screen (app#236).
+          setRoundsUsed(null)
         }
-      } catch { /* ignore */ }
+      } catch { setRoundsUsed(null) }
       finally { setDraftsLoading(false) }
     }
     loadDrafts()
@@ -504,9 +509,11 @@ function EssaysPageInner() {
             <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-slate-200">
-                  {roundsUsed === null
-                    ? `Detailed Feedback Rounds: usage unavailable \u2014 limit ${effectiveReviewLimit}`
-                    : `Detailed Feedback Rounds: ${roundsUsed} used of ${effectiveReviewLimit}`}
+                  {roundsUsed !== null
+                    ? `Detailed Feedback Rounds: ${roundsUsed} used of ${effectiveReviewLimit}`
+                    : draftsLoading
+                      ? 'Detailed Feedback Rounds: checking\u2026'
+                      : `Detailed Feedback Rounds: usage unavailable \u2014 limit ${effectiveReviewLimit}`}
                 </span>
                 {(isStudent || isParent) && (
                   <button
@@ -529,7 +536,7 @@ function EssaysPageInner() {
                   />
                 </div>
               )}
-              {roundsUsed === null && (
+              {roundsUsed === null && !draftsLoading && (
                 <p className="text-xs text-slate-400">
                   We couldn&apos;t reach Editate to check how many rounds have been used. Try again shortly.
                 </p>
