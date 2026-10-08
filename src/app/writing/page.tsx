@@ -1244,8 +1244,17 @@ function AssignmentCard({ a, studentId }: { a: WritingAssignment; studentId?: st
       {a.unit_title && (
         <p className="text-xs text-slate-500 mt-0.5">{a.unit_title}</p>
       )}
+      {/* next#99 — clamped to two lines. A coach leaving detailed guidance produced a card
+          that dwarfed every other one; one real example was five lines of follow-up
+          questions sitting at the top of the list. The full note is on the assignment page,
+          which this card links to, rendered with whitespace-pre-wrap. The coach list has
+          clamped at one line all along — this matches that, with a line more for the
+          student, since the note is addressed to them.
+          The literal quote marks came off deliberately: line-clamp truncates with an
+          ellipsis, so the closing quote would be dropped and the text would read as though
+          it had been cut off mid-sentence. Italic already reads as a quotation. */}
       {a.note_to_student && (
-        <p className="text-xs text-slate-400 mt-1 italic">"{a.note_to_student}"</p>
+        <p className="text-xs text-slate-400 mt-1 italic line-clamp-2">{a.note_to_student}</p>
       )}
       {!isContent && !isMilestone && (
         <div className="flex items-center gap-3 mt-2">
