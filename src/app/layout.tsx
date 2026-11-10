@@ -28,7 +28,13 @@ export const metadata: Metadata = {
     'The AI college and career planning platform for IECs and school counselors. It keeps you in the loop and your students on track between sessions.',
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'https://withsoar.ai'),
   alternates: {
-    canonical: process.env.NEXT_PUBLIC_APP_URL ?? 'https://withsoar.ai',
+    // RELATIVE, so Next resolves it against metadataBase + the current pathname
+    // and every page canonicalises to ITSELF. This was an absolute homepage URL,
+    // and alternates.canonical is INHERITED by every page under this layout — so
+    // /faq, /upgrade, /families, every blog post and every webinar all declared
+    // https://withsoar.ai as their canonical, i.e. told Google they were
+    // duplicates of the homepage and should not be indexed (next#101).
+    canonical: './',
   },
   keywords: [
     'college planning',
@@ -44,7 +50,11 @@ export const metadata: Metadata = {
     title: 'Soar: the College Counselor\'s Edge in a World Run by AI',
     description:
       'The AI college and career planning platform for IECs and school counselors. It keeps you in the loop and your students on track between sessions.',
-    url: process.env.NEXT_PUBLIC_APP_URL ?? 'https://withsoar.ai',
+    // Relative for the same reason as alternates.canonical above: this is
+    // inherited, so a hardcoded homepage URL made every static marketing page
+    // share as if it were '/'. Blog posts and webinars set their own full
+    // openGraph block (next#101).
+    url: './',
     siteName: 'Soar',
     images: [
       {

@@ -24,12 +24,42 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params
   const post = await client.fetch<Post | null>(postQuery, { slug })
   if (!post) return {}
+
+  const title = post.seo?.metaTitle ?? post.title
+  const description = post.seo?.metaDescription ?? post.excerpt
+  // Fall back to the site card rather than emitting no image. A post with no
+  // mainImage previously defined no openGraph at all and so inherited the
+  // homepage's entire card — title, description and all.
+  const image = post.mainImage
+    ? urlFor(post.mainImage).width(1200).height(630).fit('crop').url()
+    : '/og-image.png?v=3'
+  const url = `/blog/${slug}`
+
   return {
-    title: post.seo?.metaTitle ?? post.title,
-    description: post.seo?.metaDescription ?? post.excerpt,
-    openGraph: post.mainImage
-      ? { images: [{ url: urlFor(post.mainImage).width(1200).height(630).fit('crop').url() }] }
-      : undefined,
+    title,
+    description,
+    alternates: { canonical: url },
+    // openGraph and twitter are REPLACED wholesale, not deep-merged, when a
+    // child route defines them — so each has to be stated in full here. The old
+    // version set only openGraph.images, which silently dropped the inherited
+    // url and type while leaving twitter untouched, so LinkedIn showed the
+    // post's image and X showed the Soar logo (next#101).
+    openGraph: {
+      title,
+      description,
+      url,
+      siteName: 'Soar',
+      type: 'article',
+      publishedTime: post.publishedAt,
+      authors: post.authorName ? [post.authorName] : undefined,
+      images: [{ url: image, width: 1200, height: 630, alt: post.title }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [image],
+    },
   }
 }
 

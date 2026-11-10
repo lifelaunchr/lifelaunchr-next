@@ -5,6 +5,7 @@ import PageHeader from '@/components/blog/PageHeader'
 import PortableBody from '@/components/blog/PortableBody'
 import VideoEmbed from '@/components/blog/VideoEmbed'
 import { client } from '@/sanity/client'
+import { urlFor } from '@/sanity/image'
 import { webinarQuery, type Webinar } from '@/sanity/queries'
 
 // Rendered dynamically — see the note in blog/[slug]/page.tsx. The root layout's
@@ -21,7 +22,37 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params
   const webinar = await client.fetch<Webinar | null>(webinarQuery, { slug })
   if (!webinar) return {}
-  return { title: webinar.title, description: webinar.summary }
+
+  // Returning only title + description meant the root layout's openGraph and
+  // twitter blocks were inherited WHOLE, so a shared webinar link showed the
+  // homepage headline, the homepage marketing line, the generic logo and
+  // og:url = https://withsoar.ai. The <title> was the only correct part, and
+  // no social network reads it (next#101).
+  const image = webinar.mainImage
+    ? urlFor(webinar.mainImage).width(1200).height(630).fit('crop').url()
+    : '/og-image.png?v=3'
+  const url = `/webinars/${slug}`
+
+  return {
+    title: webinar.title,
+    description: webinar.summary,
+    alternates: { canonical: url },
+    openGraph: {
+      title: webinar.title,
+      description: webinar.summary,
+      url,
+      siteName: 'Soar',
+      type: 'article',
+      publishedTime: webinar.date,
+      images: [{ url: image, width: 1200, height: 630, alt: webinar.title }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: webinar.title,
+      description: webinar.summary,
+      images: [image],
+    },
+  }
 }
 
 export default async function WebinarPage({ params }: { params: Promise<{ slug: string }> }) {
