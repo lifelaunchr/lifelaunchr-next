@@ -23,6 +23,14 @@ const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/api/version',       // build-version probe for the update banner (no auth, no PII) — next#85
+  // Public by definition: a crawler is never signed in. Both are route handlers
+  // (src/app/sitemap.ts, src/app/robots.ts), so they must RUN — they can't be
+  // skipped via the matcher's static-asset extension list below, which is why
+  // they are listed here rather than there. Without this they fell through to
+  // the unauthenticated redirect and served the homepage with a 307, so neither
+  // has ever been readable by a search engine (next#102).
+  '/sitemap.xml',
+  '/robots.txt',
 ])
 
 const MAINTENANCE_MODE = process.env.MAINTENANCE_MODE === 'true'
