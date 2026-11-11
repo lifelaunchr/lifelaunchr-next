@@ -85,6 +85,44 @@ function cleanText(html: string): string {
     .trim()
 }
 
+// next#100: Editate sends program-specific essays as a flat list in payload
+// order, so one program's essays are scattered through the whole thing — USC
+// has 65 across 16 programs and printed `Film & Television Production B.F.A.`
+// as a heading six separate times. Bucket them so each program is named once
+// with its own essays beneath it.
+//
+// The bucket key is program_name because that is all `/essays/prompts` sends.
+// The rows are keyed (slug, program_slug) in the database, but program_slug is
+// selected and then not emitted, so the uniqueness that constraint guarantees
+// is not visible here — see the row key below.
+interface ProgramBucket {
+  name: string // '' for entries Editate sent with no program
+  url: string
+  groups: EssayGroup[]
+}
+
+function groupByProgram(groups: EssayGroup[]): ProgramBucket[] {
+  const buckets = new Map<string, ProgramBucket>()
+  for (const g of groups) {
+    const name = g.program_name || ''
+    let bucket = buckets.get(name)
+    if (!bucket) {
+      bucket = { name, url: '', groups: [] }
+      buckets.set(name, bucket)
+    }
+    // Every row of one program should carry the same URL; take the first set.
+    if (!bucket.url && g.program_url) bucket.url = g.program_url
+    bucket.groups.push(g) // payload order preserved within a program
+  }
+  // Alphabetical so a student can find theirs. The unnamed bucket, if Editate
+  // ever sends one, trails rather than sorting to the top as an empty string.
+  return [...buckets.values()].sort((a, b) => {
+    if (!a.name) return 1
+    if (!b.name) return -1
+    return a.name.localeCompare(b.name)
+  })
+}
+
 // ── Sub-components ─────────────────────────────────────────────────────────
 
 function EssayGroupCard({ group }: { group: EssayGroup }) {
@@ -743,17 +781,24 @@ function EssaysPageInner() {
                         ))}
                       </CollapsibleSection>
 
+                      {/* Count stays the number of ESSAYS, not programs — that is
+                          what the student wants to know (next#100). */}
                       <CollapsibleSection label="Program-specific" count={school.program_supplements.length}>
-                        {school.program_supplements.map(g => (
-                          <div key={g.slug}>
-                            {g.program_name && (
+                        {groupByProgram(school.program_supplements).map(p => (
+                          <div key={p.name || '__no_program__'} className="mb-4 last:mb-0">
+                            {p.name && (
                               <div className="text-xs font-semibold text-violet-400 mb-1">
-                                {g.program_url
-                                  ? <a href={g.program_url} target="_blank" rel="noopener noreferrer" className="hover:text-violet-300 transition-colors">{g.program_name} ↗</a>
-                                  : g.program_name}
+                                {p.url
+                                  ? <a href={p.url} target="_blank" rel="noopener noreferrer" className="hover:text-violet-300 transition-colors">{p.name} ↗</a>
+                                  : p.name}
                               </div>
                             )}
-                            <EssayGroupCard group={g} />
+                            {p.groups.map((g, i) => (
+                              // NOT keyed on slug alone: since app#247 a slug can
+                              // legitimately repeat across programs (USC: 65 rows,
+                              // 50 distinct slugs), which gave React duplicate keys.
+                              <EssayGroupCard key={`${g.slug}:${i}`} group={g} />
+                            ))}
                           </div>
                         ))}
                       </CollapsibleSection>
