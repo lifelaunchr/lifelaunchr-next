@@ -3088,10 +3088,14 @@ interface CardViewProps {
   onEdit: (entry: CollegeEntry) => void
   onDelete: (id: number) => void
   onDrop: (entryId: number, targetStatus: string) => void
+  /** Show the testing line on each card. Only while a testing filter is active:
+   *  filtering a board and giving no reason a card matched is a half-feature,
+   *  and showing it on every card unfiltered is clutter on a drag-and-drop view. */
+  showTesting?: boolean
 }
 
-function CollegeCard({ entry, onEdit, onDelete, canWrite, accountType, onDragStart }:
-  { entry: CollegeEntry; onEdit: () => void; onDelete: () => void; canWrite: boolean; accountType: string; onDragStart: (e: React.DragEvent) => void }) {
+function CollegeCard({ entry, onEdit, onDelete, canWrite, accountType, onDragStart, showTesting }:
+  { entry: CollegeEntry; onEdit: () => void; onDelete: () => void; canWrite: boolean; accountType: string; onDragStart: (e: React.DragEvent) => void; showTesting?: boolean }) {
   return (
     <div
       draggable={canWrite && accountType !== 'parent'}
@@ -3125,11 +3129,16 @@ function CollegeCard({ entry, onEdit, onDelete, canWrite, accountType, onDragSta
       {entry.deadline_date && (
         <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#9ca3af' }}>{formatDeadline(entry)}</p>
       )}
+      {showTesting && (
+        <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#6b7280' }}>
+          <TestingSummary entry={entry} />
+        </p>
+      )}
     </div>
   )
 }
 
-function CardView({ entries, canWrite, accountType, onEdit, onDelete, onDrop }: CardViewProps) {
+function CardView({ entries, canWrite, accountType, onEdit, onDelete, onDrop, showTesting }: CardViewProps) {
   const [draggingId, setDraggingId] = useState<number | null>(null)
   const [dragOver, setDragOver] = useState<string | null>(null)
 
@@ -3175,6 +3184,7 @@ function CardView({ entries, canWrite, accountType, onEdit, onDelete, onDrop }: 
         </p>
         {notApplying.map((e) => (
           <CollegeCard
+            showTesting={showTesting}
             key={e.id}
             entry={e}
             onEdit={() => onEdit(e)}
@@ -3203,6 +3213,7 @@ function CardView({ entries, canWrite, accountType, onEdit, onDelete, onDrop }: 
         </p>
         {researching.map((e) => (
           <CollegeCard
+            showTesting={showTesting}
             key={e.id}
             entry={e}
             onEdit={() => onEdit(e)}
@@ -3229,6 +3240,7 @@ function CardView({ entries, canWrite, accountType, onEdit, onDelete, onDrop }: 
         </p>
         {applying.map((e) => (
           <CollegeCard
+            showTesting={showTesting}
             key={e.id}
             entry={e}
             onEdit={() => onEdit(e)}
@@ -3612,6 +3624,30 @@ function ListsContent() {
             </p>
           </div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexShrink: 0 }}>
+            {/* Testing filter (colleges only, and only once we hold testing data
+                for at least one school on the list). Sits beside the sort control
+                because that is where this page already keeps its view controls --
+                a second filter row above the list read as a separate thing. */}
+            {activeTab === 'colleges'
+              && entries.some((e) => e.test_required || e.self_report || e.superscore) && (
+              <select
+                value={testingFilter}
+                onChange={(ev) => setTestingFilter(ev.target.value)}
+                title="Filter by testing requirements"
+                style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: '7px 10px',
+                         fontSize: '0.8rem', background: '#fff', cursor: 'pointer',
+                         color: testingFilter ? '#4f46e5' : '#374151',
+                         fontWeight: testingFilter ? 600 : 400 }}
+              >
+                <option value="">Testing: all</option>
+                <option value="scores_required">Scores required</option>
+                <option value="official_report">Needs an official score report</option>
+                <option value="self_report">Accepts self-reported scores</option>
+                <option value="superscores">Superscores</option>
+                <option value="all_sittings">Must send every sitting</option>
+                <option value="test_blind">Test-blind — scores ignored</option>
+              </select>
+            )}
             {/* Sort control (colleges only) */}
             {activeTab === 'colleges' && (
               <select
@@ -3724,48 +3760,10 @@ function ListsContent() {
               {entries.filter((e) => e.status === 'not_applying').length > 0
                 ? ` · ${entries.filter((e) => e.status === 'not_applying').length} not applying`
                 : ''}
+              {testingFilter
+                ? ` · showing ${filterByTesting(entries, testingFilter).length} matching the testing filter`
+                : ''}
             </p>
-
-            {/* Testing filter (app#265). "Show only the schools that need an
-                official report" is the action a student actually takes -- official
-                reports cost money per school, so ten schools that accept
-                self-reported scores is real money saved. Matching is on the TOKENS
-                the backend resolves, so a counselor override filters exactly like
-                our licensed value and the single summary column costs nothing in
-                filtering power. */}
-            {entries.some((e) => e.test_required || e.self_report || e.superscore) && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
-                <label style={{ fontSize: '0.78rem', color: '#6b7280', fontWeight: 600 }}>Testing:</label>
-                <select
-                  value={testingFilter}
-                  onChange={(e) => setTestingFilter(e.target.value)}
-                  style={{ border: '1.5px solid #e5e7eb', borderRadius: 6, padding: '4px 8px',
-                           fontSize: '0.78rem', color: '#374151', background: '#fff', cursor: 'pointer' }}
-                >
-                  <option value="">All colleges</option>
-                  <option value="scores_required">Scores required</option>
-                  <option value="official_report">Needs an official score report</option>
-                  <option value="self_report">Accepts self-reported scores</option>
-                  <option value="superscores">Superscores</option>
-                  <option value="all_sittings">Must send every sitting</option>
-                  <option value="test_blind">Test-blind — scores ignored</option>
-                </select>
-                {testingFilter && (
-                  <button
-                    onClick={() => setTestingFilter('')}
-                    style={{ fontSize: '0.75rem', color: '#6366f1', background: 'none',
-                             border: 'none', cursor: 'pointer', padding: 0 }}
-                  >
-                    Clear
-                  </button>
-                )}
-                {testingFilter && (
-                  <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
-                    {filterByTesting(entries, testingFilter).length} of {entries.length}
-                  </span>
-                )}
-              </div>
-            )}
 
             {/* Main view */}
             {viewMode === 'spreadsheet' ? (
@@ -3782,12 +3780,13 @@ function ListsContent() {
               />
             ) : (
               <CardView
-                entries={sortCollegeEntries(entries, collegeSortBy, collegeSortDir)}
+                entries={sortCollegeEntries(filterByTesting(entries, testingFilter), collegeSortBy, collegeSortDir)}
                 canWrite={canWrite}
                 accountType={accountType}
                 onEdit={setEditEntry}
                 onDelete={removeCollege}
                 onDrop={handleDrop}
+                showTesting={!!testingFilter}
               />
             )}
           </>
