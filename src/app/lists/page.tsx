@@ -44,9 +44,38 @@ interface CollegeEntry {
   // Test score / application policy fields
   program_test_required?: boolean
   program_test_required_note?: string | null
+  // DEPRECATED (app#265). Its dropdown folded superscoring and score choice into
+  // one field, which cannot express MIT: it requires every sitting AND superscores
+  // the SAT. Its 37 production rows were migrated to the two fields below on the
+  // backend; the column is kept only as that migration's rollback and is no longer
+  // read or written here.
   score_submission_policy?: string | null
   srar_required?: string | null
-  score_self_report?: string | null
+  // Per-student testing overrides (app#265). EMPTY means no override, and the
+  // field falls back to our licensed value — which the backend resolves at read
+  // time and returns in the *_ref_label fields below.
+  self_report_override?: string | null
+  test_required_override?: string | null
+  superscore_override?: string | null
+  score_choice_override?: string | null
+  // Resolved by the backend (testing_labels.py), shared with the profile card so
+  // the two can never word the same fact differently. The frontend maps NONE of
+  // these itself: `ok` reads as "nothing to do" and `free` reads as its own
+  // opposite, which is why they are never shown raw.
+  test_required?: string | null
+  test_required_label?: string | null
+  test_required_ref_label?: string | null
+  self_report?: string | null
+  self_report_label?: string | null
+  self_report_ref_label?: string | null
+  superscore?: string | null
+  superscore_label?: string | null
+  superscore_ref_label?: string | null
+  score_choice?: string | null
+  score_choice_label?: string | null
+  score_choice_ref_label?: string | null
+  test_policy_notes?: string | null
+  test_data_last_verified?: string | null
   // College DB fields (joined from colleges table)
   sc_npc_url?: string | null
   factors_very_important?: string | null
@@ -1871,6 +1900,91 @@ interface EditDrawerProps {
   getToken: () => Promise<string | null>
 }
 
+// Matches on the resolved TOKENS, not on the labels, so the wording can change
+// without breaking the filter and a counselor override filters identically to our
+// licensed value. `self_report === 'yes'` is the token for both "accepted" and
+// "self-report to apply, official after admission", because the question the
+// filter asks is whether the student self-reports to APPLY.
+function filterByTesting(entries: CollegeEntry[], f: string): CollegeEntry[] {
+  if (!f) return entries
+  return entries.filter((e) => {
+    switch (f) {
+      case 'scores_required': return e.test_required === 'required'
+      case 'official_report': return e.test_required !== 'free' && e.self_report === 'no'
+      case 'self_report':     return e.test_required !== 'free' && e.self_report === 'yes'
+      case 'superscores':     return e.superscore === 'both' || e.superscore === 'sat_only'
+                                  || e.superscore === 'act_only'
+      case 'all_sittings':    return e.score_choice === 'requires_all'
+      case 'test_blind':      return e.test_required === 'free'
+      default: return true
+    }
+  })
+}
+
+// One compact column for the whole testing picture (app#265). Three columns would
+// be ~45 characters of header for something a student checks once and then acts on,
+// and the FILTER matches on the tokens behind this regardless of how many columns
+// are shown — so one column costs nothing in filtering power.
+//
+// The short forms here are the only place the frontend words these facts, and they
+// are deliberately terse labels for a table cell, not a restatement of the
+// backend's sentences. The full wording is in the drawer and on the profile card,
+// both from `testing_labels.py`.
+const TESTING_SHORT: Record<string, string> = {
+  required: 'Required', optional: 'Optional', free: 'Test-blind',
+  yes: 'Self-report', no: 'Official report',
+  both: 'SS both', sat_only: 'SS SAT', act_only: 'SS ACT', neither: 'No SS',
+  ok: 'Choice OK', recommends_all: 'All recommended', requires_all: 'All required',
+}
+
+function TestingSummary({ entry }: { entry: CollegeEntry }) {
+  // Test-blind ends the conversation: nothing else on this row matters, and
+  // listing self-report or superscoring beside it implies scores are in play.
+  if (entry.test_required === 'free') {
+    return <span style={{ color: '#7c3aed', fontWeight: 600 }}>Test-blind</span>
+  }
+  const parts = (['test_required', 'self_report', 'superscore', 'score_choice'] as const)
+    .map((f) => {
+      const tok = entry[f]
+      return tok ? TESTING_SHORT[tok] : null
+    })
+    .filter(Boolean)
+  if (!parts.length) return <span style={{ color: '#d1d5db' }}>—</span>
+  const overridden = (['test_required', 'self_report', 'superscore', 'score_choice'] as const)
+    .some((f) => entry[`${f}_source` as keyof CollegeEntry] === 'override')
+  return (
+    <span title={overridden ? 'Includes a counselor override' : undefined}>
+      {parts.join(' · ')}
+      {overridden && <span style={{ color: '#92400e', fontWeight: 700 }}> *</span>}
+    </span>
+  )
+}
+
+// ── Testing overrides: our licensed value is the default (app#265) ──────────
+// The backend resolves counselor-override-then-reference and hands back BOTH the
+// resolved label and the reference-only label. These two helpers render the
+// difference, and the frontend maps no tokens itself: `ok` reads as "nothing to
+// do" and `free` reads as its own opposite, so every label is the backend's.
+
+/** The empty option's text: what clearing this field falls back to. */
+function defaultOpt(refLabel?: string | null): string {
+  return refLabel ? `Our data: ${refLabel}` : 'Not specified — check college website'
+}
+
+/** Shown under a dropdown only when an override DISAGREES with our value, so a
+ *  counselor can see what they replaced. Silent when they agree, because an
+ *  agreeing override is not worth a line of its own. */
+function overrideNote(override?: string | null, refLabel?: string | null) {
+  if (!override || !refLabel) return null
+  return (
+    <p style={{ fontSize: '0.74rem', color: '#92400e', background: '#fffbeb',
+                border: '1px solid #fde68a', borderRadius: 4,
+                padding: '4px 8px', margin: '6px 0 0' }}>
+      Overriding our data, which says: {refLabel}
+    </p>
+  )
+}
+
 function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, onSave, onUpdateEntry, apiUrl, getToken }: EditDrawerProps) {
   const [form, setForm] = useState<Partial<CollegeEntry>>({ ...entry })
   const [saving, setSaving] = useState(false)
@@ -2382,27 +2496,28 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
                   )}
                 </div>
 
-                {/* Score submission policy */}
+                {/* ── Our licensed value is the DEFAULT; an override replaces it ──
+                     Resolved on the backend, never written into the student's row:
+                     a written copy goes stale at the next refresh and cannot be
+                     told apart from a counselor's own choice (which is why
+                     `likelihood` needs `likelihood_set_by` and this does not).
+                     The empty option therefore shows what clearing the field falls
+                     back to, so a counselor can see what they are overriding. */}
+
+                {/* Does the school require scores at all? */}
                 <div style={fieldStyle}>
-                  <label style={labelStyle}>
-                    Score Submission Policy{' '}
-                    <a href="https://www.compassprep.com/superscore-and-score-choice/"
-                       target="_blank" rel="noopener noreferrer"
-                       style={{ fontSize: '0.75rem', color: '#6366f1', fontWeight: 400 }}>
-                      Look this up ↗
-                    </a>
-                  </label>
+                  <label style={labelStyle}>Test Scores Required</label>
                   <select
-                    value={form.score_submission_policy || ''}
-                    onChange={(e) => set('score_submission_policy', e.target.value || null)}
+                    value={form.test_required_override || ''}
+                    onChange={(e) => set('test_required_override', e.target.value || null)}
                     disabled={!canWrite || isParent}
                     style={canWrite && !isParent ? inputStyle : readonlyStyle}
                   >
-                    <option value="">Not specified — check college website</option>
-                    <option value="superscore">Superscores (takes your best section scores across dates)</option>
-                    <option value="single_sitting">Single best sitting (one test date only)</option>
-                    <option value="all_scores">All scores required (must submit every test date)</option>
+                    <option value="">{defaultOpt(entry.test_required_ref_label)}</option>
+                    <option value="required">Required — scores must be submitted</option>
+                    <option value="not_required">Not required — the student chooses</option>
                   </select>
+                  {overrideNote(form.test_required_override, entry.test_required_ref_label)}
                 </div>
 
                 {/* Self-reporting vs. official */}
@@ -2416,17 +2531,93 @@ function EditDrawer({ entry, accountType, viewerIsStudent, canWrite, onClose, on
                     </a>
                   </label>
                   <select
-                    value={form.score_self_report || ''}
-                    onChange={(e) => set('score_self_report', e.target.value || null)}
+                    value={form.self_report_override || ''}
+                    onChange={(e) => set('self_report_override', e.target.value || null)}
                     disabled={!canWrite || isParent}
                     style={canWrite && !isParent ? inputStyle : readonlyStyle}
                   >
-                    <option value="">Not specified — check college website</option>
+                    <option value="">{defaultOpt(entry.self_report_ref_label)}</option>
                     <option value="self_reported_ok">Self-reported scores accepted for application</option>
                     <option value="official_at_application">Official scores required at application</option>
                     <option value="official_after_admission">Self-report to apply; official required after admission</option>
                   </select>
+                  {overrideNote(form.self_report_override, entry.self_report_ref_label)}
                 </div>
+
+                {/* Superscoring — SEPARATE from score choice, and they are
+                    independent: MIT requires every sitting AND superscores the
+                    SAT, as do all twelve schools that require all scores. The old
+                    single "Score Submission Policy" dropdown could not say that. */}
+                <div style={fieldStyle}>
+                  <label style={labelStyle}>
+                    Superscoring{' '}
+                    <a href="https://www.compassprep.com/superscore-and-score-choice/"
+                       target="_blank" rel="noopener noreferrer"
+                       style={{ fontSize: '0.75rem', color: '#6366f1', fontWeight: 400 }}>
+                      Look this up ↗
+                    </a>
+                  </label>
+                  <select
+                    value={form.superscore_override || ''}
+                    onChange={(e) => set('superscore_override', e.target.value || null)}
+                    disabled={!canWrite || isParent}
+                    style={canWrite && !isParent ? inputStyle : readonlyStyle}
+                  >
+                    <option value="">{defaultOpt(entry.superscore_ref_label)}</option>
+                    <option value="both">Superscores both the SAT and the ACT</option>
+                    <option value="sat_only">Superscores the SAT only</option>
+                    <option value="act_only">Superscores the ACT only</option>
+                    <option value="neither">Does not superscore either test</option>
+                  </select>
+                  {overrideNote(form.superscore_override, entry.superscore_ref_label)}
+                </div>
+
+                {/* Score choice */}
+                <div style={fieldStyle}>
+                  <label style={labelStyle}>
+                    Score Choice{' '}
+                    <a href="https://www.compassprep.com/superscore-and-score-choice/"
+                       target="_blank" rel="noopener noreferrer"
+                       style={{ fontSize: '0.75rem', color: '#6366f1', fontWeight: 400 }}>
+                      Look this up ↗
+                    </a>
+                  </label>
+                  <select
+                    value={form.score_choice_override || ''}
+                    onChange={(e) => set('score_choice_override', e.target.value || null)}
+                    disabled={!canWrite || isParent}
+                    style={canWrite && !isParent ? inputStyle : readonlyStyle}
+                  >
+                    <option value="">{defaultOpt(entry.score_choice_ref_label)}</option>
+                    <option value="ok">Score Choice allowed — send only the sittings you choose</option>
+                    <option value="recommends_all">All scores recommended, but not required</option>
+                    <option value="requires_all">All scores required — every sitting must be sent</option>
+                  </select>
+                  {overrideNote(form.score_choice_override, entry.score_choice_ref_label)}
+                </div>
+
+                {/* The source's own sentence about this school's policy. It
+                    OUTRANKS the three-value policy above where they differ, and for
+                    several schools it is the only thing that makes the summary
+                    correct — Princeton and Columbia require scores only from fall
+                    2028, Alabama only below a 3.0 GPA. */}
+                {entry.test_policy_notes && (
+                  <div style={{ ...fieldStyle, background: '#f8fafc', border: '1px solid #e2e8f0',
+                                borderRadius: 6, padding: '10px 12px' }}>
+                    <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#6b7280',
+                                textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 4px' }}>
+                      Policy detail
+                    </p>
+                    <p style={{ fontSize: '0.82rem', color: '#374151', margin: 0, lineHeight: 1.45 }}>
+                      {entry.test_policy_notes}
+                    </p>
+                    {entry.test_data_last_verified && (
+                      <p style={{ fontSize: '0.72rem', color: '#9ca3af', margin: '6px 0 0' }}>
+                        Our testing data was last verified {entry.test_data_last_verified}.
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 {/* SRAR */}
                 <div style={fieldStyle}>
@@ -2800,6 +2991,7 @@ function SpreadsheetView({ entries, canWrite, accountType, sortBy, sortDir, onSo
               <th className="hidden sm:table-cell" style={sortableTh('deadline')} onClick={() => onSort('deadline')}>Deadline<SortArrow field="deadline" /></th>
               <th className="hidden md:table-cell" style={thStyle}>Major</th>
               <th className="hidden md:table-cell" style={thStyle}>Est. Cost</th>
+              <th className="hidden lg:table-cell" style={thStyle}>Testing</th>
               <th className="hidden md:table-cell" style={thStyle}>Visited</th>
               <th style={{ ...thStyle, width: 80 }}>Actions</th>
             </tr>
@@ -2851,6 +3043,9 @@ function SpreadsheetView({ entries, canWrite, accountType, sortBy, sortDir, onSo
                     : e.cost_estimate
                     ? `$${e.cost_estimate.toLocaleString()}`
                     : '—'}
+                </td>
+                <td className="hidden lg:table-cell" style={{ ...tdStyle, color: '#6b7280', fontSize: '0.78rem' }}>
+                  <TestingSummary entry={e} />
                 </td>
                 <td className="hidden md:table-cell" style={{ ...tdStyle, textAlign: 'center' }}>
                   {e.visited ? (
@@ -3078,6 +3273,7 @@ function ListsContent() {
     tabParam === 'scholarships' ? 'scholarships' : tabParam === 'enrichment' ? 'enrichment' : 'colleges'
   )
   const [viewMode, setViewMode] = useState<'spreadsheet' | 'card'>('spreadsheet')
+  const [testingFilter, setTestingFilter] = useState<string>('')
   const [collegeSortBy, setCollegeSortBy] = useState<CollegeSortBy>(
     () => (typeof window !== 'undefined' ? (localStorage.getItem('ll_college_sort_by') as CollegeSortBy) : null) ?? 'likelihood'
   )
@@ -3530,10 +3726,51 @@ function ListsContent() {
                 : ''}
             </p>
 
+            {/* Testing filter (app#265). "Show only the schools that need an
+                official report" is the action a student actually takes -- official
+                reports cost money per school, so ten schools that accept
+                self-reported scores is real money saved. Matching is on the TOKENS
+                the backend resolves, so a counselor override filters exactly like
+                our licensed value and the single summary column costs nothing in
+                filtering power. */}
+            {entries.some((e) => e.test_required || e.self_report || e.superscore) && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
+                <label style={{ fontSize: '0.78rem', color: '#6b7280', fontWeight: 600 }}>Testing:</label>
+                <select
+                  value={testingFilter}
+                  onChange={(e) => setTestingFilter(e.target.value)}
+                  style={{ border: '1.5px solid #e5e7eb', borderRadius: 6, padding: '4px 8px',
+                           fontSize: '0.78rem', color: '#374151', background: '#fff', cursor: 'pointer' }}
+                >
+                  <option value="">All colleges</option>
+                  <option value="scores_required">Scores required</option>
+                  <option value="official_report">Needs an official score report</option>
+                  <option value="self_report">Accepts self-reported scores</option>
+                  <option value="superscores">Superscores</option>
+                  <option value="all_sittings">Must send every sitting</option>
+                  <option value="test_blind">Test-blind — scores ignored</option>
+                </select>
+                {testingFilter && (
+                  <button
+                    onClick={() => setTestingFilter('')}
+                    style={{ fontSize: '0.75rem', color: '#6366f1', background: 'none',
+                             border: 'none', cursor: 'pointer', padding: 0 }}
+                  >
+                    Clear
+                  </button>
+                )}
+                {testingFilter && (
+                  <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
+                    {filterByTesting(entries, testingFilter).length} of {entries.length}
+                  </span>
+                )}
+              </div>
+            )}
+
             {/* Main view */}
             {viewMode === 'spreadsheet' ? (
               <SpreadsheetView
-                entries={sortCollegeEntries(entries, collegeSortBy, collegeSortDir)}
+                entries={sortCollegeEntries(filterByTesting(entries, testingFilter), collegeSortBy, collegeSortDir)}
                 canWrite={canWrite}
                 accountType={accountType}
                 sortBy={collegeSortBy}
